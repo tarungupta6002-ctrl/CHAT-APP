@@ -222,6 +222,52 @@ io.on("connection", (socket) => {
         }
     });
 
+    // --- WebRTC 1-on-1 Audio / Video Calling Signaling ---
+    socket.on("call-offer", ({ to, offer, isVideo }) => {
+        const caller = users.get(socket.id);
+        if (!to || !users.has(to)) {
+            socket.emit("call-failed", { reason: "User is currently offline or unavailable" });
+            return;
+        }
+        socket.to(to).emit("incoming-call", {
+            from: socket.id,
+            fromName: caller ? caller.username : "Caller",
+            fromColor: caller ? caller.color : "#6366f1",
+            offer,
+            isVideo: Boolean(isVideo)
+        });
+    });
+
+    socket.on("call-answer", ({ to, answer }) => {
+        if (to && users.has(to)) {
+            socket.to(to).emit("call-answered", {
+                from: socket.id,
+                answer
+            });
+        }
+    });
+
+    socket.on("ice-candidate", ({ to, candidate }) => {
+        if (to && candidate) {
+            socket.to(to).emit("ice-candidate", {
+                from: socket.id,
+                candidate
+            });
+        }
+    });
+
+    socket.on("call-reject", ({ to }) => {
+        if (to && users.has(to)) {
+            socket.to(to).emit("call-rejected", { from: socket.id });
+        }
+    });
+
+    socket.on("call-end", ({ to }) => {
+        if (to && users.has(to)) {
+            socket.to(to).emit("call-ended", { from: socket.id });
+        }
+    });
+
     // Disconnect event
     socket.on("disconnect", () => {
         if (users.has(socket.id)) {

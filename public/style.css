@@ -1777,6 +1777,542 @@ body.light-theme .reply-preview-dock {
   font-style: italic;
 }
 
+/* ==========================================================
+   WebRTC 1-on-1 Audio & Video Calling Styling
+   ========================================================== */
+
+/* Tabs Bar Layout with DM Call Buttons */
+.chat-tabs-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 1rem;
+}
+
+.tabs-scroll-area {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs-scroll-area::-webkit-scrollbar {
+  display: none;
+}
+
+.dm-call-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.dm-call-actions.hidden {
+  display: none !important;
+}
+
+.dm-call-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dm-call-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.dm-call-btn:hover {
+  background: rgba(16, 185, 129, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.dm-call-btn.video-accent {
+  color: #06b6d4;
+  background: rgba(6, 182, 212, 0.12);
+  border-color: rgba(6, 182, 212, 0.3);
+}
+
+.dm-call-btn.video-accent:hover {
+  background: rgba(6, 182, 212, 0.25);
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+}
+
+/* Incoming Call Ringing Modal */
+.call-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 18, 0.88);
+  backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.call-modal-overlay.hidden {
+  display: none !important;
+}
+
+.incoming-call-card {
+  background: linear-gradient(145deg, #131a29, #0d121c);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  padding: 2.25rem 2rem;
+  text-align: center;
+  width: 90%;
+  max-width: 360px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.caller-avatar-pulse-wrap {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.caller-avatar-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #6366f1;
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.5);
+  z-index: 2;
+}
+
+.pulse-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid #6366f1;
+  animation: rippleRing 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+.pulse-ring.ring-2 {
+  animation-delay: 0.8s;
+}
+
+@keyframes rippleRing {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.incoming-call-card h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0.3rem;
+}
+
+.incoming-call-card p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 2rem;
+}
+
+.incoming-call-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.75rem;
+  width: 100%;
+}
+
+.call-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.call-btn svg {
+  width: 58px;
+  height: 58px;
+  padding: 15px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.btn-decline svg {
+  background: #ef4444;
+  fill: #fff;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.4);
+}
+
+.btn-decline:hover svg {
+  transform: scale(1.1);
+  background: #dc2626;
+}
+
+.btn-accept svg {
+  background: #10b981;
+  fill: #fff;
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
+  animation: callWiggle 1.5s infinite;
+}
+
+.btn-accept:hover svg {
+  transform: scale(1.1);
+  background: #059669;
+}
+
+@keyframes callWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(12deg); }
+  60% { transform: rotate(-8deg); }
+  80% { transform: rotate(8deg); }
+}
+
+/* Active Call Screen Overlay */
+.active-call-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 7, 14, 0.94);
+  backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3100;
+  padding: 1rem;
+}
+
+.active-call-overlay.hidden {
+  display: none !important;
+}
+
+.active-call-container {
+  width: 100%;
+  max-width: 900px;
+  height: 82vh;
+  max-height: 720px;
+  background: #0d111b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.9);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+/* Compact / Picture-in-Picture Mini-Mode */
+.active-call-container.compact-mode {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 340px;
+  height: 240px;
+  max-height: 240px;
+  z-index: 3500;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+}
+
+.active-call-header {
+  padding: 0.9rem 1.25rem;
+  background: rgba(13, 17, 27, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 5;
+}
+
+.active-call-peer-info {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.call-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+}
+
+.call-timer-badge {
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.call-icon-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.call-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.active-call-stage {
+  flex: 1;
+  position: relative;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#remote-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+.remote-avatar-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, #1a2234 0%, #0d121c 100%);
+  gap: 1rem;
+  z-index: 2;
+}
+
+.remote-avatar-placeholder.hidden {
+  display: none !important;
+}
+
+.remote-avatar-large {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #6366f1;
+  color: #fff;
+  font-size: 2.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+#remote-avatar-name {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Local Picture-in-Picture thumbnail */
+.local-pip-wrap {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 170px;
+  height: 115px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+  background: #111;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.local-pip-wrap:hover {
+  transform: scale(1.05);
+  border-color: #6366f1;
+}
+
+#local-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1); /* Mirror view for natural self-view */
+}
+
+.pip-label {
+  position: absolute;
+  bottom: 6px;
+  left: 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* Call Control Buttons */
+.active-call-controls {
+  padding: 1rem 1.5rem;
+  background: rgba(13, 17, 27, 0.85);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 5;
+}
+
+.call-ctrl-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-radius: 16px;
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 70px;
+}
+
+.call-ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.call-ctrl-btn.off {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+.call-ctrl-btn.btn-hangup {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+}
+
+.call-ctrl-btn.btn-hangup svg {
+  width: 22px;
+  height: 22px;
+  fill: #fff;
+}
+
+.call-ctrl-btn.btn-hangup:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6);
+}
+
+.ctrl-icon {
+  font-size: 1.25rem;
+}
+
+.ctrl-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* Light Theme overrides for Call screens */
+body.light-theme .incoming-call-card {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+}
+
+body.light-theme .incoming-call-card h3 {
+  color: #1e293b;
+}
+
+body.light-theme .active-call-container {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .active-call-header,
+body.light-theme .active-call-controls {
+  background: rgba(248, 250, 252, 0.95);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .active-call-peer-info {
+  color: #1e293b;
+}
+
+body.light-theme .call-ctrl-btn {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #1e293b;
+}
+
+@media (max-width: 640px) {
+  .active-call-container {
+    height: 94vh;
+    border-radius: 16px;
+  }
+  .local-pip-wrap {
+    width: 120px;
+    height: 80px;
+    bottom: 12px;
+    right: 12px;
+  }
+  .call-ctrl-btn {
+    padding: 0.45rem 0.8rem;
+    min-width: 58px;
+  }
+}
+
+
 
 
 
