@@ -1498,25 +1498,26 @@ function createPeerConnection(targetSocketId, isVideoCall) {
     pc.ontrack = (event) => {
         console.log("WebRTC track received:", event.track.kind, event.streams);
 
-        // Bind incoming stream directly to remoteVideo element
-        if (event.streams && event.streams[0]) {
-            remoteVideo.srcObject = event.streams[0];
-        } else {
-            if (!remoteVideo.srcObject) {
-                remoteVideo.srcObject = new MediaStream();
-            }
-            remoteVideo.srcObject.addTrack(event.track);
-        }
-
-        remoteVideo.play().catch((e) => console.log("remoteVideo play error:", e));
-
-        event.track.onunmute = () => {
-            remoteVideo.play().catch(() => {});
-        };
-
         if (event.track.kind === "video") {
+            const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+            remoteVideo.srcObject = stream;
+            remoteVideo.play().catch((e) => console.log("remoteVideo play error:", e));
+
+            event.track.onunmute = () => {
+                remoteVideo.play().catch(() => {});
+            };
+
             remoteAvatarPlaceholder.classList.add("hidden");
             remoteVideo.style.display = "block";
+        }
+
+        if (event.track.kind === "audio") {
+            const remoteAudio = document.getElementById("remote-audio");
+            if (remoteAudio) {
+                const audioStream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+                remoteAudio.srcObject = audioStream;
+                remoteAudio.play().catch((e) => console.log("remoteAudio play error:", e));
+            }
         }
     };
 
@@ -1776,6 +1777,8 @@ function cleanupCall() {
 
     if (localVideo) localVideo.srcObject = null;
     if (remoteVideo) remoteVideo.srcObject = null;
+    const remoteAudio = document.getElementById("remote-audio");
+    if (remoteAudio) remoteAudio.srcObject = null;
 
     incomingCallModal.classList.add("hidden");
     activeCallModal.classList.add("hidden");
