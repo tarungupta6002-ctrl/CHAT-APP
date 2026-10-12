@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulseChat — Realtime Chat Room</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Username Join Modal -->
+    <div id="join-modal" class="modal-overlay">
+        <div class="join-card">
+            <div class="join-icon-wrap">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.38 5.08L2 22l5.08-1.35C8.52 21.48 10.22 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/>
+                </svg>
+            </div>
+            <h2>Join the Room</h2>
+            <p>Pick a display name to start chatting with others in real-time.</p>
+            <form id="join-form">
+                <div class="input-group">
+                    <label for="username-input">Your Nickname</label>
+                    <input type="text" id="username-input" class="styled-input" placeholder="e.g. Alex, Tarun, Sarah" maxlength="20" required autocomplete="off" />
+                </div>
+                <button type="submit" class="btn-primary" id="join-btn">
+                    <span>Enter Chat</span>
+                    <svg style="width: 18px; height: 18px; fill: currentColor;" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Chat Container -->
+    <div class="chat-app-container">
+        <!-- Header -->
+        <header class="chat-header">
+            <div class="brand-section">
+                <div class="brand-logo">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
+                    </svg>
+                </div>
+                <div class="brand-info">
+                    <h1>PulseChat</h1>
+                    <button type="button" id="online-users-toggle-btn" class="online-users-badge-btn" title="View Online Members">
+                        <span class="pulse-dot"></span>
+                        <span id="online-count">1 Online</span>
+                        <svg class="users-icon" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="header-right-actions">
+                <button type="button" id="sound-toggle-btn" class="header-icon-btn" title="Toggle Sound Chime">🔔</button>
+                <button type="button" id="theme-toggle-btn" class="header-icon-btn" title="Toggle Light/Dark Theme">🌓</button>
+                <div class="user-profile-badge">
+                    <div class="user-avatar-circle" id="current-user-avatar">?</div>
+                    <span class="user-profile-name" id="current-username">Guest</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Channel & Direct Message (DM) Tabs -->
+        <nav class="chat-tabs-bar" id="chat-tabs-bar">
+            <button type="button" class="chat-tab active" id="tab-general" data-type="general">
+                <span class="tab-icon">#</span>
+                <span>General Room</span>
+                <span class="unread-badge hidden" id="unread-general">0</span>
+            </button>
+            <div id="dm-tabs-container" class="dm-tabs-container"></div>
+        </nav>
+
+        <!-- Active Users Sidebar Drawer -->
+        <aside id="users-sidebar" class="users-sidebar hidden">
+            <div class="sidebar-header">
+                <div class="sidebar-title">
+                    <h3>Online Members</h3>
+                    <span class="member-count-badge" id="member-count-badge">1</span>
+                </div>
+                <button type="button" id="close-sidebar-btn" class="close-sidebar-btn" title="Close Members Panel">✕</button>
+            </div>
+            <div class="sidebar-search-box">
+                <input type="text" id="users-search-input" placeholder="Search members..." autocomplete="off" />
+            </div>
+            <div class="users-list" id="users-list">
+                <!-- User items populated dynamically -->
+            </div>
+        </aside>
+
+        <!-- Message List -->
+        <main class="messages-container" id="messages-container">
+            <!-- Messages and status notifications will be dynamically inserted here -->
+        </main>
+
+        <!-- Typing Indicator -->
+        <div id="typing-indicator" class="typing-bar hidden">
+            <span id="typing-text">Someone is typing...</span>
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+
+        <!-- Floating Emoji Picker -->
+        <div id="emoji-picker" class="emoji-picker-popover hidden">
+            <div class="emoji-picker-header">Pick an emoji</div>
+            <div class="emoji-grid" id="emoji-grid"></div>
+        </div>
+
+        <!-- Image Preview Dock (Before Sending) -->
+        <div id="image-preview-dock" class="image-preview-dock hidden">
+            <div class="preview-thumbnail-wrap">
+                <img id="preview-thumbnail" src="" alt="Selected image preview" />
+                <button type="button" id="remove-preview-btn" class="remove-preview-btn" title="Remove image">✕</button>
+            </div>
+            <div class="preview-controls">
+                <button type="button" id="view-once-btn" class="view-once-toggle-btn" title="Toggle View Once">
+                    <span class="view-once-circle">①</span>
+                    <span class="view-once-label">View Once</span>
+                </button>
+                <span class="preview-info" id="preview-info">Photo attached</span>
+            </div>
+        </div>
+
+        <!-- Voice Note Recording Bar -->
+        <div id="voice-recording-dock" class="voice-recording-dock hidden">
+            <div class="recording-indicator">
+                <span class="recording-pulse-dot"></span>
+                <span id="recording-timer">0:00</span>
+            </div>
+            <div class="recording-wave-animation">
+                <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="recording-actions">
+                <button type="button" id="cancel-recording-btn" class="cancel-recording-btn" title="Discard voice note">✕ Cancel</button>
+                <button type="button" id="send-recording-btn" class="send-recording-btn" title="Send voice note">✓ Send</button>
+            </div>
+        </div>
+
+        <!-- Reply Preview Bar -->
+        <div id="reply-preview-dock" class="reply-preview-dock hidden">
+            <div class="reply-preview-indicator"></div>
+            <div class="reply-preview-content">
+                <div class="reply-preview-user" id="reply-preview-user">Replying to Alex</div>
+                <div class="reply-preview-snippet" id="reply-preview-snippet">Hello there...</div>
+            </div>
+            <button type="button" id="cancel-reply-btn" class="cancel-reply-btn" title="Cancel Reply">✕</button>
+        </div>
+
+        <!-- Chat Input Footer -->
+        <footer class="chat-footer">
+            <form id="chat-form" class="input-container">
+                <input type="file" id="image-file-input" accept="image/*" style="display: none;" />
+                <button type="button" id="attach-btn" class="input-action-btn" title="Attach Image or Screenshot">📎</button>
+                <button type="button" id="emoji-btn" class="emoji-toggle-btn" title="Insert emoji">😊</button>
+                <button type="button" id="mic-btn" class="input-action-btn" title="Record Voice Note">🎙️</button>
+                <input 
+                    type="text" 
+                    id="message-input" 
+                    class="chat-input" 
+                    placeholder="Type a message or paste image (Ctrl+V)..." 
+                    autocomplete="off" 
+                />
+                <button type="submit" id="send-button" class="send-button" title="Send message" aria-label="Send message">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </form>
+        </footer>
+    </div>
+
+    <!-- Edit Message Modal -->
+    <div id="edit-modal" class="modal-overlay hidden">
+        <div class="join-card">
+            <h2>Edit Message</h2>
+            <form id="edit-form">
+                <div class="input-group" style="margin-top: 1rem;">
+                    <input type="text" id="edit-input" class="styled-input" required autocomplete="off" />
+                </div>
+                <div style="display: flex; gap: 0.65rem; justify-content: flex-end; margin-top: 1.25rem;">
+                    <button type="button" id="cancel-edit-btn" class="cancel-recording-btn">Cancel</button>
+                    <button type="submit" class="btn-primary" style="width: auto; padding: 0.5rem 1.25rem;">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Fullscreen Image Lightbox Modal (For standard & View Once photos) -->
+    <div id="image-lightbox" class="lightbox-overlay hidden">
+        <div class="lightbox-modal">
+            <div class="lightbox-header">
+                <div class="lightbox-title-area">
+                    <span id="lightbox-badge" class="lightbox-badge hidden">① View Once</span>
+                    <span id="lightbox-sender-info">Photo</span>
+                </div>
+                <button type="button" id="lightbox-close-btn" class="lightbox-close-btn" title="Close">✕</button>
+            </div>
+            <div class="lightbox-body">
+                <img id="lightbox-img" src="" alt="Chat photo" />
+            </div>
+            <div id="lightbox-view-once-warning" class="lightbox-warning hidden">
+                🔒 This is a View Once photo. It will disappear permanently once closed.
+            </div>
+        </div>
+    </div>
+
+    <!-- Socket.io and Client Script -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
