@@ -1460,37 +1460,31 @@ function stopCallTimer() {
     activeCallTimer.textContent = "00:00";
 }
 
-// Request Camera & Mic Stream
+// Request Camera & Mic Stream with robust fallback
 async function getMediaStream(isVideo) {
-    const constraints = {
-        audio: {
-            echoCancellation: true,
-            noiseSuppression: true
-        },
-        video: isVideo ? {
-            width: { ideal: 1280, max: 1920 },
-            height: { ideal: 720, max: 1080 },
-            facingMode: "user"
-        } : false
-    };
     try {
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        return stream;
+        return await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: isVideo ? { facingMode: "user" } : false
+        });
     } catch (err) {
-        console.error("Camera/Mic access error:", err);
-        alert("Camera or Microphone permission was denied or not found. Please enable permissions to make calls.");
-        throw err;
+        console.warn("Retrying getUserMedia with basic constraints:", err);
+        try {
+            return await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: isVideo ? true : false
+            });
+        } catch (finalErr) {
+            console.error("Camera/Mic access error:", finalErr);
+            alert("Camera or Microphone permission was denied or camera is in use by another tab/app.");
+            throw finalErr;
+        }
     }
 }
 
 // Setup PeerConnection with buffered ICE candidate management
 function createPeerConnection(targetSocketId, isVideoCall) {
     const pc = new RTCPeerConnection(RTC_CONFIG);
-
-    remoteStream = new MediaStream();
-    remoteVideo.srcObject = remoteStream;
-    remoteVideo.setAttribute("playsinline", "true");
-    remoteVideo.setAttribute("autoplay", "true");
 
     pc.onicecandidate = (event) => {
         if (event.candidate) {
@@ -1502,14 +1496,27 @@ function createPeerConnection(targetSocketId, isVideoCall) {
     };
 
     pc.ontrack = (event) => {
-        if (event.track) {
-            remoteStream.addTrack(event.track);
-            remoteVideo.play().catch(() => {});
+        console.log("WebRTC track received:", event.track.kind, event.streams);
 
-            if (event.track.kind === "video") {
-                remoteAvatarPlaceholder.classList.add("hidden");
-                remoteVideo.style.display = "block";
+        // Bind incoming stream directly to remoteVideo element
+        if (event.streams && event.streams[0]) {
+            remoteVideo.srcObject = event.streams[0];
+        } else {
+            if (!remoteVideo.srcObject) {
+                remoteVideo.srcObject = new MediaStream();
             }
+            remoteVideo.srcObject.addTrack(event.track);
+        }
+
+        remoteVideo.play().catch((e) => console.log("remoteVideo play error:", e));
+
+        event.track.onunmute = () => {
+            remoteVideo.play().catch(() => {});
+        };
+
+        if (event.track.kind === "video") {
+            remoteAvatarPlaceholder.classList.add("hidden");
+            remoteVideo.style.display = "block";
         }
     };
 
