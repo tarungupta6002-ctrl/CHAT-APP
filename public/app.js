@@ -1371,13 +1371,17 @@ const RTC_CONFIG = {
     iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" },
-        { urls: "stun:stun2.l.google.com:19302" }
-    ]
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:19302" }
+    ],
+    iceCandidatePoolSize: 10
 };
 
 // Call State
 let peerConnection = null;
 let localStream = null;
+let remoteStream = null;
 let activeCallTargetId = null;
 let pendingIncomingCall = null;
 let callTimerInterval = null;
@@ -1386,6 +1390,7 @@ let isAudioMuted = false;
 let isVideoMuted = false;
 let isCallActive = false;
 let activeCallPartnerName = "";
+let iceCandidateQueue = [];
 
 // Ringtone Synthesizer using Web Audio API
 let ringtoneAudioContext = null;
@@ -1440,9 +1445,9 @@ function formatCallTimer(sec) {
 }
 
 function startCallTimer() {
+    if (callTimerInterval) return; // Prevent duplicate timers
     callDurationSeconds = 0;
     activeCallTimer.textContent = "00:00";
-    clearInterval(callTimerInterval);
     callTimerInterval = setInterval(() => {
         callDurationSeconds++;
         activeCallTimer.textContent = formatCallTimer(callDurationSeconds);
@@ -1458,8 +1463,15 @@ function stopCallTimer() {
 // Request Camera & Mic Stream
 async function getMediaStream(isVideo) {
     const constraints = {
-        audio: true,
-        video: isVideo ? { width: { ideal: 1280 }, height: { ideal: 720 } } : false
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true
+        },
+        video: isVideo ? {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            facingMode: "user"
+        } : false
     };
     try {
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -1471,9 +1483,14 @@ async function getMediaStream(isVideo) {
     }
 }
 
-// Setup PeerConnection
+// Setup PeerConnection with buffered ICE candidate management
 function createPeerConnection(targetSocketId, isVideoCall) {
     const pc = new RTCPeerConnection(RTC_CONFIG);
+
+    remoteStream = new MediaStream();
+    remoteVideo.srcObject = remoteStream;
+    remoteVideo.setAttribute("playsinline", "true");
+    remoteVideo.setAttribute("autoplay", "true");
 
     pc.onicecandidate = (event) => {
         if (event.candidate) {
@@ -1485,28 +1502,48 @@ function createPeerConnection(targetSocketId, isVideoCall) {
     };
 
     pc.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-            remoteVideo.srcObject = event.streams[0];
-            if (isVideoCall) {
+        if (event.track) {
+            remoteStream.addTrack(event.track);
+            remoteVideo.play().catch(() => {});
+
+            if (event.track.kind === "video") {
                 remoteAvatarPlaceholder.classList.add("hidden");
                 remoteVideo.style.display = "block";
-            } else {
-                remoteAvatarPlaceholder.classList.remove("hidden");
-                remoteVideo.style.display = "none";
             }
         }
     };
 
+    pc.oniceconnectionstatechange = () => {
+        console.log("ICE Connection State:", pc.iceConnectionState);
+        if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+            activeCallPeerName.textContent = activeCallPartnerName || "Connected";
+            startCallTimer();
+        }
+    };
+
     pc.onconnectionstatechange = () => {
+        console.log("Peer Connection State:", pc.connectionState);
         if (pc.connectionState === "connected") {
             activeCallPeerName.textContent = activeCallPartnerName || "Connected";
             startCallTimer();
-        } else if (pc.connectionState === "disconnected" || pc.connectionState === "failed" || pc.connectionState === "closed") {
-            endCall(false);
         }
     };
 
     return pc;
+}
+
+// Flush Queued ICE Candidates once remoteDescription is set
+async function flushIceCandidateQueue() {
+    while (iceCandidateQueue.length > 0) {
+        const cand = iceCandidateQueue.shift();
+        try {
+            if (peerConnection && peerConnection.remoteDescription) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(cand));
+            }
+        } catch (err) {
+            console.warn("Error adding queued ICE candidate:", err);
+        }
+    }
 }
 
 // Start Outgoing Call
@@ -1524,10 +1561,14 @@ async function initiateCall(isVideo) {
     const partnerId = currentChat.partnerId;
     activeCallTargetId = partnerId;
     activeCallPartnerName = currentChat.partnerName || "User";
+    iceCandidateQueue = [];
 
     try {
         localStream = await getMediaStream(isVideo);
         localVideo.srcObject = localStream;
+        localVideo.setAttribute("playsinline", "true");
+        localVideo.setAttribute("autoplay", "true");
+        localVideo.play().catch(() => {});
         localVideo.style.display = isVideo ? "block" : "none";
 
         isAudioMuted = false;
@@ -1537,7 +1578,10 @@ async function initiateCall(isVideo) {
         peerConnection = createPeerConnection(partnerId, isVideo);
         localStream.getTracks().forEach((track) => peerConnection.addTrack(track, localStream));
 
-        const offer = await peerConnection.createOffer();
+        const offer = await peerConnection.createOffer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: isVideo
+        });
         await peerConnection.setLocalDescription(offer);
 
         socket.emit("call-offer", {
@@ -1555,6 +1599,7 @@ async function initiateCall(isVideo) {
         activeCallModal.classList.remove("hidden");
 
     } catch (err) {
+        console.error("Initiate call failed:", err);
         cleanupCall();
     }
 }
@@ -1567,6 +1612,7 @@ socket.on("incoming-call", (data) => {
     }
 
     pendingIncomingCall = data;
+    iceCandidateQueue = [];
     incomingCallerName.textContent = data.fromName;
     incomingCallerAvatar.textContent = getInitials(data.fromName);
     incomingCallerAvatar.style.backgroundColor = data.fromColor || "#6366f1";
@@ -1590,6 +1636,9 @@ acceptCallBtn.addEventListener("click", async () => {
     try {
         localStream = await getMediaStream(data.isVideo);
         localVideo.srcObject = localStream;
+        localVideo.setAttribute("playsinline", "true");
+        localVideo.setAttribute("autoplay", "true");
+        localVideo.play().catch(() => {});
         localVideo.style.display = data.isVideo ? "block" : "none";
 
         isAudioMuted = false;
@@ -1600,6 +1649,9 @@ acceptCallBtn.addEventListener("click", async () => {
         localStream.getTracks().forEach((track) => peerConnection.addTrack(track, localStream));
 
         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+        // Flush any candidates that arrived while phone was ringing
+        await flushIceCandidateQueue();
+
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
 
@@ -1623,6 +1675,7 @@ acceptCallBtn.addEventListener("click", async () => {
         startCallTimer();
 
     } catch (err) {
+        console.error("Accept call error:", err);
         cleanupCall();
         socket.emit("call-reject", { to: data.from });
     } finally {
@@ -1645,6 +1698,8 @@ socket.on("call-answered", async (data) => {
     if (peerConnection && data.answer) {
         try {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+            // Flush buffered candidates
+            await flushIceCandidateQueue();
             activeCallPeerName.textContent = activeCallPartnerName;
             startCallTimer();
         } catch (err) {
@@ -1655,12 +1710,16 @@ socket.on("call-answered", async (data) => {
 
 // ICE Candidate
 socket.on("ice-candidate", async (data) => {
-    if (peerConnection && data.candidate) {
+    if (!data.candidate) return;
+    if (peerConnection && peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
         try {
             await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
         } catch (err) {
             console.error("Error adding ICE candidate:", err);
         }
+    } else {
+        // Buffer until setRemoteDescription is executed
+        iceCandidateQueue.push(data.candidate);
     }
 });
 
@@ -1696,6 +1755,7 @@ function cleanupCall() {
     pendingIncomingCall = null;
     activeCallTargetId = null;
     activeCallPartnerName = "";
+    iceCandidateQueue = [];
 
     if (localStream) {
         localStream.getTracks().forEach((track) => track.stop());
