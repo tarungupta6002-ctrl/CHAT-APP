@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0d14">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>PulseChat — Realtime Chat Room</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -38,6 +41,9 @@
         <!-- Header -->
         <header class="chat-header">
             <div class="brand-section">
+                <button type="button" id="mobile-menu-btn" class="mobile-menu-btn" title="Menu">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+                </button>
                 <div class="brand-logo">
                     <svg viewBox="0 0 24 24">
                         <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/>
@@ -260,8 +266,9 @@
             </div>
 
             <div class="active-call-stage" id="active-call-stage">
-                <!-- Large Remote Video (Muted to guarantee autoplay across all mobile & desktop browsers) -->
-                <video id="remote-video" autoplay playsinline webkit-playsinline muted></video>
+                <!-- Large Remote Video -->
+                <video id="remote-video" autoplay playsinline webkit-playsinline></video>
+                <!-- Separate audio element for remote audio (unmuted, ensures audio plays even when video is hidden) -->
                 <audio id="remote-audio" autoplay playsinline></audio>
                 
                 <!-- Remote Avatar Placeholder (Shown if camera is off or voice only) -->
