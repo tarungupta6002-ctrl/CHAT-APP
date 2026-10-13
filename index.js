@@ -258,7 +258,7 @@ io.on("connection", (socket) => {
     socket.on("call-offer", ({ to, toUsername, offer, isVideo }) => {
         const caller = users.get(socket.id);
         let targetSocketId = to;
-        if (!targetSocketId && toUsername) {
+        if ((!targetSocketId || !users.has(targetSocketId)) && toUsername) {
             targetSocketId = findSocketIdByUsername(toUsername);
         }
         if (!targetSocketId || !users.has(targetSocketId)) {
