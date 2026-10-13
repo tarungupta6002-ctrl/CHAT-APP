@@ -606,6 +606,10 @@ export default function AuthPage() {
                                 Enter it below to activate your account.
                             </p>
 
+                            <div style={{ fontSize: '12px', background: '#f0fdf4', color: '#166534', padding: '10px 14px', borderRadius: '8px', marginBottom: '18px', border: '1px dashed #86efac', textAlign: 'center', lineHeight: '1.5' }}>
+                                💡 <strong>Terminal Note:</strong> Agar real email configure nahi hai, toh yeh 6-digit code aapke <strong>Server Terminal (CMD)</strong> mein print ho gaya hai. Wahan se copy karke yahan daal sakte hain!
+                            </div>
+
                             {error && <div className="auth-alert-box error">{error}</div>}
                             {successMsg && <div className="auth-alert-box success">{successMsg}</div>}
 
