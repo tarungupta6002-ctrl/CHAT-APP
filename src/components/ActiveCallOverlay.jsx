@@ -1,65 +1,177 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { MeetingProvider, useMeeting, useParticipant } from '@videosdk.live/react-sdk';
 import { useWebRTC } from '../context/WebRTCContext';
+import { useAuth } from '../context/AuthContext';
 
-export default function ActiveCallOverlay() {
+// Remote Participant Audio & Video Stream Renderer
+function RemoteParticipantView({ participantId, partnerName, partnerColor, callIsVideo }) {
+    const videoRef = useRef(null);
+    const audioRef = useRef(null);
+
+    const { webcamStream, micStream, webcamOn, micOn } = useParticipant(participantId);
+
+    // Bind video stream
+    useEffect(() => {
+        if (videoRef.current) {
+            if (webcamOn && webcamStream) {
+                const mediaStream = new MediaStream([webcamStream.track]);
+                videoRef.current.srcObject = mediaStream;
+                videoRef.current.play().catch((err) => console.log("Remote video play error:", err));
+            } else {
+                videoRef.current.srcObject = null;
+            }
+        }
+    }, [webcamStream, webcamOn]);
+
+    // Bind audio stream
+    useEffect(() => {
+        if (audioRef.current) {
+            if (micOn && micStream) {
+                const mediaStream = new MediaStream([micStream.track]);
+                audioRef.current.srcObject = mediaStream;
+                audioRef.current.play().catch((err) => console.log("Remote audio play error:", err));
+            } else {
+                audioRef.current.srcObject = null;
+            }
+        }
+    }, [micStream, micOn]);
+
+    const showAvatar = !callIsVideo || !webcamOn;
+
+    return (
+        <>
+            <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                webkit-playsinline="true"
+                style={{ display: showAvatar ? 'none' : 'block' }}
+            />
+            <audio ref={audioRef} autoPlay playsInline />
+
+            {showAvatar && (
+                <div className="remote-avatar-placeholder">
+                    <div
+                        className="remote-avatar-large"
+                        style={{ backgroundColor: partnerColor }}
+                    >
+                        {partnerName.slice(0, 2).toUpperCase()}
+                    </div>
+                    <span>{partnerName}</span>
+                </div>
+            )}
+        </>
+    );
+}
+
+// Local Participant Video PiP Renderer
+function LocalParticipantView({ participantId, isVideoMuted, callIsVideo }) {
+    const videoRef = useRef(null);
+    const { webcamStream, webcamOn } = useParticipant(participantId);
+
+    useEffect(() => {
+        if (videoRef.current) {
+            if (webcamOn && webcamStream && !isVideoMuted && callIsVideo) {
+                const mediaStream = new MediaStream([webcamStream.track]);
+                videoRef.current.srcObject = mediaStream;
+                videoRef.current.play().catch((err) => console.log("Local video play error:", err));
+            } else {
+                videoRef.current.srcObject = null;
+            }
+        }
+    }, [webcamStream, webcamOn, isVideoMuted, callIsVideo]);
+
+    if (!callIsVideo || isVideoMuted || !webcamOn) return null;
+
+    return (
+        <div className="local-pip-wrap">
+            <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                webkit-playsinline="true"
+                muted
+            />
+            <span className="pip-label">You</span>
+        </div>
+    );
+}
+
+// Inner Call Stage inside MeetingProvider
+function VideoSDKCallStage() {
     const {
-        isCallActive,
         activeCallPartner,
         callStatus,
+        setCallStatus,
         callTimer,
+        startTimer,
         isAudioMuted,
         isVideoMuted,
         isCompactMode,
         callIsVideo,
-        remoteVideoAvailable,
-        localStream,
-        remoteStream,
-        localVideoRef,
-        remoteVideoRef,
-        remoteAudioRef,
         endCall,
-        toggleMic,
-        toggleCam,
+        toggleMic: toggleContextMic,
+        toggleCam: toggleContextCam,
         toggleCompact
     } = useWebRTC();
 
-    // Automatically bind local video stream whenever mounted or updated
-    useEffect(() => {
-        if (localVideoRef.current && localStream) {
-            localVideoRef.current.srcObject = localStream;
-            localVideoRef.current.play().catch((err) => console.log("Local video play err:", err));
-        }
-    }, [localStream, isCallActive]);
+    const [hasJoined, setHasJoined] = useState(false);
 
-    // Automatically bind remote video and audio stream with mobile tap fallback
-    useEffect(() => {
-        if (remoteVideoRef.current && remoteStream) {
-            remoteVideoRef.current.srcObject = remoteStream;
-            remoteVideoRef.current.play().catch((err) => {
-                console.warn("[WebRTC] Autoplay blocked, waiting for tap:", err);
-                const retry = () => {
-                    remoteVideoRef.current?.play().catch(() => {});
-                    if (remoteAudioRef.current) remoteAudioRef.current.play().catch(() => {});
-                    document.removeEventListener("touchstart", retry);
-                    document.removeEventListener("click", retry);
-                };
-                document.addEventListener("touchstart", retry, { once: true });
-                document.addEventListener("click", retry, { once: true });
-            });
+    const {
+        join,
+        leave,
+        toggleMic: sdkToggleMic,
+        toggleWebcam: sdkToggleWebcam,
+        participants,
+        localParticipant
+    } = useMeeting({
+        onMeetingJoined: () => {
+            console.log("[VideoSDK] Meeting joined successfully");
+            setHasJoined(true);
+            setCallStatus("Connected");
+            startTimer();
+        },
+        onMeetingLeft: () => {
+            console.log("[VideoSDK] Meeting left");
+        },
+        onParticipantJoined: (p) => {
+            console.log("[VideoSDK] Remote participant joined:", p.displayName);
+            setCallStatus("Connected");
+            startTimer();
+        },
+        onError: (error) => {
+            console.error("[VideoSDK] Meeting error:", error);
         }
-        if (remoteAudioRef.current && remoteStream) {
-            remoteAudioRef.current.srcObject = remoteStream;
-            remoteAudioRef.current.play().catch(() => {});
-        }
-    }, [remoteStream, isCallActive]);
+    });
 
-    if (!isCallActive) return null;
+    // Auto-join meeting on mount
+    useEffect(() => {
+        join();
+        return () => {
+            leave();
+        };
+    }, []);
+
+    // Sync mic toggle
+    const handleToggleMic = () => {
+        toggleContextMic();
+        sdkToggleMic();
+    };
+
+    // Sync cam toggle
+    const handleToggleCam = () => {
+        toggleContextCam();
+        sdkToggleWebcam();
+    };
 
     const partnerName = activeCallPartner.name || 'User';
     const initials = partnerName.slice(0, 2).toUpperCase();
     const partnerColor = activeCallPartner.color || '#00a884';
 
-    const showAvatarPlaceholder = !callIsVideo || (!remoteVideoAvailable && callStatus !== "Connected");
+    // Find remote participant (the participant that is not local)
+    const remoteParticipantId = localParticipant
+        ? [...participants.keys()].find((id) => id !== localParticipant.id)
+        : null;
 
     return (
         <div className="active-call-overlay">
@@ -83,20 +195,14 @@ export default function ActiveCallOverlay() {
 
                 {/* Call Stage */}
                 <div className="active-call-stage">
-                    {/* Remote Video */}
-                    <video
-                        ref={remoteVideoRef}
-                        autoPlay
-                        playsInline
-                        webkit-playsinline="true"
-                        style={{ display: showAvatarPlaceholder ? 'none' : 'block' }}
-                    />
-                    
-                    {/* Remote Audio element (Unmuted, guarantees audio playback even if video element fails) */}
-                    <audio ref={remoteAudioRef} autoPlay playsInline />
-
-                    {/* Remote Avatar Placeholder */}
-                    {showAvatarPlaceholder && (
+                    {remoteParticipantId ? (
+                        <RemoteParticipantView
+                            participantId={remoteParticipantId}
+                            partnerName={partnerName}
+                            partnerColor={partnerColor}
+                            callIsVideo={callIsVideo}
+                        />
+                    ) : (
                         <div className="remote-avatar-placeholder">
                             <div
                                 className="remote-avatar-large"
@@ -104,22 +210,22 @@ export default function ActiveCallOverlay() {
                             >
                                 {initials}
                             </div>
-                            <span>{callStatus === 'Connected' ? partnerName : `${partnerName} (${callStatus || 'Connecting...'})`}</span>
+                            <span>
+                                {callStatus === 'Connected'
+                                    ? `Connected with ${partnerName}`
+                                    : `${partnerName} (${callStatus || 'Calling...'})`}
+                            </span>
                         </div>
                     )}
 
                     {/* Local PiP Video Thumbnail */}
-                    <div className="local-pip-wrap">
-                        <video
-                            ref={localVideoRef}
-                            autoPlay
-                            playsInline
-                            webkit-playsinline="true"
-                            muted
-                            style={{ display: isVideoMuted ? 'none' : 'block' }}
+                    {localParticipant && (
+                        <LocalParticipantView
+                            participantId={localParticipant.id}
+                            isVideoMuted={isVideoMuted}
+                            callIsVideo={callIsVideo}
                         />
-                        <span className="pip-label">You</span>
-                    </div>
+                    )}
                 </div>
 
                 {/* In-Call Controls Dock */}
@@ -128,7 +234,7 @@ export default function ActiveCallOverlay() {
                         type="button"
                         className={`call-ctrl-btn ${isAudioMuted ? 'off' : 'active'}`}
                         title={isAudioMuted ? 'Unmute Mic' : 'Mute Mic'}
-                        onClick={toggleMic}
+                        onClick={handleToggleMic}
                     >
                         <span className="ctrl-icon">{isAudioMuted ? '🔇' : '🎙️'}</span>
                         <span className="ctrl-label">{isAudioMuted ? 'Unmute' : 'Mute'}</span>
@@ -139,7 +245,7 @@ export default function ActiveCallOverlay() {
                             type="button"
                             className={`call-ctrl-btn ${isVideoMuted ? 'off' : 'active'}`}
                             title={isVideoMuted ? 'Turn Camera On' : 'Turn Camera Off'}
-                            onClick={toggleCam}
+                            onClick={handleToggleCam}
                         >
                             <span className="ctrl-icon">{isVideoMuted ? '🚫' : '📹'}</span>
                             <span className="ctrl-label">{isVideoMuted ? 'Turn On' : 'Camera'}</span>
@@ -160,5 +266,51 @@ export default function ActiveCallOverlay() {
                 </div>
             </div>
         </div>
+    );
+}
+
+// Top-Level Overlay Wrapper (Only mounts MeetingProvider when meetingId & token are available)
+export default function ActiveCallOverlay() {
+    const { isCallActive, meetingId, videoSDKToken, isAudioMuted, isVideoMuted, callIsVideo } = useWebRTC();
+    const { user } = useAuth();
+
+    if (!isCallActive) return null;
+
+    if (!meetingId || !videoSDKToken) {
+        return (
+            <div className="active-call-overlay">
+                <div className="active-call-container">
+                    <div className="active-call-header">
+                        <div className="active-call-peer-info">
+                            <span className="call-status-dot"></span>
+                            <span>Setting up call connection...</span>
+                        </div>
+                    </div>
+                    <div className="active-call-stage">
+                        <div className="remote-avatar-placeholder">
+                            <div className="remote-avatar-large" style={{ backgroundColor: '#00a884' }}>
+                                📞
+                            </div>
+                            <span>Connecting via VideoSDK Cloud...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <MeetingProvider
+            config={{
+                meetingId,
+                micEnabled: !isAudioMuted,
+                webcamEnabled: callIsVideo && !isVideoMuted,
+                name: user?.username || "You",
+                mode: "CONFERENCE"
+            }}
+            token={videoSDKToken}
+        >
+            <VideoSDKCallStage />
+        </MeetingProvider>
     );
 }

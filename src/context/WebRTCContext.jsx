@@ -1,47 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useSocket } from './SocketContext';
+import { useAuth } from './AuthContext';
 
 const WebRTCContext = createContext(null);
 
-const RTC_CONFIG = {
-    iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" },
-        { urls: "stun:stun2.l.google.com:19302" },
-        { urls: "stun:stun3.l.google.com:19302" },
-        { urls: "stun:stun4.l.google.com:19302" },
-        { urls: "stun:stun.relay.metered.ca:80" },
-        {
-            urls: "turn:openrelay.metered.ca:80",
-            username: "openrelayproject",
-            credential: "openrelayproject"
-        },
-        {
-            urls: "turn:openrelay.metered.ca:443",
-            username: "openrelayproject",
-            credential: "openrelayproject"
-        },
-        {
-            urls: "turn:openrelay.metered.ca:443?transport=tcp",
-            username: "openrelayproject",
-            credential: "openrelayproject"
-        },
-        {
-            urls: "turn:staticauth.openrelay.metered.ca:80",
-            username: "openrelayproject",
-            credential: "openrelayproject"
-        },
-        {
-            urls: "turns:staticauth.openrelay.metered.ca:443",
-            username: "openrelayproject",
-            credential: "openrelayproject"
-        }
-    ],
-    iceCandidatePoolSize: 10
-};
-
 export function WebRTCProvider({ children }) {
     const { socket, currentChat, isSoundMuted, onlineUsers } = useSocket();
+    const { user, token: authToken } = useAuth();
 
     // Call States
     const [isCallActive, setIsCallActive] = useState(false);
@@ -53,25 +18,16 @@ export function WebRTCProvider({ children }) {
     const [isAudioMuted, setIsAudioMuted] = useState(false);
     const [isVideoMuted, setIsVideoMuted] = useState(false);
     const [isCompactMode, setIsCompactMode] = useState(false);
-    const [remoteVideoAvailable, setRemoteVideoAvailable] = useState(false);
 
-    // Media Streams in React State (Ensures components re-render and attach srcObject)
-    const [localStream, setLocalStream] = useState(null);
-    const [remoteStream, setRemoteStream] = useState(null);
+    // VideoSDK specific state
+    const [meetingId, setMeetingId] = useState(null);
+    const [videoSDKToken, setVideoSDKToken] = useState(null);
 
-    // Internal refs
-    const localVideoRef = useRef(null);
-    const remoteVideoRef = useRef(null);
-    const remoteAudioRef = useRef(null);
-    const peerConnectionRef = useRef(null);
-    const localStreamRef = useRef(null);
-    const remoteStreamRef = useRef(null);
-    const iceQueueRef = useRef([]);
+    // Refs
     const callTimerIntervalRef = useRef(null);
     const ringtoneAudioCtxRef = useRef(null);
     const ringtoneIntervalRef = useRef(null);
     const callSecondsRef = useRef(0);
-    const disconnectTimeoutRef = useRef(null);
 
     // Ringtone generator using Web Audio API
     const startRingtone = useCallback(() => {
@@ -143,154 +99,46 @@ export function WebRTCProvider({ children }) {
     const cleanupCall = useCallback(() => {
         stopRingtone();
         stopTimer();
-        clearTimeout(disconnectTimeoutRef.current);
-        disconnectTimeoutRef.current = null;
 
         setIsCallActive(false);
         setPendingIncomingCall(null);
         setActiveCallPartner({ id: null, name: '', color: '#00a884' });
-        iceQueueRef.current = [];
         setCallStatus('');
-        setRemoteVideoAvailable(false);
-
-        if (localStreamRef.current) {
-            localStreamRef.current.getTracks().forEach((t) => t.stop());
-            localStreamRef.current = null;
-        }
-        remoteStreamRef.current = null;
-        setLocalStream(null);
-        setRemoteStream(null);
-
-        if (peerConnectionRef.current) {
-            peerConnectionRef.current.close();
-            peerConnectionRef.current = null;
-        }
-
-        if (localVideoRef.current) localVideoRef.current.srcObject = null;
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
-        if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
+        setMeetingId(null);
+        setVideoSDKToken(null);
+        setIsAudioMuted(false);
+        setIsVideoMuted(false);
     }, [stopRingtone, stopTimer]);
 
     // End Call
     const endCall = useCallback((notifyRemote = true) => {
-        if (notifyRemote && activeCallPartner.id && socket) {
-            socket.emit("call-end", { to: activeCallPartner.id });
+        const currentMeetingId = meetingId;
+        const duration = callSecondsRef.current;
+        const partnerSocketId = activeCallPartner.id;
+
+        if (notifyRemote && partnerSocketId && socket) {
+            socket.emit("call-end", { to: partnerSocketId, roomId: currentMeetingId, durationSeconds: duration });
         }
+
+        if (currentMeetingId && authToken) {
+            fetch("/api/calls/update-status", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${authToken}`
+                },
+                body: JSON.stringify({
+                    roomId: currentMeetingId,
+                    status: "completed",
+                    durationSeconds: duration
+                })
+            }).catch(() => {});
+        }
+
         cleanupCall();
-    }, [activeCallPartner.id, socket, cleanupCall]);
+    }, [activeCallPartner.id, meetingId, authToken, socket, cleanupCall]);
 
-    // Get Media Stream with fallback
-    const getMediaStream = useCallback(async (isVideo) => {
-        try {
-            return await navigator.mediaDevices.getUserMedia({
-                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-                video: isVideo ? { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } } : false
-            });
-        } catch (err) {
-            console.warn("Retrying getUserMedia with basic constraints:", err);
-            return await navigator.mediaDevices.getUserMedia({
-                audio: true,
-                video: isVideo ? true : false
-            });
-        }
-    }, []);
-
-    // Flush ICE candidates
-    const flushIceQueue = useCallback(async () => {
-        while (iceQueueRef.current.length > 0) {
-            const cand = iceQueueRef.current.shift();
-            try {
-                if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
-                    await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(cand));
-                }
-            } catch (err) {
-                console.warn("Error adding queued ICE candidate:", err);
-            }
-        }
-    }, []);
-
-    // Create RTCPeerConnection
-    const createPeerConnection = useCallback((targetSocketId) => {
-        const pc = new RTCPeerConnection(RTC_CONFIG);
-        const unifiedRemoteStream = new MediaStream();
-        remoteStreamRef.current = unifiedRemoteStream;
-        setRemoteStream(unifiedRemoteStream);
-
-        pc.onicecandidate = (event) => {
-            if (event.candidate && socket) {
-                socket.emit("ice-candidate", {
-                    to: targetSocketId,
-                    candidate: event.candidate
-                });
-            }
-        };
-
-        pc.ontrack = (event) => {
-            console.log("[WebRTC] Track received:", event.track.kind);
-            unifiedRemoteStream.addTrack(event.track);
-
-            // Re-trigger stream reference in state
-            setRemoteStream(new MediaStream(unifiedRemoteStream.getTracks()));
-
-            if (event.track.kind === "video") {
-                setRemoteVideoAvailable(true);
-                event.track.onunmute = () => {
-                    console.log("[WebRTC] Video unmuted");
-                    setRemoteVideoAvailable(true);
-                    setRemoteStream(new MediaStream(unifiedRemoteStream.getTracks()));
-                };
-            }
-
-            if (event.track.kind === "audio") {
-                event.track.onunmute = () => {
-                    console.log("[WebRTC] Audio unmuted");
-                    setRemoteStream(new MediaStream(unifiedRemoteStream.getTracks()));
-                };
-            }
-        };
-
-        pc.oniceconnectionstatechange = () => {
-            console.log("[WebRTC] ICE state:", pc.iceConnectionState);
-            if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
-                clearTimeout(disconnectTimeoutRef.current);
-                setCallStatus("Connected");
-                startTimer();
-            }
-            if (pc.iceConnectionState === "disconnected") {
-                setCallStatus("Reconnecting...");
-                disconnectTimeoutRef.current = setTimeout(() => {
-                    if (peerConnectionRef.current?.iceConnectionState === "disconnected") {
-                        endCall(true);
-                    }
-                }, 15000);
-            }
-            if (pc.iceConnectionState === "failed") {
-                setCallStatus("Connection Failed");
-                disconnectTimeoutRef.current = setTimeout(() => {
-                    if (peerConnectionRef.current?.iceConnectionState === "failed") {
-                        endCall(true);
-                    }
-                }, 10000);
-            }
-        };
-
-        pc.onconnectionstatechange = () => {
-            console.log("[WebRTC] Connection state:", pc.connectionState);
-            if (pc.connectionState === "connected") {
-                clearTimeout(disconnectTimeoutRef.current);
-                setCallStatus("Connected");
-                startTimer();
-            }
-            if (pc.connectionState === "failed") {
-                endCall(true);
-            }
-        };
-
-        peerConnectionRef.current = pc;
-        return pc;
-    }, [socket, startTimer, endCall]);
-
-    // Initiate Call
+    // Initiate Call (Uses VideoSDK cloud room)
     const initiateCall = useCallback(async (isVideo, targetUser = null) => {
         if (isCallActive) return alert("A call is already active.");
 
@@ -307,12 +155,11 @@ export function WebRTCProvider({ children }) {
         );
 
         let partnerSocketId = targetUser?.id || currentChat?.partnerId || (onlineEntry ? onlineEntry.id : null);
+        if (onlineEntry) partnerSocketId = onlineEntry.id;
 
         if (!onlineEntry && !partnerSocketId) {
-            return alert(`${partnerName} is currently offline. Both users must be online to connect an audio/video call.`);
+            return alert(`${partnerName} is currently offline. Both users must be online to connect.`);
         }
-
-        partnerSocketId = onlineEntry ? onlineEntry.id : partnerSocketId;
 
         setActiveCallPartner({ id: partnerSocketId, name: partnerName, color: partnerColor });
         setCallIsVideo(isVideo);
@@ -320,34 +167,44 @@ export function WebRTCProvider({ children }) {
         setIsVideoMuted(!isVideo);
         setIsCallActive(true);
         setCallStatus(`Calling ${partnerName}...`);
-        iceQueueRef.current = [];
+        startRingtone();
 
         try {
-            const stream = await getMediaStream(isVideo);
-            localStreamRef.current = stream;
-            setLocalStream(stream);
-
-            const pc = createPeerConnection(partnerSocketId);
-            stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-
-            const offer = await pc.createOffer({
-                offerToReceiveAudio: true,
-                offerToReceiveVideo: true
+            // Request room creation from backend
+            const res = await fetch("/api/calls/create-room", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${authToken}`
+                },
+                body: JSON.stringify({
+                    receiverUsername: partnerName,
+                    callType: isVideo ? "video" : "audio"
+                })
             });
-            await pc.setLocalDescription(offer);
 
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || "Failed to create calling session");
+            }
+
+            const { roomId, token } = await res.json();
+            setMeetingId(roomId);
+            setVideoSDKToken(token);
+
+            // Signal recipient via Socket.IO
             socket?.emit("call-offer", {
                 to: partnerSocketId,
                 toUsername: partnerName,
-                offer: offer,
+                roomId: roomId,
                 isVideo: isVideo
             });
         } catch (err) {
-            console.error("Initiate call failed:", err);
+            console.error("Initiate call error:", err);
             cleanupCall();
-            alert("Could not access camera or microphone: " + err.message);
+            alert("Could not start call: " + err.message);
         }
-    }, [isCallActive, currentChat, onlineUsers, getMediaStream, createPeerConnection, socket, cleanupCall]);
+    }, [isCallActive, currentChat, onlineUsers, authToken, socket, startRingtone, cleanupCall]);
 
     // Accept Incoming Call
     const acceptCall = useCallback(async () => {
@@ -361,114 +218,78 @@ export function WebRTCProvider({ children }) {
         setIsAudioMuted(false);
         setIsVideoMuted(!data.isVideo);
         setIsCallActive(true);
-        setCallStatus("Connecting...");
+        setCallStatus("Connecting to VideoSDK...");
 
         try {
-            const stream = await getMediaStream(data.isVideo);
-            localStreamRef.current = stream;
-            setLocalStream(stream);
-
-            const pc = createPeerConnection(data.from);
-            stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-
-            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-            await flushIceQueue();
-
-            const answer = await pc.createAnswer({
-                offerToReceiveAudio: true,
-                offerToReceiveVideo: true
+            // Fetch participant token for this room
+            const res = await fetch(`/api/calls/token?roomId=${data.roomId}`, {
+                headers: { Authorization: `Bearer ${authToken}` }
             });
-            await pc.setLocalDescription(answer);
 
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || "Failed to fetch participant token");
+            }
+
+            const { token } = await res.json();
+            setMeetingId(data.roomId);
+            setVideoSDKToken(token);
+
+            // Notify caller that call was answered
             socket?.emit("call-answer", {
                 to: data.from,
-                answer: answer
+                roomId: data.roomId
             });
-
-            startTimer();
         } catch (err) {
             console.error("Accept call error:", err);
             cleanupCall();
-            socket?.emit("call-reject", { to: data.from });
-            alert("Failed to connect call: " + err.message);
+            socket?.emit("call-reject", { to: data.from, roomId: data.roomId, reason: "Token error" });
+            alert("Failed to join call: " + err.message);
         }
-    }, [pendingIncomingCall, stopRingtone, getMediaStream, createPeerConnection, flushIceQueue, socket, startTimer, cleanupCall]);
+    }, [pendingIncomingCall, stopRingtone, authToken, socket, cleanupCall]);
 
     // Decline Incoming Call
     const declineCall = useCallback(() => {
         stopRingtone();
         if (pendingIncomingCall && socket) {
-            socket.emit("call-reject", { to: pendingIncomingCall.from });
+            socket.emit("call-reject", { to: pendingIncomingCall.from, roomId: pendingIncomingCall.roomId, reason: "declined" });
         }
         setPendingIncomingCall(null);
     }, [stopRingtone, pendingIncomingCall, socket]);
 
-    // Toggle Mic
+    // Controls
     const toggleMic = useCallback(() => {
-        if (!localStreamRef.current) return;
-        const track = localStreamRef.current.getAudioTracks()[0];
-        if (track) {
-            const next = !track.enabled;
-            track.enabled = next;
-            setIsAudioMuted(!next);
-        }
+        setIsAudioMuted((prev) => !prev);
     }, []);
 
-    // Toggle Cam
     const toggleCam = useCallback(() => {
-        if (!localStreamRef.current) return;
-        const track = localStreamRef.current.getVideoTracks()[0];
-        if (track) {
-            const next = !track.enabled;
-            track.enabled = next;
-            setIsVideoMuted(!next);
-        }
+        setIsVideoMuted((prev) => !prev);
     }, []);
 
     const toggleCompact = useCallback(() => {
         setIsCompactMode((prev) => !prev);
     }, []);
 
-    // Socket Event Listeners for WebRTC Signaling
+    // Socket Event Listeners for Call Signaling
     useEffect(() => {
         if (!socket) return;
 
         const handleIncomingCall = (data) => {
             if (isCallActive) {
-                socket.emit("call-reject", { to: data.from });
+                socket.emit("call-reject", { to: data.from, roomId: data.roomId, reason: "busy" });
                 return;
             }
             setPendingIncomingCall(data);
             startRingtone();
         };
 
-        const handleCallAnswered = async (data) => {
-            if (peerConnectionRef.current && data.answer) {
-                try {
-                    await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
-                    await flushIceQueue();
-                    setCallStatus("Connected");
-                    startTimer();
-                } catch (err) {
-                    console.error("Error setting remote description:", err);
-                }
-            }
+        const handleCallAnswered = () => {
+            stopRingtone();
+            setCallStatus("Connecting...");
         };
 
-        const handleIceCandidate = async (data) => {
-            if (!data.candidate) return;
-            if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription && peerConnectionRef.current.remoteDescription.type) {
-                try {
-                    await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
-                } catch (err) {
-                    console.error("Error adding ICE candidate:", err);
-                }
-            } else {
-                iceQueueRef.current.push(data.candidate);
-            }
-        };
-
-        const handleCallRejected = () => {
+        const handleCallRejected = (data) => {
+            stopRingtone();
             alert(`${activeCallPartner.name || "User"} declined the call.`);
             cleanupCall();
         };
@@ -478,13 +299,13 @@ export function WebRTCProvider({ children }) {
         };
 
         const handleCallFailed = (data) => {
+            stopRingtone();
             alert(data.reason || "Call failed.");
             cleanupCall();
         };
 
         socket.on("incoming-call", handleIncomingCall);
         socket.on("call-answered", handleCallAnswered);
-        socket.on("ice-candidate", handleIceCandidate);
         socket.on("call-rejected", handleCallRejected);
         socket.on("call-ended", handleCallEnded);
         socket.on("call-failed", handleCallFailed);
@@ -492,12 +313,11 @@ export function WebRTCProvider({ children }) {
         return () => {
             socket.off("incoming-call", handleIncomingCall);
             socket.off("call-answered", handleCallAnswered);
-            socket.off("ice-candidate", handleIceCandidate);
             socket.off("call-rejected", handleCallRejected);
             socket.off("call-ended", handleCallEnded);
             socket.off("call-failed", handleCallFailed);
         };
-    }, [socket, isCallActive, activeCallPartner.name, startRingtone, flushIceQueue, startTimer, cleanupCall]);
+    }, [socket, isCallActive, activeCallPartner.name, startRingtone, stopRingtone, cleanupCall]);
 
     const value = {
         isCallActive,
@@ -505,16 +325,15 @@ export function WebRTCProvider({ children }) {
         activeCallPartner,
         callIsVideo,
         callStatus,
+        setCallStatus,
         callTimer,
+        startTimer,
+        stopTimer,
+        meetingId,
+        videoSDKToken,
         isAudioMuted,
         isVideoMuted,
         isCompactMode,
-        remoteVideoAvailable,
-        localStream,
-        remoteStream,
-        localVideoRef,
-        remoteVideoRef,
-        remoteAudioRef,
         initiateCall,
         acceptCall,
         declineCall,

@@ -1,8 +1,10 @@
+require("dotenv").config();
 const http = require("http");
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 const { Server } = require("socket.io");
 const db = require("./database");
 
@@ -13,6 +15,46 @@ const server = http.createServer(app);
 const io = new Server(server, {
     maxHttpBufferSize: 1e8 // Allow up to 100MB for image transfers
 });
+
+// VideoSDK Configuration
+const VIDEOSDK_API_KEY = process.env.VIDEOSDK_API_KEY;
+const VIDEOSDK_SECRET_KEY = process.env.VIDEOSDK_SECRET_KEY;
+
+function generateVideoSDKToken(roomId = null, participantId = null) {
+    if (!VIDEOSDK_API_KEY || !VIDEOSDK_SECRET_KEY) {
+        throw new Error("VideoSDK API credentials are not configured in environment variables");
+    }
+    const options = {
+        expiresIn: "24h",
+        algorithm: "HS256"
+    };
+    const payload = {
+        apikey: VIDEOSDK_API_KEY,
+        permissions: ["allow_join"],
+        version: 2
+    };
+    if (roomId) payload.roomId = roomId;
+    if (participantId) payload.participantId = participantId;
+    return jwt.sign(payload, VIDEOSDK_SECRET_KEY, options);
+}
+
+async function createVideoSDKRoom(token) {
+    const url = "https://api.videosdk.live/v2/rooms";
+    const response = await fetch(url, {
+        method: "POST",
+        headers: {
+            Authorization: token,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({})
+    });
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`VideoSDK room creation failed (${response.status}): ${errText}`);
+    }
+    const data = await response.json();
+    return data.roomId;
+}
 
 // Track connected users: socketId -> { username, color }
 const users = new Map();
@@ -254,8 +296,8 @@ io.on("connection", (socket) => {
         }
     });
 
-    // --- WebRTC 1-on-1 Audio / Video Calling Signaling ---
-    socket.on("call-offer", ({ to, toUsername, offer, isVideo }) => {
+    // --- VideoSDK & WebRTC 1-on-1 Audio / Video Calling Signaling ---
+    socket.on("call-offer", ({ to, toUsername, roomId, offer, isVideo }) => {
         const caller = users.get(socket.id);
         let targetSocketId = to;
         if ((!targetSocketId || !users.has(targetSocketId)) && toUsername) {
@@ -269,22 +311,24 @@ io.on("connection", (socket) => {
             from: socket.id,
             fromName: caller ? caller.username : "Caller",
             fromColor: caller ? caller.color : "#00a884",
-            offer,
+            roomId: roomId || null,
+            offer: offer || null,
             isVideo: Boolean(isVideo)
         });
     });
 
-    socket.on("call-answer", ({ to, answer }) => {
+    socket.on("call-answer", ({ to, roomId, answer }) => {
         if (to && users.has(to)) {
             socket.to(to).emit("call-answered", {
                 from: socket.id,
-                answer
+                roomId: roomId || null,
+                answer: answer || null
             });
         }
     });
 
     socket.on("ice-candidate", ({ to, candidate }) => {
-        if (to && candidate) {
+        if (to && candidate && users.has(to)) {
             socket.to(to).emit("ice-candidate", {
                 from: socket.id,
                 candidate
@@ -292,15 +336,21 @@ io.on("connection", (socket) => {
         }
     });
 
-    socket.on("call-reject", ({ to }) => {
+    socket.on("call-reject", ({ to, roomId, reason }) => {
         if (to && users.has(to)) {
-            socket.to(to).emit("call-rejected", { from: socket.id });
+            socket.to(to).emit("call-rejected", { from: socket.id, roomId, reason: reason || "declined" });
+        }
+        if (roomId) {
+            db.updateCallStatus(roomId, "rejected", 0).catch(() => {});
         }
     });
 
-    socket.on("call-end", ({ to }) => {
+    socket.on("call-end", ({ to, roomId, durationSeconds = 0 }) => {
         if (to && users.has(to)) {
-            socket.to(to).emit("call-ended", { from: socket.id });
+            socket.to(to).emit("call-ended", { from: socket.id, roomId });
+        }
+        if (roomId) {
+            db.updateCallStatus(roomId, "completed", durationSeconds).catch(() => {});
         }
     });
 
@@ -453,6 +503,94 @@ app.get("/api/chats/recent", async (req, res) => {
         return res.json({ chats });
     } catch (err) {
         return res.status(500).json({ error: "Failed to fetch recent chats" });
+    }
+});
+
+// Authentication Middleware
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ error: "Unauthorized: Missing authentication token" });
+    }
+    const token = authHeader.split(" ")[1];
+    const decoded = verifyToken(token);
+    if (!decoded) {
+        return res.status(401).json({ error: "Invalid or expired session" });
+    }
+    req.user = decoded;
+    next();
+}
+
+// --- VideoSDK Calling API Routes ---
+
+// Get secure VideoSDK participant token
+app.get("/api/calls/token", authenticateToken, (req, res) => {
+    try {
+        const roomId = req.query.roomId || null;
+        const participantId = req.user.username;
+        const token = generateVideoSDKToken(roomId, participantId);
+        return res.json({ token, participantId });
+    } catch (err) {
+        console.error("VideoSDK token error:", err);
+        return res.status(500).json({ error: err.message || "Failed to generate calling token" });
+    }
+});
+
+// Create VideoSDK meeting room for a 1-on-1 call
+app.post("/api/calls/create-room", authenticateToken, async (req, res) => {
+    try {
+        const { receiverUsername, callType = "video" } = req.body;
+        if (!receiverUsername) {
+            return res.status(400).json({ error: "receiverUsername is required" });
+        }
+
+        const callerUsername = req.user.username;
+        const callerToken = generateVideoSDKToken(null, callerUsername);
+        const roomId = await createVideoSDKRoom(callerToken);
+
+        // Record in DB
+        await db.logCall({
+            roomId,
+            callerUsername,
+            receiverUsername,
+            callType,
+            status: "initiated"
+        });
+
+        return res.json({
+            roomId,
+            token: callerToken,
+            callerUsername,
+            receiverUsername,
+            callType
+        });
+    } catch (err) {
+        console.error("VideoSDK create room error:", err);
+        return res.status(500).json({ error: err.message || "Failed to create calling room" });
+    }
+});
+
+// Update call status (completed, rejected, missed, failed)
+app.post("/api/calls/update-status", authenticateToken, async (req, res) => {
+    try {
+        const { roomId, status, durationSeconds = 0 } = req.body;
+        if (!roomId || !status) {
+            return res.status(400).json({ error: "roomId and status are required" });
+        }
+        await db.updateCallStatus(roomId, status, durationSeconds);
+        return res.json({ success: true });
+    } catch (err) {
+        return res.status(500).json({ error: "Failed to update call status" });
+    }
+});
+
+// Get call history
+app.get("/api/calls/history", authenticateToken, async (req, res) => {
+    try {
+        const history = await db.getCallLogs(req.user.username);
+        return res.json({ calls: history });
+    } catch (err) {
+        return res.status(500).json({ error: "Failed to fetch call history" });
     }
 });
 

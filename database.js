@@ -1,5 +1,6 @@
 require("dotenv").config();
 const path = require("path");
+const crypto = require("crypto");
 const { createClient } = require("@libsql/client");
 
 // Support both remote Turso URL or local chat.db file
@@ -49,9 +50,23 @@ async function initDb() {
                 created_at INTEGER
             );
         `);
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS call_logs (
+                id TEXT PRIMARY KEY,
+                room_id TEXT,
+                caller_username TEXT,
+                receiver_username TEXT,
+                call_type TEXT,
+                status TEXT,
+                duration_seconds INTEGER DEFAULT 0,
+                created_at INTEGER
+            );
+        `);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_username);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_call_logs_caller ON call_logs(caller_username);`);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_call_logs_receiver ON call_logs(receiver_username);`);
     } catch (err) {
         console.error("[Database] Initialization error:", err);
     }
@@ -275,6 +290,60 @@ async function getRecentChatsForUser(username) {
     }
 }
 
+async function logCall({ id, roomId, callerUsername, receiverUsername, callType, status = "initiated", durationSeconds = 0 }) {
+    try {
+        await db.execute({
+            sql: `
+                INSERT OR REPLACE INTO call_logs (
+                    id, room_id, caller_username, receiver_username,
+                    call_type, status, duration_seconds, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            args: [
+                id || crypto.randomUUID(),
+                roomId || null,
+                callerUsername,
+                receiverUsername,
+                callType || "video",
+                status,
+                durationSeconds || 0,
+                Date.now()
+            ]
+        });
+    } catch (err) {
+        console.error("Error logging call:", err);
+    }
+}
+
+async function updateCallStatus(id, status, durationSeconds = 0) {
+    try {
+        await db.execute({
+            sql: `UPDATE call_logs SET status = ?, duration_seconds = ? WHERE id = ? OR room_id = ?`,
+            args: [status, durationSeconds, id, id]
+        });
+    } catch (err) {
+        console.error("Error updating call status:", err);
+    }
+}
+
+async function getCallLogs(username) {
+    try {
+        const rs = await db.execute({
+            sql: `
+                SELECT * FROM call_logs
+                WHERE caller_username = ? OR receiver_username = ?
+                ORDER BY created_at DESC
+                LIMIT 50
+            `,
+            args: [username, username]
+        });
+        return rs.rows;
+    } catch (err) {
+        console.error("Error fetching call logs:", err);
+        return [];
+    }
+}
+
 module.exports = {
     saveMessage,
     deleteMessage,
@@ -284,5 +353,8 @@ module.exports = {
     createUser,
     getUserByUsername,
     getAllUsers,
-    getRecentChatsForUser
+    getRecentChatsForUser,
+    logCall,
+    updateCallStatus,
+    getCallLogs
 };
