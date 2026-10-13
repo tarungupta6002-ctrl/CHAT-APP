@@ -62,11 +62,29 @@ async function initDb() {
                 created_at INTEGER
             );
         `);
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS otps (
+                id TEXT PRIMARY KEY,
+                email TEXT NOT NULL COLLATE NOCASE,
+                otp_hash TEXT NOT NULL,
+                purpose TEXT NOT NULL,
+                payload TEXT,
+                attempts INTEGER DEFAULT 0,
+                expires_at INTEGER NOT NULL,
+                created_at INTEGER NOT NULL
+            );
+        `);
+        try { await db.execute(`ALTER TABLE users ADD COLUMN full_name TEXT;`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE users ADD COLUMN email TEXT;`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 1;`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE users ADD COLUMN google_id TEXT;`); } catch (_) {}
+
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_username);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_call_logs_caller ON call_logs(caller_username);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_call_logs_receiver ON call_logs(receiver_username);`);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_otps_email ON otps(email);`);
     } catch (err) {
         console.error("[Database] Initialization error:", err);
     }
@@ -206,13 +224,24 @@ function mapRowToMessage(row) {
 }
 
 // User Authentication & Management Queries
-async function createUser(id, username, passwordHash, avatarColor) {
+async function createUser({ id, fullName = "", email = "", username, passwordHash = "", avatarColor = "#10b981", googleId = null, isVerified = 1 }) {
     try {
+        const userId = id || `u_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
         await db.execute({
-            sql: `INSERT INTO users (id, username, password_hash, avatar_color, created_at) VALUES (?, ?, ?, ?, ?)`,
-            args: [id, username, passwordHash, avatarColor, Date.now()]
+            sql: `
+                INSERT INTO users (id, full_name, email, username, password_hash, avatar_color, google_id, is_verified, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            args: [userId, fullName, email.toLowerCase(), username, passwordHash, avatarColor, googleId, isVerified, Date.now()]
         });
-        return { id, username, color: avatarColor };
+        return {
+            id: userId,
+            fullName,
+            email: email.toLowerCase(),
+            username,
+            color: avatarColor,
+            isVerified
+        };
     } catch (err) {
         console.error("Error creating user in DB:", err);
         throw err;
@@ -229,14 +258,195 @@ async function getUserByUsername(username) {
         const row = rs.rows[0];
         return {
             id: row.id,
+            fullName: row.full_name || row.username,
+            email: row.email,
             username: row.username,
             passwordHash: row.password_hash,
             color: row.avatar_color,
+            isVerified: row.is_verified,
+            googleId: row.google_id,
             createdAt: row.created_at
         };
     } catch (err) {
         console.error("Error fetching user by username:", err);
         return null;
+    }
+}
+
+async function getUserByEmail(email) {
+    if (!email) return null;
+    try {
+        const rs = await db.execute({
+            sql: `SELECT * FROM users WHERE email = ? COLLATE NOCASE LIMIT 1`,
+            args: [email.toLowerCase().trim()]
+        });
+        if (rs.rows.length === 0) return null;
+        const row = rs.rows[0];
+        return {
+            id: row.id,
+            fullName: row.full_name || row.username,
+            email: row.email,
+            username: row.username,
+            passwordHash: row.password_hash,
+            color: row.avatar_color,
+            isVerified: row.is_verified,
+            googleId: row.google_id,
+            createdAt: row.created_at
+        };
+    } catch (err) {
+        console.error("Error fetching user by email:", err);
+        return null;
+    }
+}
+
+async function getUserByIdentifier(identifier) {
+    if (!identifier) return null;
+    const clean = identifier.trim().toLowerCase();
+    try {
+        const rs = await db.execute({
+            sql: `SELECT * FROM users WHERE username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE LIMIT 1`,
+            args: [clean, clean]
+        });
+        if (rs.rows.length === 0) return null;
+        const row = rs.rows[0];
+        return {
+            id: row.id,
+            fullName: row.full_name || row.username,
+            email: row.email,
+            username: row.username,
+            passwordHash: row.password_hash,
+            color: row.avatar_color,
+            isVerified: row.is_verified,
+            googleId: row.google_id,
+            createdAt: row.created_at
+        };
+    } catch (err) {
+        console.error("Error fetching user by identifier:", err);
+        return null;
+    }
+}
+
+async function getUserByGoogleId(googleId) {
+    if (!googleId) return null;
+    try {
+        const rs = await db.execute({
+            sql: `SELECT * FROM users WHERE google_id = ? LIMIT 1`,
+            args: [googleId]
+        });
+        if (rs.rows.length === 0) return null;
+        const row = rs.rows[0];
+        return {
+            id: row.id,
+            fullName: row.full_name || row.username,
+            email: row.email,
+            username: row.username,
+            color: row.avatar_color,
+            isVerified: row.is_verified,
+            googleId: row.google_id,
+            createdAt: row.created_at
+        };
+    } catch (err) {
+        console.error("Error fetching user by googleId:", err);
+        return null;
+    }
+}
+
+async function updateUserPassword(userId, newPasswordHash) {
+    try {
+        await db.execute({
+            sql: `UPDATE users SET password_hash = ? WHERE id = ?`,
+            args: [newPasswordHash, userId]
+        });
+        return true;
+    } catch (err) {
+        console.error("Error updating password in DB:", err);
+        return false;
+    }
+}
+
+async function linkGoogleAccount(userId, googleId) {
+    try {
+        await db.execute({
+            sql: `UPDATE users SET google_id = ?, is_verified = 1 WHERE id = ?`,
+            args: [googleId, userId]
+        });
+        return true;
+    } catch (err) {
+        console.error("Error linking google account:", err);
+        return false;
+    }
+}
+
+// --- OTP Management Queries ---
+async function saveOtp({ email, otpHash, purpose, payload = null, expiresInMinutes = 5 }) {
+    try {
+        const cleanEmail = email.toLowerCase().trim();
+        // Clear previous active OTPs for this email & purpose
+        await db.execute({
+            sql: `DELETE FROM otps WHERE email = ? AND purpose = ?`,
+            args: [cleanEmail, purpose]
+        });
+
+        const id = `otp_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+        const expiresAt = Date.now() + expiresInMinutes * 60 * 1000;
+        await db.execute({
+            sql: `
+                INSERT INTO otps (id, email, otp_hash, purpose, payload, attempts, expires_at, created_at)
+                VALUES (?, ?, ?, ?, ?, 0, ?, ?)
+            `,
+            args: [id, cleanEmail, otpHash, purpose, payload ? JSON.stringify(payload) : null, expiresAt, Date.now()]
+        });
+        return { id, email: cleanEmail, expiresAt };
+    } catch (err) {
+        console.error("Error saving OTP:", err);
+        throw err;
+    }
+}
+
+async function getLatestOtp(email, purpose) {
+    try {
+        const cleanEmail = email.toLowerCase().trim();
+        const rs = await db.execute({
+            sql: `SELECT * FROM otps WHERE email = ? AND purpose = ? AND expires_at > ? ORDER BY created_at DESC LIMIT 1`,
+            args: [cleanEmail, purpose, Date.now()]
+        });
+        if (rs.rows.length === 0) return null;
+        const row = rs.rows[0];
+        return {
+            id: row.id,
+            email: row.email,
+            otpHash: row.otp_hash,
+            purpose: row.purpose,
+            payload: row.payload ? JSON.parse(row.payload) : null,
+            attempts: row.attempts,
+            expiresAt: row.expires_at,
+            createdAt: row.created_at
+        };
+    } catch (err) {
+        console.error("Error fetching latest OTP:", err);
+        return null;
+    }
+}
+
+async function incrementOtpAttempts(id) {
+    try {
+        await db.execute({
+            sql: `UPDATE otps SET attempts = attempts + 1 WHERE id = ?`,
+            args: [id]
+        });
+    } catch (err) {
+        console.error("Error incrementing OTP attempts:", err);
+    }
+}
+
+async function deleteOtp(id) {
+    try {
+        await db.execute({
+            sql: `DELETE FROM otps WHERE id = ?`,
+            args: [id]
+        });
+    } catch (err) {
+        console.error("Error deleting OTP:", err);
     }
 }
 
@@ -352,9 +562,18 @@ module.exports = {
     getDmHistory,
     createUser,
     getUserByUsername,
+    getUserByEmail,
+    getUserByIdentifier,
+    getUserByGoogleId,
+    updateUserPassword,
+    linkGoogleAccount,
     getAllUsers,
     getRecentChatsForUser,
     logCall,
     updateCallStatus,
-    getCallLogs
+    getCallLogs,
+    saveOtp,
+    getLatestOtp,
+    incrementOtpAttempts,
+    deleteOtp
 };

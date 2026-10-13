@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const { Server } = require("socket.io");
 const db = require("./database");
+const { sendOtpEmail } = require("./emailService");
 
 const app = express();
 app.use(express.json());
@@ -385,9 +386,19 @@ function verifyPassword(password, stored) {
     return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(check, "hex"));
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || "pulsechat-secret-token-key-2026";
+const JWT_SECRET = process.env.JWT_SECRET || "chathub-secret-token-key-2026";
+
+function hashOtp(otp) {
+    return crypto.createHmac("sha256", JWT_SECRET).update(String(otp).trim()).digest("hex");
+}
+
 function createToken(user) {
-    const payload = JSON.stringify({ id: user.id, username: user.username, exp: Date.now() + 30 * 24 * 3600 * 1000 });
+    const payload = JSON.stringify({
+        id: user.id,
+        username: user.username,
+        email: user.email || null,
+        exp: Date.now() + 30 * 24 * 3600 * 1000
+    });
     const b64 = Buffer.from(payload).toString("base64url");
     const sig = crypto.createHmac("sha256", JWT_SECRET).update(b64).digest("base64url");
     return `${b64}.${sig}`;
@@ -407,7 +418,447 @@ function verifyToken(token) {
     }
 }
 
-// --- REST API Endpoints ---
+function createResetToken(email) {
+    const payload = JSON.stringify({
+        email: email.toLowerCase().trim(),
+        purpose: "password_reset",
+        exp: Date.now() + 15 * 60 * 1000 // 15 min expiry
+    });
+    const b64 = Buffer.from(payload).toString("base64url");
+    const sig = crypto.createHmac("sha256", JWT_SECRET).update(b64).digest("base64url");
+    return `${b64}.${sig}`;
+}
+
+function verifyResetToken(token) {
+    if (!token || !token.includes(".")) return null;
+    const [b64, sig] = token.split(".");
+    const checkSig = crypto.createHmac("sha256", JWT_SECRET).update(b64).digest("base64url");
+    if (sig !== checkSig) return null;
+    try {
+        const data = JSON.parse(Buffer.from(b64, "base64url").toString("utf-8"));
+        if (data.exp < Date.now() || data.purpose !== "password_reset") return null;
+        return data;
+    } catch (e) {
+        return null;
+    }
+}
+
+// --- REST API Authentication Endpoints ---
+
+// 1. Send Registration OTP
+app.post("/api/auth/send-signup-otp", async (req, res) => {
+    try {
+        const { fullName, email, username, password } = req.body;
+
+        if (!fullName || typeof fullName !== "string" || fullName.trim().length < 2) {
+            return res.status(400).json({ error: "Please enter your full name." });
+        }
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+            return res.status(400).json({ error: "Please enter a valid email address." });
+        }
+        if (!username || typeof username !== "string" || username.trim().length < 3) {
+            return res.status(400).json({ error: "Username must be at least 3 characters." });
+        }
+        if (!password || typeof password !== "string" || password.length < 6) {
+            return res.status(400).json({ error: "Password must be at least 6 characters." });
+        }
+
+        const cleanEmail = email.trim().toLowerCase();
+        const cleanUsername = username.trim().slice(0, 25);
+
+        // Check for existing users
+        const existingUsername = await db.getUserByUsername(cleanUsername);
+        if (existingUsername) {
+            return res.status(409).json({ error: "This username is already taken. Please choose another." });
+        }
+        const existingEmail = await db.getUserByEmail(cleanEmail);
+        if (existingEmail) {
+            return res.status(409).json({ error: "An account with this email already exists. Please log in." });
+        }
+
+        // Generate cryptographically secure random 6-digit OTP
+        const otpCode = crypto.randomInt(100000, 999999).toString();
+        const otpHash = hashOtp(otpCode);
+        const pwdHash = hashPassword(password);
+        const avatarColor = getRandomColor();
+
+        // Store OTP with registration payload (User is only created upon OTP verification)
+        await db.saveOtp({
+            email: cleanEmail,
+            otpHash,
+            purpose: "signup",
+            payload: {
+                fullName: fullName.trim(),
+                username: cleanUsername,
+                passwordHash: pwdHash,
+                avatarColor
+            },
+            expiresInMinutes: 5
+        });
+
+        // Send OTP email
+        await sendOtpEmail({
+            toEmail: cleanEmail,
+            otpCode,
+            purpose: "signup"
+        });
+
+        return res.json({
+            success: true,
+            message: "A 6-digit verification code has been sent to your email.",
+            email: cleanEmail
+        });
+    } catch (err) {
+        console.error("send-signup-otp error:", err);
+        return res.status(500).json({ error: "Failed to send verification code. Please try again." });
+    }
+});
+
+// 2. Verify Registration OTP and Create User
+app.post("/api/auth/verify-signup-otp", async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        if (!email || !otp) {
+            return res.status(400).json({ error: "Email and 6-digit verification code are required." });
+        }
+
+        const cleanEmail = email.trim().toLowerCase();
+        const otpRecord = await db.getLatestOtp(cleanEmail, "signup");
+
+        if (!otpRecord) {
+            return res.status(400).json({ error: "Verification code has expired or is invalid. Please request a new code." });
+        }
+
+        if (otpRecord.attempts >= 5) {
+            await db.deleteOtp(otpRecord.id);
+            return res.status(429).json({ error: "Too many failed attempts. Please request a new code." });
+        }
+
+        const submittedHash = hashOtp(otp);
+        if (submittedHash !== otpRecord.otpHash) {
+            await db.incrementOtpAttempts(otpRecord.id);
+            return res.status(400).json({ error: "Incorrect verification code. Please check and try again." });
+        }
+
+        // OTP verified successfully -> Activate/Create User
+        const payload = otpRecord.payload;
+        if (!payload) {
+            return res.status(400).json({ error: "Invalid registration state. Please register again." });
+        }
+
+        // Delete used OTP
+        await db.deleteOtp(otpRecord.id);
+
+        // Check once more for race condition on username or email
+        const clash = await db.getUserByUsername(payload.username);
+        if (clash) {
+            return res.status(409).json({ error: "Username already taken." });
+        }
+
+        const user = await db.createUser({
+            fullName: payload.fullName,
+            email: cleanEmail,
+            username: payload.username,
+            passwordHash: payload.passwordHash,
+            avatarColor: payload.avatarColor,
+            isVerified: 1
+        });
+
+        const token = createToken(user);
+
+        return res.status(201).json({
+            success: true,
+            user: {
+                id: user.id,
+                username: user.username,
+                fullName: user.fullName,
+                email: user.email,
+                color: user.color
+            },
+            token
+        });
+    } catch (err) {
+        console.error("verify-signup-otp error:", err);
+        return res.status(500).json({ error: "Verification failed. Please try again." });
+    }
+});
+
+// 3. Resend OTP (for signup or forgot_password)
+app.post("/api/auth/resend-otp", async (req, res) => {
+    try {
+        const { email, purpose = "signup" } = req.body;
+        if (!email) {
+            return res.status(400).json({ error: "Email is required." });
+        }
+
+        const cleanEmail = email.trim().toLowerCase();
+        const existingRecord = await db.getLatestOtp(cleanEmail, purpose);
+
+        // Rate limit: Enforce at least 30 seconds cooldown between resends
+        if (existingRecord && (Date.now() - existingRecord.createdAt) < 30 * 1000) {
+            const waitSeconds = Math.ceil((30 * 1000 - (Date.now() - existingRecord.createdAt)) / 1000);
+            return res.status(429).json({ error: `Please wait ${waitSeconds} seconds before requesting a new code.` });
+        }
+
+        const newOtpCode = crypto.randomInt(100000, 999999).toString();
+        const newOtpHash = hashOtp(newOtpCode);
+
+        // Preserve previous payload if signup
+        const payload = existingRecord ? existingRecord.payload : null;
+
+        await db.saveOtp({
+            email: cleanEmail,
+            otpHash: newOtpHash,
+            purpose,
+            payload,
+            expiresInMinutes: 5
+        });
+
+        await sendOtpEmail({
+            toEmail: cleanEmail,
+            otpCode: newOtpCode,
+            purpose
+        });
+
+        return res.json({
+            success: true,
+            message: "A new verification code has been sent to your email."
+        });
+    } catch (err) {
+        console.error("resend-otp error:", err);
+        return res.status(500).json({ error: "Failed to resend code. Please try again." });
+    }
+});
+
+// 4. Login (Supports Username OR Email)
+app.post("/api/auth/login", async (req, res) => {
+    try {
+        const { identifier, username, password } = req.body;
+        const loginId = (identifier || username || "").trim();
+
+        if (!loginId || !password) {
+            return res.status(400).json({ error: "Username/Email and password are required." });
+        }
+
+        const user = await db.getUserByIdentifier(loginId);
+        if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
+            return res.status(401).json({ error: "Invalid username/email or password." });
+        }
+
+        const token = createToken(user);
+        return res.json({
+            user: {
+                id: user.id,
+                username: user.username,
+                fullName: user.fullName || user.username,
+                email: user.email,
+                color: user.color
+            },
+            token
+        });
+    } catch (err) {
+        console.error("Login error:", err);
+        return res.status(500).json({ error: "Login failed. Please try again." });
+    }
+});
+
+// 5. Forgot Password - Request Recovery OTP
+app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+            return res.status(400).json({ error: "Please enter a valid email address." });
+        }
+
+        const cleanEmail = email.trim().toLowerCase();
+        const user = await db.getUserByEmail(cleanEmail);
+
+        // For security, generic response is returned even if account doesn't exist
+        if (user) {
+            const otpCode = crypto.randomInt(100000, 999999).toString();
+            const otpHash = hashOtp(otpCode);
+
+            await db.saveOtp({
+                email: cleanEmail,
+                otpHash,
+                purpose: "forgot_password",
+                payload: { userId: user.id },
+                expiresInMinutes: 5
+            });
+
+            await sendOtpEmail({
+                toEmail: cleanEmail,
+                otpCode,
+                purpose: "forgot_password"
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: "If an account with that email exists, a password reset code has been sent."
+        });
+    } catch (err) {
+        console.error("forgot-password error:", err);
+        return res.status(500).json({ error: "Could not process password recovery. Please try again." });
+    }
+});
+
+// 6. Verify Forgot Password OTP
+app.post("/api/auth/verify-reset-otp", async (req, res) => {
+    try {
+        const { email, otp } = req.body;
+        if (!email || !otp) {
+            return res.status(400).json({ error: "Email and verification code are required." });
+        }
+
+        const cleanEmail = email.trim().toLowerCase();
+        const otpRecord = await db.getLatestOtp(cleanEmail, "forgot_password");
+
+        if (!otpRecord) {
+            return res.status(400).json({ error: "Reset code has expired or is invalid. Please request a new code." });
+        }
+
+        if (otpRecord.attempts >= 5) {
+            await db.deleteOtp(otpRecord.id);
+            return res.status(429).json({ error: "Too many failed attempts. Please request a new reset code." });
+        }
+
+        const submittedHash = hashOtp(otp);
+        if (submittedHash !== otpRecord.otpHash) {
+            await db.incrementOtpAttempts(otpRecord.id);
+            return res.status(400).json({ error: "Incorrect verification code." });
+        }
+
+        // Delete used OTP
+        await db.deleteOtp(otpRecord.id);
+
+        // Issue short-lived, single-use password-reset authorization token
+        const resetToken = createResetToken(cleanEmail);
+
+        return res.json({
+            success: true,
+            resetToken
+        });
+    } catch (err) {
+        console.error("verify-reset-otp error:", err);
+        return res.status(500).json({ error: "Failed to verify reset code." });
+    }
+});
+
+// 7. Reset Password with Reset Token
+app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+        const { email, resetToken, newPassword } = req.body;
+        if (!email || !resetToken || !newPassword) {
+            return res.status(400).json({ error: "Email, reset token and new password are required." });
+        }
+
+        if (typeof newPassword !== "string" || newPassword.length < 6) {
+            return res.status(400).json({ error: "New password must be at least 6 characters." });
+        }
+
+        const cleanEmail = email.trim().toLowerCase();
+        const decoded = verifyResetToken(resetToken);
+
+        if (!decoded || decoded.email !== cleanEmail) {
+            return res.status(401).json({ error: "Password reset authorization has expired. Please restart the recovery process." });
+        }
+
+        const user = await db.getUserByEmail(cleanEmail);
+        if (!user) {
+            return res.status(404).json({ error: "Account not found." });
+        }
+
+        const newHash = hashPassword(newPassword);
+        await db.updateUserPassword(user.id, newHash);
+
+        return res.json({
+            success: true,
+            message: "Your password has been reset successfully. Please log in with your new password."
+        });
+    } catch (err) {
+        console.error("reset-password error:", err);
+        return res.status(500).json({ error: "Failed to reset password. Please try again." });
+    }
+});
+
+// 8. Google Authentication (Google Identity Services)
+app.post("/api/auth/google", async (req, res) => {
+    try {
+        const { credential } = req.body;
+        if (!credential) {
+            return res.status(400).json({ error: "Google credential token is required." });
+        }
+
+        // Verify token with Google's tokeninfo API
+        const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+        if (!googleRes.ok) {
+            return res.status(401).json({ error: "Invalid Google authentication token." });
+        }
+
+        const payload = await googleRes.json();
+        const googleId = payload.sub;
+        const email = payload.email?.toLowerCase();
+        const fullName = payload.name || "Google User";
+        const emailVerified = payload.email_verified === "true" || payload.email_verified === true;
+
+        if (!googleId || !email || !emailVerified) {
+            return res.status(400).json({ error: "Unverified Google account or missing email." });
+        }
+
+        // 1. Check if user already exists by googleId
+        let user = await db.getUserByGoogleId(googleId);
+
+        // 2. If not, check if user exists by verified email
+        if (!user) {
+            user = await db.getUserByEmail(email);
+            if (user) {
+                // Safely link Google ID to existing verified account
+                await db.linkGoogleAccount(user.id, googleId);
+            }
+        }
+
+        // 3. First time user: Create user record
+        if (!user) {
+            // Generate unique username from email prefix
+            let baseUsername = email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").slice(0, 15);
+            if (baseUsername.length < 3) baseUsername = "user";
+            let chosenUsername = baseUsername;
+            let count = 1;
+            while (await db.getUserByUsername(chosenUsername)) {
+                chosenUsername = `${baseUsername}${count++}`;
+            }
+
+            user = await db.createUser({
+                fullName,
+                email,
+                username: chosenUsername,
+                passwordHash: "",
+                avatarColor: getRandomColor(),
+                googleId,
+                isVerified: 1
+            });
+        }
+
+        const token = createToken(user);
+        return res.json({
+            success: true,
+            user: {
+                id: user.id,
+                username: user.username,
+                fullName: user.fullName || user.username,
+                email: user.email,
+                color: user.color
+            },
+            token
+        });
+    } catch (err) {
+        console.error("Google auth error:", err);
+        return res.status(500).json({ error: "Google sign-in failed. Please try again." });
+    }
+});
+
+// 9. Legacy register fallback
 app.post("/api/auth/register", async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -424,11 +875,15 @@ app.post("/api/auth/register", async (req, res) => {
             return res.status(409).json({ error: "Username already exists. Please pick another one or log in." });
         }
 
-        const id = `u_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
         const pwdHash = hashPassword(password);
-        const avatarColor = getRandomColor();
-
-        const user = await db.createUser(id, cleanUsername, pwdHash, avatarColor);
+        const user = await db.createUser({
+            fullName: cleanUsername,
+            email: `${cleanUsername}@local.pulse`,
+            username: cleanUsername,
+            passwordHash: pwdHash,
+            avatarColor: getRandomColor(),
+            isVerified: 1
+        });
         const token = createToken(user);
 
         return res.status(201).json({
@@ -436,35 +891,12 @@ app.post("/api/auth/register", async (req, res) => {
             token
         });
     } catch (err) {
-        console.error("Register error:", err);
+        console.error("Legacy register error:", err);
         return res.status(500).json({ error: "Registration failed. Please try again." });
     }
 });
 
-app.post("/api/auth/login", async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        if (!username || !password) {
-            return res.status(400).json({ error: "Username and password are required." });
-        }
-
-        const cleanUsername = username.trim();
-        const user = await db.getUserByUsername(cleanUsername);
-        if (!user || !verifyPassword(password, user.passwordHash)) {
-            return res.status(401).json({ error: "Invalid username or password." });
-        }
-
-        const token = createToken(user);
-        return res.json({
-            user: { id: user.id, username: user.username, color: user.color },
-            token
-        });
-    } catch (err) {
-        console.error("Login error:", err);
-        return res.status(500).json({ error: "Login failed." });
-    }
-});
-
+// 10. Get current authenticated user
 app.get("/api/auth/me", async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -482,7 +914,13 @@ app.get("/api/auth/me", async (req, res) => {
     }
 
     return res.json({
-        user: { id: user.id, username: user.username, color: user.color }
+        user: {
+            id: user.id,
+            username: user.username,
+            fullName: user.fullName || user.username,
+            email: user.email,
+            color: user.color
+        }
     });
 });
 

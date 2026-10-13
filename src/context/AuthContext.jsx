@@ -5,19 +5,65 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(() => {
         try {
-            const saved = localStorage.getItem("pulse_user");
+            const saved = localStorage.getItem("chathub_user") || localStorage.getItem("pulse_user");
             return saved ? JSON.parse(saved) : null;
         } catch (e) {
             return null;
         }
     });
 
-    const [token, setToken] = useState(() => localStorage.getItem("pulse_token") || null);
+    const [token, setToken] = useState(() => localStorage.getItem("chathub_token") || localStorage.getItem("pulse_token") || null);
     const [isLoading, setIsLoading] = useState(true);
-    // currentView: 'landing' | 'auth' | 'chat'
+
+    // Navigation View State: 'landing' | 'login' | 'signup' | 'verify-otp' | 'forgot-password' | 'reset-password' | 'chat'
     const [currentView, setCurrentView] = useState(() => {
-        return localStorage.getItem("pulse_token") ? 'chat' : 'landing';
+        const path = window.location.pathname.toLowerCase();
+        const hasToken = localStorage.getItem("chathub_token") || localStorage.getItem("pulse_token");
+        if (hasToken) return 'chat';
+        if (path === '/signup') return 'signup';
+        if (path === '/login') return 'login';
+        if (path === '/forgot-password') return 'forgot-password';
+        if (path === '/verify-otp') return 'verify-otp';
+        return 'landing';
     });
+
+    // OTP / Password recovery context states
+    const [pendingEmail, setPendingEmail] = useState('');
+    const [pendingPurpose, setPendingPurpose] = useState('signup'); // 'signup' | 'forgot_password'
+    const [resetToken, setResetToken] = useState('');
+
+    // URL synchronizer
+    const navigateTo = useCallback((view) => {
+        setCurrentView(view);
+        try {
+            let path = '/';
+            if (view === 'signup') path = '/signup';
+            else if (view === 'login') path = '/login';
+            else if (view === 'forgot-password') path = '/forgot-password';
+            else if (view === 'verify-otp') path = '/verify-otp';
+            else if (view === 'reset-password') path = '/reset-password';
+            else if (view === 'landing') path = '/';
+            window.history.pushState({}, '', path);
+        } catch (e) {}
+    }, []);
+
+    // Listen to browser popstate (Back/Forward buttons)
+    useEffect(() => {
+        const handlePopState = () => {
+            const path = window.location.pathname.toLowerCase();
+            if (token) {
+                setCurrentView('chat');
+                return;
+            }
+            if (path === '/signup') setCurrentView('signup');
+            else if (path === '/login') setCurrentView('login');
+            else if (path === '/forgot-password') setCurrentView('forgot-password');
+            else if (path === '/verify-otp') setCurrentView('verify-otp');
+            else setCurrentView('landing');
+        };
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [token]);
 
     // Check existing session on load
     useEffect(() => {
@@ -33,9 +79,9 @@ export function AuthProvider({ children }) {
                 if (res.ok) {
                     const data = await res.json();
                     setUser(data.user);
-                    localStorage.setItem("pulse_user", JSON.stringify(data.user));
+                    localStorage.setItem("chathub_user", JSON.stringify(data.user));
+                    setCurrentView('chat');
                 } else {
-                    // Invalid/expired token
                     logout();
                 }
             } catch (err) {
@@ -47,51 +93,162 @@ export function AuthProvider({ children }) {
         verifySession();
     }, [token]);
 
-    const login = useCallback(async (username, password) => {
+    // 1. Login with identifier (username or email) and password
+    const login = useCallback(async (identifier, password) => {
         const res = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ identifier, password })
         });
         const data = await res.json();
         if (!res.ok) {
-            throw new Error(data.error || 'Login failed');
+            throw new Error(data.error || 'Login failed. Please check your credentials.');
         }
 
         setUser(data.user);
         setToken(data.token);
-        localStorage.setItem("pulse_user", JSON.stringify(data.user));
-        localStorage.setItem("pulse_token", data.token);
-        setCurrentView('chat');
+        localStorage.setItem("chathub_user", JSON.stringify(data.user));
+        localStorage.setItem("chathub_token", data.token);
+        navigateTo('chat');
         return data.user;
-    }, []);
+    }, [navigateTo]);
 
-    const register = useCallback(async (username, password) => {
-        const res = await fetch('/api/auth/register', {
+    // 2. Send Registration OTP
+    const sendSignupOtp = useCallback(async ({ fullName, email, username, password }) => {
+        const res = await fetch('/api/auth/send-signup-otp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ fullName, email, username, password })
         });
         const data = await res.json();
         if (!res.ok) {
-            throw new Error(data.error || 'Registration failed');
+            throw new Error(data.error || 'Failed to send verification code.');
+        }
+
+        setPendingEmail(email);
+        setPendingPurpose('signup');
+        navigateTo('verify-otp');
+        return data;
+    }, [navigateTo]);
+
+    // 3. Verify Registration OTP
+    const verifySignupOtp = useCallback(async ({ email, otp }) => {
+        const res = await fetch('/api/auth/verify-signup-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, otp })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || 'Verification code failed.');
         }
 
         setUser(data.user);
         setToken(data.token);
-        localStorage.setItem("pulse_user", JSON.stringify(data.user));
-        localStorage.setItem("pulse_token", data.token);
-        setCurrentView('chat');
+        localStorage.setItem("chathub_user", JSON.stringify(data.user));
+        localStorage.setItem("chathub_token", data.token);
+        setPendingEmail('');
+        navigateTo('chat');
         return data.user;
+    }, [navigateTo]);
+
+    // 4. Resend OTP
+    const resendOtp = useCallback(async ({ email, purpose = 'signup' }) => {
+        const res = await fetch('/api/auth/resend-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, purpose })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || 'Failed to resend code.');
+        }
+        return data;
     }, []);
 
+    // 5. Forgot Password - Request Recovery OTP
+    const forgotPassword = useCallback(async ({ email }) => {
+        const res = await fetch('/api/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || 'Failed to request password reset.');
+        }
+
+        setPendingEmail(email);
+        setPendingPurpose('forgot_password');
+        navigateTo('verify-otp');
+        return data;
+    }, [navigateTo]);
+
+    // 6. Verify Reset OTP
+    const verifyResetOtp = useCallback(async ({ email, otp }) => {
+        const res = await fetch('/api/auth/verify-reset-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, otp })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || 'Invalid reset code.');
+        }
+
+        setResetToken(data.resetToken);
+        navigateTo('reset-password');
+        return data.resetToken;
+    }, [navigateTo]);
+
+    // 7. Reset Password with Authorized Token
+    const resetPassword = useCallback(async ({ email, newPassword }) => {
+        const res = await fetch('/api/auth/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, resetToken, newPassword })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || 'Failed to reset password.');
+        }
+
+        setResetToken('');
+        setPendingEmail('');
+        navigateTo('login');
+        return data;
+    }, [resetToken, navigateTo]);
+
+    // 8. Google Sign-In
+    const googleLogin = useCallback(async (credential) => {
+        const res = await fetch('/api/auth/google', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ credential })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.error || 'Google sign-in failed.');
+        }
+
+        setUser(data.user);
+        setToken(data.token);
+        localStorage.setItem("chathub_user", JSON.stringify(data.user));
+        localStorage.setItem("chathub_token", data.token);
+        navigateTo('chat');
+        return data.user;
+    }, [navigateTo]);
+
+    // 9. Logout
     const logout = useCallback(() => {
         setUser(null);
         setToken(null);
+        localStorage.removeItem("chathub_user");
+        localStorage.removeItem("chathub_token");
         localStorage.removeItem("pulse_user");
         localStorage.removeItem("pulse_token");
-        setCurrentView('landing');
-    }, []);
+        navigateTo('landing');
+    }, [navigateTo]);
 
     const value = {
         user,
@@ -100,8 +257,20 @@ export function AuthProvider({ children }) {
         isLoading,
         currentView,
         setCurrentView,
+        navigateTo,
+        pendingEmail,
+        setPendingEmail,
+        pendingPurpose,
+        setPendingPurpose,
+        resetToken,
         login,
-        register,
+        sendSignupOtp,
+        verifySignupOtp,
+        resendOtp,
+        forgotPassword,
+        verifyResetOtp,
+        resetPassword,
+        googleLogin,
         logout
     };
 

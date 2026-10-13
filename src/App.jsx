@@ -16,21 +16,22 @@ function AppRouter() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'var(--bg-primary)',
-                color: 'var(--accent-primary)',
-                fontSize: '1.2rem',
-                fontWeight: 600
+                backgroundColor: '#f8fafc',
+                color: '#10b981',
+                fontSize: '1.25rem',
+                fontWeight: 700,
+                fontFamily: 'Inter, system-ui, sans-serif'
             }}>
-                Loading PulseChat...
+                <span style={{ marginRight: '8px' }}>💬</span> Loading ChatHub...
             </div>
         );
     }
 
-    if (currentView === 'landing') {
+    if (currentView === 'landing' && !isAuthenticated) {
         return <LandingPage />;
     }
 
-    if (currentView === 'auth' || !isAuthenticated) {
+    if (!isAuthenticated || ['login', 'signup', 'verify-otp', 'forgot-password', 'reset-password'].includes(currentView)) {
         return <AuthPage />;
     }
 

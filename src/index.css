@@ -4096,5 +4096,1522 @@ body.light-theme .call-ctrl-btn {
   }
 }
 
+/* ==========================================================================
+   CHATHUB PREMIUM AUTHENTICATION & LANDING PAGE DESIGN SYSTEM
+   Theme: Crisp White / Light-Grey + Emerald Green (#10b981) + Navy Typography
+   ========================================================================== */
+
+/* 1. Global Navigation Bar */
+.chathub-global-nav {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  z-index: 100;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.chathub-global-nav .nav-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0.85rem 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand-logo-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.chathub-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.chathub-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.brand-name {
+  font-family: 'Plus Jakarta Sans', Inter, -apple-system, sans-serif;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.6px;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.auth-switch-text {
+  font-size: 0.92rem;
+  color: #64748b;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.auth-switch-btn {
+  background: transparent;
+  border: none;
+  color: #10b981;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.auth-switch-btn:hover {
+  color: #047857;
+  text-decoration: underline;
+}
+
+.nav-link-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  padding: 0.5rem 0.85rem;
+  transition: color 0.2s ease;
+}
+
+.nav-link-btn:hover {
+  color: #0f172a;
+}
+
+.nav-cta-btn {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+
+.nav-cta-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+/* 2. Main Auth Page Layout */
+.chathub-auth-page-root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1e293b;
+}
+
+.auth-main-layout {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1.5rem;
+}
+
+.auth-split-grid {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  max-width: 1140px;
+  width: 100%;
+  gap: 3.5rem;
+  align-items: center;
+}
+
+/* 3. Form Card (Left Column) */
+.auth-form-column {
+  width: 100%;
+}
+
+.auth-form-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  padding: 2.75rem 2.25rem;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+}
+
+.form-title-group {
+  margin-bottom: 1.6rem;
+  text-align: left;
+}
+
+.form-main-heading {
+  font-family: 'Plus Jakarta Sans', Inter, sans-serif;
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+  margin: 0 0 0.4rem 0;
+}
+
+.form-sub-heading {
+  font-size: 0.92rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Feedback alerts */
+.auth-alert-box {
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  margin-bottom: 1.25rem;
+  text-align: left;
+}
+
+.auth-alert-box.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.auth-alert-box.success {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+}
+
+/* Inputs & Form Groups */
+.chathub-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.chathub-input-group {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.chathub-input-group label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.45rem;
+}
+
+.input-with-icon {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 0.65rem 0.9rem;
+  background: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.input-with-icon:focus-within {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.field-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: #94a3b8;
+  margin-right: 0.65rem;
+  flex-shrink: 0;
+}
+
+.field-icon.text-symbol {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.input-with-icon input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 0.92rem;
+  color: #0f172a;
+  background: transparent;
+  padding: 0;
+}
+
+.input-with-icon input::placeholder {
+  color: #94a3b8;
+}
+
+.password-toggle-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 0.95rem;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.password-toggle-btn:hover {
+  opacity: 1;
+}
+
+/* Remember me & Forgot Password */
+.remember-forgot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-top: -0.25rem;
+}
+
+.checkbox-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-wrap input[type="checkbox"] {
+  accent-color: #10b981;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.forgot-link-btn {
+  background: transparent;
+  border: none;
+  color: #10b981;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+}
+
+.forgot-link-btn:hover {
+  text-decoration: underline;
+}
+
+/* Primary CTA Button */
+.chathub-primary-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 0.82rem 1.25rem;
+  font-size: 0.98rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 8px 20px -6px rgba(16, 185, 129, 0.5);
+  transition: all 0.2s ease;
+  margin-top: 0.4rem;
+}
+
+.chathub-primary-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px -6px rgba(16, 185, 129, 0.6);
+}
+
+.chathub-primary-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.btn-arrow {
+  font-size: 1.15rem;
+  transition: transform 0.2s ease;
+}
+
+.chathub-primary-btn:hover .btn-arrow {
+  transform: translateX(3px);
+}
+
+.btn-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Social Login Divider */
+.social-divider {
+  display: flex;
+  align-items: center;
+  margin: 1.4rem 0;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.social-divider::before,
+.social-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.social-divider span {
+  padding: 0 1rem;
+}
+
+/* Social Buttons Grid (Google, GitHub, Microsoft) */
+.social-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0.62rem 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #334155;
+  transition: all 0.15s ease;
+}
+
+.social-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.social-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.terms-privacy-note {
+  margin-top: 1.4rem;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.terms-privacy-note a {
+  color: #10b981;
+  text-decoration: underline;
+}
+
+/* 4. Right Hero Panel (Signup & Login) */
+.auth-hero-column {
+  border-radius: 28px;
+  padding: 2.75rem;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.auth-hero-column.light-hero {
+  background: linear-gradient(145deg, #f0fdf4 0%, #ecfdf5 50%, #e6fcf5 100%);
+  border: 1px solid #dcfce7;
+}
+
+.hero-headline {
+  font-family: 'Plus Jakarta Sans', Inter, sans-serif;
+  font-size: 2.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.15;
+  letter-spacing: -0.8px;
+  margin: 0 0 0.6rem 0;
+  text-align: left;
+}
+
+.highlight-green {
+  color: #10b981;
+}
+
+.hero-description {
+  font-size: 0.96rem;
+  color: #475569;
+  line-height: 1.6;
+  margin: 0 0 1.75rem 0;
+  text-align: left;
+}
+
+/* Feature Badge List */
+.features-badge-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.feature-pill-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.pill-icon.green {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #d1fae5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.pill-text h4 {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 2px 0;
+}
+
+.pill-text p {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Live Product Mockup Frame */
+.product-mockup-frame {
+  background: #111b21;
+  border-radius: 18px;
+  padding: 1.1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid #202c33;
+}
+
+.mockup-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #202c33;
+  color: #ffffff;
+}
+
+.mockup-logo {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #25d366;
+}
+
+.mockup-user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.mockup-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #10b981;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mockup-name {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.mockup-status-dot {
+  font-size: 0.68rem;
+  color: #25d366;
+}
+
+.mockup-chat-preview-body {
+  padding-top: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mock-bubble {
+  max-width: 82%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.mock-bubble.other {
+  background: #202c33;
+  color: #e9edef;
+  align-self: flex-start;
+  border-top-left-radius: 0;
+}
+
+.mock-bubble.self {
+  background: #005c4b;
+  color: #e9edef;
+  align-self: flex-end;
+  border-top-right-radius: 0;
+}
+
+/* Emerald Night Hero for Log In */
+.auth-hero-column.emerald-night {
+  background: radial-gradient(circle at 70% 30%, #064e3b 0%, #062e24 70%, #022019 100%);
+  color: #ffffff;
+  border: 1px solid #065f46;
+}
+
+.hero-headline.night {
+  color: #ffffff;
+}
+
+.highlight-green-light {
+  color: #34d399;
+}
+
+.hero-description.night {
+  color: #a7f3d0;
+}
+
+/* Smartphone Video Call Mockup */
+.smartphone-video-mockup {
+  position: relative;
+  max-width: 320px;
+  margin: 1rem auto 0;
+  background: #0b141a;
+  border-radius: 36px;
+  border: 5px solid #1f2937;
+  padding: 8px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
+}
+
+.phone-screen-inner {
+  border-radius: 28px;
+  overflow: hidden;
+  position: relative;
+  height: 380px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #111b21;
+}
+
+.phone-call-header {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 10;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+  color: #ffffff;
+}
+
+.caller-profile-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.caller-avatar-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #10b981;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.caller-profile-chip h5 {
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.caller-profile-chip span {
+  font-size: 0.72rem;
+  opacity: 0.8;
+}
+
+.screen-expand-icon {
+  font-size: 0.95rem;
+  opacity: 0.8;
+}
+
+.video-feed-placeholder {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, #1a3a30 0%, #0d1f1a 100%);
+}
+
+.video-avatar-face {
+  font-size: 4.5rem;
+}
+
+.video-pip-preview {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 70px;
+  height: 90px;
+  background: #202c33;
+  border: 1.5px solid #10b981;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #ffffff;
+}
+
+.phone-call-actions {
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+  z-index: 10;
+}
+
+.call-btn-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+
+.call-btn-circle.end {
+  background: #ef4444;
+}
+
+/* Floating Badges */
+.floating-badge {
+  position: absolute;
+  background: rgba(16, 185, 129, 0.92);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 20px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+  z-index: 20;
+}
+
+.floating-badge.top-left {
+  top: 30px;
+  left: -20px;
+}
+
+.floating-badge.top-right {
+  top: 80px;
+  right: -25px;
+}
+
+.floating-badge.bottom-badge {
+  bottom: 30px;
+  left: -15px;
+  background: rgba(15, 23, 42, 0.9);
+}
+
+/* 5. Centered OTP & Recovery Screen */
+.auth-centered-container {
+  max-width: 460px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.auth-verification-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  padding: 2.75rem 2.25rem;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.06);
+  text-align: center;
+}
+
+.verification-icon-wrap {
+  margin-bottom: 1.25rem;
+}
+
+.icon-pulse-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #d1fae5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  margin: 0 auto;
+  box-shadow: 0 0 0 8px #ecfdf5;
+}
+
+.auth-verification-card h2 {
+  font-family: 'Plus Jakarta Sans', Inter, sans-serif;
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.5rem 0;
+}
+
+.verification-instruction {
+  font-size: 0.92rem;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0 0 1.75rem 0;
+}
+
+.verification-instruction strong {
+  color: #0f172a;
+}
+
+.otp-boxes-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 1.5rem;
+}
+
+.otp-digit-box {
+  width: 48px;
+  height: 56px;
+  border: 2px solid #cbd5e1;
+  border-radius: 12px;
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-align: center;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.2s ease;
+  background: #ffffff;
+}
+
+.otp-digit-box:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.otp-timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  font-size: 0.84rem;
+}
+
+.countdown-text {
+  color: #64748b;
+}
+
+.resend-code-btn {
+  background: transparent;
+  border: none;
+  color: #10b981;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.resend-code-btn:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.verification-card-footer {
+  margin-top: 1.5rem;
+}
+
+.text-link-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.text-link-btn:hover {
+  color: #0f172a;
+  text-decoration: underline;
+}
+
+/* 6. ChatHub Premium Landing Page Styles */
+.chathub-landing-page {
+  background: #ffffff;
+  color: #0f172a;
+  font-family: 'Inter', -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+.landing-container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 1.75rem;
+}
+
+.chathub-landing-hero {
+  padding: 3.5rem 0 4.5rem;
+  background: radial-gradient(circle at 80% 20%, #f0fdf4 0%, #ffffff 70%);
+}
+
+.landing-hero-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 3.5rem;
+  align-items: center;
+}
+
+.hero-eyebrow-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+  padding: 0.4rem 0.95rem;
+  border-radius: 20px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.eyebrow-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.landing-hero-title {
+  font-family: 'Plus Jakarta Sans', Inter, sans-serif;
+  font-size: 3.6rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+  letter-spacing: -1.2px;
+  margin: 0 0 1.25rem 0;
+  text-align: left;
+}
+
+.emerald-gradient-text {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.landing-hero-subtitle {
+  font-size: 1.12rem;
+  line-height: 1.65;
+  color: #475569;
+  margin: 0 0 2rem 0;
+  max-width: 560px;
+  text-align: left;
+}
+
+.landing-cta-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2.75rem;
+}
+
+.chathub-btn-primary {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 0.88rem 1.65rem;
+  font-size: 1.02rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 24px -4px rgba(16, 185, 129, 0.45);
+  transition: all 0.2s ease;
+}
+
+.chathub-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -4px rgba(16, 185, 129, 0.55);
+}
+
+.chathub-btn-secondary {
+  background: #ffffff;
+  color: #1e293b;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 0.85rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chathub-btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.hero-trust-metrics {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.trust-item strong {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.trust-item span {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.trust-divider {
+  width: 1px;
+  height: 28px;
+  background: #e2e8f0;
+}
+
+/* Mockup Window Header & Body */
+.app-mockup-wrapper {
+  background: #111b21;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35);
+  border: 1px solid #202c33;
+}
+
+.mockup-window-header {
+  padding: 10px 14px;
+  background: #202c33;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #2a3942;
+}
+
+.window-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.window-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot.red { background: #ef4444; }
+.dot.yellow { background: #f59e0b; }
+.dot.green { background: #10b981; }
+
+.window-title-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #aebac1;
+}
+
+.window-action-status {
+  font-size: 0.72rem;
+  color: #10b981;
+  font-weight: 600;
+}
+
+.mockup-window-body {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  height: 380px;
+  background: #0b141a;
+}
+
+.mockup-sidebar-preview {
+  background: #111b21;
+  border-right: 1px solid #202c33;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.mock-search-box {
+  background: #202c33;
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 0.72rem;
+  color: #8696a0;
+  margin-bottom: 4px;
+}
+
+.mock-contact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+}
+
+.mock-contact.active {
+  background: #202c33;
+}
+
+.mock-contact-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.mock-contact-avatar.small {
+  width: 24px;
+  height: 24px;
+  font-size: 0.7rem;
+}
+
+.mock-contact-info h5 {
+  font-size: 0.78rem;
+  color: #e9edef;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 85px;
+}
+
+.mock-contact-info p {
+  font-size: 0.65rem;
+  color: #8696a0;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 85px;
+}
+
+.mock-unread-badge {
+  background: #10b981;
+  color: #111b21;
+  font-size: 0.65rem;
+  font-weight: 800;
+  border-radius: 10px;
+  padding: 1px 5px;
+  position: absolute;
+  right: 6px;
+}
+
+.mockup-chat-stage {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #0b141a;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.mockup-chat-header {
+  padding: 8px 12px;
+  background: #202c33;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #2a3942;
+}
+
+.mockup-peer-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.mockup-peer-chip strong {
+  font-size: 0.8rem;
+  color: #e9edef;
+}
+
+.mockup-peer-chip span {
+  display: block;
+  font-size: 0.65rem;
+  color: #25d366;
+}
+
+.mockup-call-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.mock-icon-pill {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 6px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #e9edef;
+}
+
+.mock-icon-pill.video {
+  background: rgba(16, 185, 129, 0.2);
+  color: #25d366;
+}
+
+.mockup-messages-feed {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mock-msg {
+  max-width: 80%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  text-align: left;
+  line-height: 1.35;
+}
+
+.mock-msg.other {
+  background: #202c33;
+  color: #e9edef;
+  align-self: flex-start;
+  border-top-left-radius: 0;
+}
+
+.mock-msg.self {
+  background: #005c4b;
+  color: #e9edef;
+  align-self: flex-end;
+  border-top-right-radius: 0;
+}
+
+.mockup-input-bar {
+  margin: 8px;
+  background: #202c33;
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #8696a0;
+}
+
+.mock-send-btn {
+  color: #10b981;
+  font-weight: 700;
+}
+
+/* Feature Cards Grid */
+.chathub-features-section {
+  padding: 4.5rem 0;
+  background: #f8fafc;
+}
+
+.section-header-center {
+  text-align: center;
+  max-width: 620px;
+  margin: 0 auto 3rem;
+}
+
+.section-tag {
+  display: inline-block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #047857;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.6rem;
+}
+
+.section-header-center h2 {
+  font-family: 'Plus Jakarta Sans', Inter, sans-serif;
+  font-size: 2.3rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 0.6rem 0;
+}
+
+.section-header-center p {
+  font-size: 1.05rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.features-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+
+.feature-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 2rem 1.5rem;
+  text-align: left;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  border-color: #10b981;
+  box-shadow: 0 16px 30px -10px rgba(16, 185, 129, 0.15);
+}
+
+.feature-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.feature-card h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.5rem 0;
+}
+
+.feature-card p {
+  font-size: 0.88rem;
+  color: #64748b;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* Bottom CTA Banner */
+.chathub-bottom-cta {
+  padding: 4rem 0;
+}
+
+.cta-banner-card {
+  background: linear-gradient(135deg, #064e3b 0%, #062e24 100%);
+  border-radius: 28px;
+  padding: 3.5rem 2rem;
+  color: #ffffff;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(6, 78, 59, 0.4);
+}
+
+.cta-banner-card h2 {
+  font-family: 'Plus Jakarta Sans', Inter, sans-serif;
+  font-size: 2.4rem;
+  font-weight: 800;
+  margin: 0 0 0.75rem 0;
+}
+
+.cta-banner-card p {
+  font-size: 1.05rem;
+  color: #a7f3d0;
+  max-width: 540px;
+  margin: 0 auto 2rem;
+}
+
+/* Responsive Footer */
+.chathub-landing-footer {
+  padding: 2.5rem 0;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.footer-content-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.footer-brand {
+  text-align: left;
+}
+
+.footer-brand .brand-icon {
+  font-size: 1.35rem;
+  margin-right: 6px;
+}
+
+.footer-brand .brand-text {
+  font-family: 'Plus Jakarta Sans', Inter, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.footer-brand p {
+  font-size: 0.84rem;
+  color: #94a3b8;
+  margin: 4px 0 0 0;
+}
+
+.footer-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.footer-links button {
+  background: transparent;
+  border: none;
+  font-size: 0.88rem;
+  color: #64748b;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.footer-links button:hover {
+  color: #10b981;
+}
+
+/* 7. Mobile Responsiveness */
+@media (max-width: 980px) {
+  .auth-split-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .auth-form-card {
+    padding: 2rem 1.5rem;
+  }
+  .landing-hero-grid {
+    grid-template-columns: 1fr;
+  }
+  .landing-hero-title {
+    font-size: 2.8rem;
+  }
+  .features-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-hero-title {
+    font-size: 2.2rem;
+  }
+  .features-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .cta-banner-card h2 {
+    font-size: 1.8rem;
+  }
+  .footer-content-row {
+    flex-direction: column;
+    gap: 1.5rem;
+    text-align: center;
+  }
+  .footer-brand {
+    text-align: center;
+  }
+  .features-badge-list {
+    grid-template-columns: 1fr;
+  }
+  .hero-trust-metrics {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .trust-divider {
+    display: none;
+  }
+  .otp-digit-box {
+    width: 40px;
+    height: 50px;
+    font-size: 1.3rem;
+  }
+}
+
 
 
