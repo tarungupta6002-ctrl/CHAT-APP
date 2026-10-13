@@ -1366,14 +1366,31 @@ const toggleMicBtn = document.getElementById("toggle-mic-btn");
 const toggleCamBtn = document.getElementById("toggle-cam-btn");
 const endCallBtn = document.getElementById("end-call-btn");
 
-// STUN ICE Servers Configuration
+// STUN & TURN ICE Servers Configuration
 const RTC_CONFIG = {
     iceServers: [
+        // Google Public STUN Servers
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" },
         { urls: "stun:stun2.l.google.com:19302" },
         { urls: "stun:stun3.l.google.com:19302" },
-        { urls: "stun:stun4.l.google.com:19302" }
+        { urls: "stun:stun4.l.google.com:19302" },
+        // OpenRelay Public TURN Relay Servers (Bypasses Mobile 4G/5G CGNAT & WiFi Firewalls)
+        {
+            urls: "turn:openrelay.metered.ca:80",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+        },
+        {
+            urls: "turn:openrelay.metered.ca:443",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+        },
+        {
+            urls: "turn:openrelay.metered.ca:443?transport=tcp",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+        }
     ],
     iceCandidatePoolSize: 10
 };
@@ -1660,7 +1677,10 @@ acceptCallBtn.addEventListener("click", async () => {
         // Flush any candidates that arrived while phone was ringing
         await flushIceCandidateQueue();
 
-        const answer = await peerConnection.createAnswer();
+        const answer = await peerConnection.createAnswer({
+            offerToReceiveAudio: true,
+            offerToReceiveVideo: Boolean(data.isVideo)
+        });
         await peerConnection.setLocalDescription(answer);
 
         socket.emit("call-answer", {
