@@ -6,9 +6,11 @@ export default function MessagesContainer() {
     const { currentChat, conversations } = useSocket();
     const containerRef = useRef(null);
 
-    const activeList = currentChat.type === 'general'
-        ? (conversations.general || [])
-        : (conversations[currentChat.partnerId] || []);
+    const activeKey = !currentChat || currentChat.type === 'general'
+        ? 'general'
+        : (currentChat.partnerName ? currentChat.partnerName.toLowerCase() : (currentChat.partnerId || 'dm'));
+
+    const activeList = conversations[activeKey] || [];
 
     // Auto scroll to bottom
     useEffect(() => {

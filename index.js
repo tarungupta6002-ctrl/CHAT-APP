@@ -38,6 +38,18 @@ function broadcastUsersList() {
     io.emit("users-count", list.length);
 }
 
+// Helper to find connected socketId by username
+function findSocketIdByUsername(username) {
+    if (!username) return null;
+    const clean = username.trim().toLowerCase();
+    for (const [id, u] of users.entries()) {
+        if (u.username && u.username.trim().toLowerCase() === clean) {
+            return id;
+        }
+    }
+    return null;
+}
+
 // Socket.io handlers
 io.on("connection", (socket) => {
     // Send current online count immediately
@@ -96,6 +108,7 @@ io.on("connection", (socket) => {
         const audioDuration = data?.audioDuration || null;
         const isViewOnce = Boolean(data?.isViewOnce);
         const recipientId = data?.recipientId || null;
+        let recipientUsername = (data?.recipientUsername || "").trim() || null;
 
         const hasText = messageText && messageText.trim().length > 0;
         const hasImage = Boolean(image);
@@ -105,10 +118,21 @@ io.on("connection", (socket) => {
 
         const user = users.get(socket.id) || { username: "Guest", color: "#6366f1" };
 
+        let targetSocketId = recipientId;
+        if (!targetSocketId && recipientUsername) {
+            targetSocketId = findSocketIdByUsername(recipientUsername);
+        } else if (targetSocketId && !recipientUsername) {
+            const rUser = users.get(targetSocketId);
+            if (rUser) recipientUsername = rUser.username;
+        }
+
+        const isPrivateDm = Boolean(recipientUsername || targetSocketId);
+
         const messagePayload = {
             id: `${socket.id}-${Date.now()}`,
             senderId: socket.id,
-            recipientId: recipientId,
+            recipientId: targetSocketId,
+            recipientUsername: recipientUsername,
             username: user.username,
             avatarColor: user.color,
             text: hasText ? messageText.trim() : "",
@@ -121,23 +145,19 @@ io.on("connection", (socket) => {
             time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
         };
 
-        const recipientUser = recipientId ? users.get(recipientId) : null;
-        const recipientUsername = recipientUser ? recipientUser.username : null;
-
         // Persist message to SQLite / Turso
         await db.saveMessage({
             ...messagePayload,
             recipientUsername: recipientUsername
         });
 
-        if (recipientId && users.has(recipientId)) {
-            if (recipientId === socket.id) {
-                // Notes to Self
-                socket.emit("message", messagePayload);
-            } else {
-                // Private 1-on-1 DM: Send to recipient and sender only
-                socket.to(recipientId).emit("message", messagePayload);
-                socket.emit("message", messagePayload);
+        if (isPrivateDm) {
+            // Send back to sender
+            socket.emit("message", messagePayload);
+
+            // Send to recipient if they are connected on a socket
+            if (targetSocketId && targetSocketId !== socket.id && users.has(targetSocketId)) {
+                socket.to(targetSocketId).emit("message", messagePayload);
             }
         } else {
             // Public Room: Broadcast to everyone
@@ -235,16 +255,20 @@ io.on("connection", (socket) => {
     });
 
     // --- WebRTC 1-on-1 Audio / Video Calling Signaling ---
-    socket.on("call-offer", ({ to, offer, isVideo }) => {
+    socket.on("call-offer", ({ to, toUsername, offer, isVideo }) => {
         const caller = users.get(socket.id);
-        if (!to || !users.has(to)) {
-            socket.emit("call-failed", { reason: "User is currently offline or unavailable" });
+        let targetSocketId = to;
+        if (!targetSocketId && toUsername) {
+            targetSocketId = findSocketIdByUsername(toUsername);
+        }
+        if (!targetSocketId || !users.has(targetSocketId)) {
+            socket.emit("call-failed", { reason: `${toUsername || "User"} is currently offline or unavailable` });
             return;
         }
-        socket.to(to).emit("incoming-call", {
+        socket.to(targetSocketId).emit("incoming-call", {
             from: socket.id,
             fromName: caller ? caller.username : "Caller",
-            fromColor: caller ? caller.color : "#6366f1",
+            fromColor: caller ? caller.color : "#00a884",
             offer,
             isVideo: Boolean(isVideo)
         });

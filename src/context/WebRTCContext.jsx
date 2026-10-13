@@ -41,7 +41,7 @@ const RTC_CONFIG = {
 };
 
 export function WebRTCProvider({ children }) {
-    const { socket, currentChat, isSoundMuted } = useSocket();
+    const { socket, currentChat, isSoundMuted, onlineUsers } = useSocket();
 
     // Call States
     const [isCallActive, setIsCallActive] = useState(false);
@@ -294,15 +294,27 @@ export function WebRTCProvider({ children }) {
     const initiateCall = useCallback(async (isVideo, targetUser = null) => {
         if (isCallActive) return alert("A call is already active.");
 
-        const partnerId = targetUser?.id || (currentChat.type === "dm" ? currentChat.partnerId : null);
-        const partnerName = targetUser?.username || currentChat.partnerName || "User";
-        const partnerColor = targetUser?.color || currentChat.partnerColor || "#00a884";
+        const partnerName = targetUser?.username || (currentChat?.type === "dm" ? currentChat.partnerName : null);
+        const partnerColor = targetUser?.color || currentChat?.partnerColor || "#00a884";
 
-        if (!partnerId) {
+        if (!partnerName) {
             return alert("Please select a private chat to start a call.");
         }
 
-        setActiveCallPartner({ id: partnerId, name: partnerName, color: partnerColor });
+        // Look up recipient in active online users list
+        const onlineEntry = onlineUsers.find(
+            (u) => u.username && u.username.toLowerCase() === partnerName.toLowerCase()
+        );
+
+        let partnerSocketId = targetUser?.id || currentChat?.partnerId || (onlineEntry ? onlineEntry.id : null);
+
+        if (!onlineEntry && !partnerSocketId) {
+            return alert(`${partnerName} is currently offline. Both users must be online to connect an audio/video call.`);
+        }
+
+        partnerSocketId = onlineEntry ? onlineEntry.id : partnerSocketId;
+
+        setActiveCallPartner({ id: partnerSocketId, name: partnerName, color: partnerColor });
         setCallIsVideo(isVideo);
         setIsAudioMuted(false);
         setIsVideoMuted(!isVideo);
@@ -315,7 +327,7 @@ export function WebRTCProvider({ children }) {
             localStreamRef.current = stream;
             setLocalStream(stream);
 
-            const pc = createPeerConnection(partnerId);
+            const pc = createPeerConnection(partnerSocketId);
             stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
             const offer = await pc.createOffer({
@@ -325,7 +337,8 @@ export function WebRTCProvider({ children }) {
             await pc.setLocalDescription(offer);
 
             socket?.emit("call-offer", {
-                to: partnerId,
+                to: partnerSocketId,
+                toUsername: partnerName,
                 offer: offer,
                 isVideo: isVideo
             });
@@ -334,7 +347,7 @@ export function WebRTCProvider({ children }) {
             cleanupCall();
             alert("Could not access camera or microphone: " + err.message);
         }
-    }, [isCallActive, currentChat, getMediaStream, createPeerConnection, socket, cleanupCall]);
+    }, [isCallActive, currentChat, onlineUsers, getMediaStream, createPeerConnection, socket, cleanupCall]);
 
     // Accept Incoming Call
     const acceptCall = useCallback(async () => {
