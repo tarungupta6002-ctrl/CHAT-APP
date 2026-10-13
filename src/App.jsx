@@ -1,49 +1,52 @@
 import React from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import { WebRTCProvider } from './context/WebRTCContext';
-import JoinModal from './components/JoinModal';
-import Header from './components/Header';
-import TabsBar from './components/TabsBar';
-import UsersSidebar from './components/UsersSidebar';
-import MessagesContainer from './components/MessagesContainer';
-import TypingBar from './components/TypingBar';
-import ChatFooter from './components/ChatFooter';
-import EditModal from './components/EditModal';
-import LightboxModal from './components/LightboxModal';
-import IncomingCallModal from './components/IncomingCallModal';
-import ActiveCallOverlay from './components/ActiveCallOverlay';
+import LandingPage from './components/LandingPage';
+import AuthPage from './components/AuthPage';
+import WhatsAppLayout from './components/WhatsAppLayout';
 
-function ChatApp() {
-    return (
-        <>
-            {/* Nickname Join Modal */}
-            <JoinModal />
+function AppRouter() {
+    const { currentView, isAuthenticated, isLoading } = useAuth();
 
-            {/* Main App Container */}
-            <div className="chat-app-container">
-                <Header />
-                <TabsBar />
-                <UsersSidebar />
-                <MessagesContainer />
-                <TypingBar />
-                <ChatFooter />
+    if (isLoading) {
+        return (
+            <div style={{
+                height: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--accent-primary)',
+                fontSize: '1.2rem',
+                fontWeight: 600
+            }}>
+                Loading PulseChat...
             </div>
+        );
+    }
 
-            {/* Modals & Overlays */}
-            <EditModal />
-            <LightboxModal />
-            <IncomingCallModal />
-            <ActiveCallOverlay />
-        </>
+    if (currentView === 'landing') {
+        return <LandingPage />;
+    }
+
+    if (currentView === 'auth' || !isAuthenticated) {
+        return <AuthPage />;
+    }
+
+    return (
+        <SocketProvider>
+            <WebRTCProvider>
+                <WhatsAppLayout />
+            </WebRTCProvider>
+        </SocketProvider>
     );
 }
 
 export default function App() {
     return (
-        <SocketProvider>
-            <WebRTCProvider>
-                <ChatApp />
-            </WebRTCProvider>
-        </SocketProvider>
+        <AuthProvider>
+            <AppRouter />
+        </AuthProvider>
     );
 }

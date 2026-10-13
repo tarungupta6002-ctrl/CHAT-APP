@@ -2,10 +2,13 @@ const http = require("http");
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const { Server } = require("socket.io");
 const db = require("./database");
 
 const app = express();
+app.use(express.json());
+
 const server = http.createServer(app);
 const io = new Server(server, {
     maxHttpBufferSize: 1e8 // Allow up to 100MB for image transfers
@@ -41,12 +44,20 @@ io.on("connection", (socket) => {
     socket.emit("users-count", users.size);
     broadcastUsersList();
 
-    // User joins with a chosen username
-    socket.on("user-join", async (username) => {
-        const cleanName = (username && username.trim()) ? username.trim().slice(0, 20) : `User-${socket.id.slice(0, 4)}`;
+    // User joins with a chosen username or authenticated user
+    socket.on("user-join", async (data) => {
+        const rawName = typeof data === "string" ? data : (data?.username || "");
+        const cleanName = rawName.trim() ? rawName.trim().slice(0, 20) : `User-${socket.id.slice(0, 4)}`;
+        
+        let color = typeof data === "object" && data.color ? data.color : null;
+        if (!color) {
+            const dbUser = await db.getUserByUsername(cleanName);
+            color = dbUser ? dbUser.color : getRandomColor();
+        }
+
         const userObj = {
             username: cleanName,
-            color: getRandomColor()
+            color: color
         };
         users.set(socket.id, userObj);
 
@@ -284,6 +295,141 @@ io.on("connection", (socket) => {
             socket.broadcast.emit("user-stop-typing", { id: socket.id });
         }
     });
+});
+
+// --- Password Hashing & Token Verification ---
+function hashPassword(password) {
+    const salt = crypto.randomBytes(16).toString("hex");
+    const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+    return `${salt}:${hash}`;
+}
+
+function verifyPassword(password, stored) {
+    if (!stored || !stored.includes(":")) return false;
+    const [salt, hash] = stored.split(":");
+    const check = crypto.scryptSync(password, salt, 64).toString("hex");
+    return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(check, "hex"));
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || "pulsechat-secret-token-key-2026";
+function createToken(user) {
+    const payload = JSON.stringify({ id: user.id, username: user.username, exp: Date.now() + 30 * 24 * 3600 * 1000 });
+    const b64 = Buffer.from(payload).toString("base64url");
+    const sig = crypto.createHmac("sha256", JWT_SECRET).update(b64).digest("base64url");
+    return `${b64}.${sig}`;
+}
+
+function verifyToken(token) {
+    if (!token || !token.includes(".")) return null;
+    const [b64, sig] = token.split(".");
+    const checkSig = crypto.createHmac("sha256", JWT_SECRET).update(b64).digest("base64url");
+    if (sig !== checkSig) return null;
+    try {
+        const data = JSON.parse(Buffer.from(b64, "base64url").toString("utf-8"));
+        if (data.exp < Date.now()) return null;
+        return data;
+    } catch (e) {
+        return null;
+    }
+}
+
+// --- REST API Endpoints ---
+app.post("/api/auth/register", async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || typeof username !== "string" || username.trim().length < 3) {
+            return res.status(400).json({ error: "Username must be at least 3 characters." });
+        }
+        if (!password || typeof password !== "string" || password.length < 4) {
+            return res.status(400).json({ error: "Password must be at least 4 characters." });
+        }
+
+        const cleanUsername = username.trim().slice(0, 20);
+        const existing = await db.getUserByUsername(cleanUsername);
+        if (existing) {
+            return res.status(409).json({ error: "Username already exists. Please pick another one or log in." });
+        }
+
+        const id = `u_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
+        const pwdHash = hashPassword(password);
+        const avatarColor = getRandomColor();
+
+        const user = await db.createUser(id, cleanUsername, pwdHash, avatarColor);
+        const token = createToken(user);
+
+        return res.status(201).json({
+            user: { id: user.id, username: user.username, color: user.color },
+            token
+        });
+    } catch (err) {
+        console.error("Register error:", err);
+        return res.status(500).json({ error: "Registration failed. Please try again." });
+    }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.status(400).json({ error: "Username and password are required." });
+        }
+
+        const cleanUsername = username.trim();
+        const user = await db.getUserByUsername(cleanUsername);
+        if (!user || !verifyPassword(password, user.passwordHash)) {
+            return res.status(401).json({ error: "Invalid username or password." });
+        }
+
+        const token = createToken(user);
+        return res.json({
+            user: { id: user.id, username: user.username, color: user.color },
+            token
+        });
+    } catch (err) {
+        console.error("Login error:", err);
+        return res.status(500).json({ error: "Login failed." });
+    }
+});
+
+app.get("/api/auth/me", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    const token = authHeader.split(" ")[1];
+    const decoded = verifyToken(token);
+    if (!decoded) {
+        return res.status(401).json({ error: "Invalid or expired session" });
+    }
+
+    const user = await db.getUserByUsername(decoded.username);
+    if (!user) {
+        return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.json({
+        user: { id: user.id, username: user.username, color: user.color }
+    });
+});
+
+app.get("/api/users", async (req, res) => {
+    try {
+        const all = await db.getAllUsers();
+        return res.json({ users: all });
+    } catch (err) {
+        return res.status(500).json({ error: "Failed to fetch users" });
+    }
+});
+
+app.get("/api/chats/recent", async (req, res) => {
+    try {
+        const username = req.query.username;
+        if (!username) return res.json({ chats: [] });
+        const chats = await db.getRecentChatsForUser(username);
+        return res.json({ chats });
+    } catch (err) {
+        return res.status(500).json({ error: "Failed to fetch recent chats" });
+    }
 });
 
 // Serve React production build from 'dist' if it exists, otherwise fallback to 'public'

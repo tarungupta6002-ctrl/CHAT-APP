@@ -7,6 +7,9 @@ const RTC_CONFIG = {
     iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+        { urls: "stun:stun3.l.google.com:19302" },
+        { urls: "stun:stun4.l.google.com:19302" },
         { urls: "stun:stun.relay.metered.ca:80" },
         {
             urls: "turn:openrelay.metered.ca:80",
@@ -43,16 +46,20 @@ export function WebRTCProvider({ children }) {
     // Call States
     const [isCallActive, setIsCallActive] = useState(false);
     const [pendingIncomingCall, setPendingIncomingCall] = useState(null);
-    const [activeCallPartner, setActiveCallPartner] = useState({ id: null, name: '', color: '#6366f1' });
+    const [activeCallPartner, setActiveCallPartner] = useState({ id: null, name: '', color: '#00a884' });
     const [callIsVideo, setCallIsVideo] = useState(true);
-    const [callStatus, setCallStatus] = useState(''); // 'Calling...', 'Connected', etc.
+    const [callStatus, setCallStatus] = useState('');
     const [callTimer, setCallTimer] = useState('00:00');
     const [isAudioMuted, setIsAudioMuted] = useState(false);
     const [isVideoMuted, setIsVideoMuted] = useState(false);
     const [isCompactMode, setIsCompactMode] = useState(false);
     const [remoteVideoAvailable, setRemoteVideoAvailable] = useState(false);
 
-    // Refs for Media Elements & Connection
+    // Media Streams in React State (Ensures components re-render and attach srcObject)
+    const [localStream, setLocalStream] = useState(null);
+    const [remoteStream, setRemoteStream] = useState(null);
+
+    // Internal refs
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
     const remoteAudioRef = useRef(null);
@@ -64,24 +71,7 @@ export function WebRTCProvider({ children }) {
     const ringtoneAudioCtxRef = useRef(null);
     const ringtoneIntervalRef = useRef(null);
     const callSecondsRef = useRef(0);
-
-    // SafePlay helper for iOS & Android autoplay restrictions
-    const safePlay = useCallback((mediaElem) => {
-        if (!mediaElem) return;
-        const promise = mediaElem.play();
-        if (promise !== undefined) {
-            promise.catch((err) => {
-                console.warn("[WebRTC] Autoplay waiting for user gesture:", err.message);
-                const retry = () => {
-                    mediaElem.play().catch(() => {});
-                    document.removeEventListener("touchstart", retry);
-                    document.removeEventListener("click", retry);
-                };
-                document.addEventListener("touchstart", retry, { once: true });
-                document.addEventListener("click", retry, { once: true });
-            });
-        }
-    }, []);
+    const disconnectTimeoutRef = useRef(null);
 
     // Ringtone generator using Web Audio API
     const startRingtone = useCallback(() => {
@@ -149,13 +139,16 @@ export function WebRTCProvider({ children }) {
         setCallTimer("00:00");
     }, []);
 
-    // Clean up call
+    // Cleanup entire call
     const cleanupCall = useCallback(() => {
         stopRingtone();
         stopTimer();
+        clearTimeout(disconnectTimeoutRef.current);
+        disconnectTimeoutRef.current = null;
+
         setIsCallActive(false);
         setPendingIncomingCall(null);
-        setActiveCallPartner({ id: null, name: '', color: '#6366f1' });
+        setActiveCallPartner({ id: null, name: '', color: '#00a884' });
         iceQueueRef.current = [];
         setCallStatus('');
         setRemoteVideoAvailable(false);
@@ -165,6 +158,8 @@ export function WebRTCProvider({ children }) {
             localStreamRef.current = null;
         }
         remoteStreamRef.current = null;
+        setLocalStream(null);
+        setRemoteStream(null);
 
         if (peerConnectionRef.current) {
             peerConnectionRef.current.close();
@@ -176,7 +171,7 @@ export function WebRTCProvider({ children }) {
         if (remoteAudioRef.current) remoteAudioRef.current.srcObject = null;
     }, [stopRingtone, stopTimer]);
 
-    // End call
+    // End Call
     const endCall = useCallback((notifyRemote = true) => {
         if (notifyRemote && activeCallPartner.id && socket) {
             socket.emit("call-end", { to: activeCallPartner.id });
@@ -188,7 +183,7 @@ export function WebRTCProvider({ children }) {
     const getMediaStream = useCallback(async (isVideo) => {
         try {
             return await navigator.mediaDevices.getUserMedia({
-                audio: { echoCancellation: true, noiseSuppression: true },
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
                 video: isVideo ? { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } } : false
             });
         } catch (err) {
@@ -217,7 +212,9 @@ export function WebRTCProvider({ children }) {
     // Create RTCPeerConnection
     const createPeerConnection = useCallback((targetSocketId) => {
         const pc = new RTCPeerConnection(RTC_CONFIG);
-        remoteStreamRef.current = new MediaStream();
+        const unifiedRemoteStream = new MediaStream();
+        remoteStreamRef.current = unifiedRemoteStream;
+        setRemoteStream(unifiedRemoteStream);
 
         pc.onicecandidate = (event) => {
             if (event.candidate && socket) {
@@ -229,61 +226,58 @@ export function WebRTCProvider({ children }) {
         };
 
         pc.ontrack = (event) => {
-            console.log("[WebRTC React] Track received:", event.track.kind);
-            remoteStreamRef.current.addTrack(event.track);
+            console.log("[WebRTC] Track received:", event.track.kind);
+            unifiedRemoteStream.addTrack(event.track);
+
+            // Re-trigger stream reference in state
+            setRemoteStream(new MediaStream(unifiedRemoteStream.getTracks()));
 
             if (event.track.kind === "video") {
-                if (remoteVideoRef.current) {
-                    remoteVideoRef.current.srcObject = remoteStreamRef.current;
-                    remoteVideoRef.current.setAttribute("playsinline", "true");
-                    remoteVideoRef.current.setAttribute("webkit-playsinline", "true");
-                    safePlay(remoteVideoRef.current);
-                }
                 setRemoteVideoAvailable(true);
-
                 event.track.onunmute = () => {
-                    if (remoteVideoRef.current) {
-                        remoteVideoRef.current.srcObject = remoteStreamRef.current;
-                        safePlay(remoteVideoRef.current);
-                    }
+                    console.log("[WebRTC] Video unmuted");
                     setRemoteVideoAvailable(true);
+                    setRemoteStream(new MediaStream(unifiedRemoteStream.getTracks()));
                 };
             }
 
             if (event.track.kind === "audio") {
-                if (remoteAudioRef.current) {
-                    remoteAudioRef.current.srcObject = remoteStreamRef.current;
-                    safePlay(remoteAudioRef.current);
-                }
                 event.track.onunmute = () => {
-                    if (remoteVideoRef.current) safePlay(remoteVideoRef.current);
-                    if (remoteAudioRef.current) safePlay(remoteAudioRef.current);
+                    console.log("[WebRTC] Audio unmuted");
+                    setRemoteStream(new MediaStream(unifiedRemoteStream.getTracks()));
                 };
             }
         };
 
         pc.oniceconnectionstatechange = () => {
-            console.log("[WebRTC React] ICE state:", pc.iceConnectionState);
+            console.log("[WebRTC] ICE state:", pc.iceConnectionState);
             if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+                clearTimeout(disconnectTimeoutRef.current);
                 setCallStatus("Connected");
                 startTimer();
-                setTimeout(() => {
-                    if (remoteVideoRef.current) safePlay(remoteVideoRef.current);
-                    if (remoteAudioRef.current) safePlay(remoteAudioRef.current);
-                }, 500);
             }
-            if (pc.iceConnectionState === "failed") {
-                setCallStatus("Connection Lost");
-                setTimeout(() => {
-                    if (peerConnectionRef.current && peerConnectionRef.current.iceConnectionState === "failed") {
+            if (pc.iceConnectionState === "disconnected") {
+                setCallStatus("Reconnecting...");
+                disconnectTimeoutRef.current = setTimeout(() => {
+                    if (peerConnectionRef.current?.iceConnectionState === "disconnected") {
                         endCall(true);
                     }
-                }, 5000);
+                }, 15000);
+            }
+            if (pc.iceConnectionState === "failed") {
+                setCallStatus("Connection Failed");
+                disconnectTimeoutRef.current = setTimeout(() => {
+                    if (peerConnectionRef.current?.iceConnectionState === "failed") {
+                        endCall(true);
+                    }
+                }, 10000);
             }
         };
 
         pc.onconnectionstatechange = () => {
+            console.log("[WebRTC] Connection state:", pc.connectionState);
             if (pc.connectionState === "connected") {
+                clearTimeout(disconnectTimeoutRef.current);
                 setCallStatus("Connected");
                 startTimer();
             }
@@ -294,18 +288,19 @@ export function WebRTCProvider({ children }) {
 
         peerConnectionRef.current = pc;
         return pc;
-    }, [socket, safePlay, startTimer, endCall]);
+    }, [socket, startTimer, endCall]);
 
-    // Initiate Call (from active DM)
-    const initiateCall = useCallback(async (isVideo) => {
+    // Initiate Call
+    const initiateCall = useCallback(async (isVideo, targetUser = null) => {
         if (isCallActive) return alert("A call is already active.");
-        if (currentChat.type !== "dm" || !currentChat.partnerId) {
+
+        const partnerId = targetUser?.id || (currentChat.type === "dm" ? currentChat.partnerId : null);
+        const partnerName = targetUser?.username || currentChat.partnerName || "User";
+        const partnerColor = targetUser?.color || currentChat.partnerColor || "#00a884";
+
+        if (!partnerId) {
             return alert("Please select a private chat to start a call.");
         }
-
-        const partnerId = currentChat.partnerId;
-        const partnerName = currentChat.partnerName || "User";
-        const partnerColor = currentChat.partnerColor || "#6366f1";
 
         setActiveCallPartner({ id: partnerId, name: partnerName, color: partnerColor });
         setCallIsVideo(isVideo);
@@ -318,12 +313,7 @@ export function WebRTCProvider({ children }) {
         try {
             const stream = await getMediaStream(isVideo);
             localStreamRef.current = stream;
-
-            if (localVideoRef.current) {
-                localVideoRef.current.srcObject = stream;
-                localVideoRef.current.muted = true;
-                safePlay(localVideoRef.current);
-            }
+            setLocalStream(stream);
 
             const pc = createPeerConnection(partnerId);
             stream.getTracks().forEach((track) => pc.addTrack(track, stream));
@@ -342,9 +332,9 @@ export function WebRTCProvider({ children }) {
         } catch (err) {
             console.error("Initiate call failed:", err);
             cleanupCall();
-            alert("Could not access camera or microphone.");
+            alert("Could not access camera or microphone: " + err.message);
         }
-    }, [isCallActive, currentChat, getMediaStream, safePlay, createPeerConnection, socket, cleanupCall]);
+    }, [isCallActive, currentChat, getMediaStream, createPeerConnection, socket, cleanupCall]);
 
     // Accept Incoming Call
     const acceptCall = useCallback(async () => {
@@ -353,7 +343,7 @@ export function WebRTCProvider({ children }) {
 
         const data = pendingIncomingCall;
         setPendingIncomingCall(null);
-        setActiveCallPartner({ id: data.from, name: data.fromName, color: data.fromColor || '#6366f1' });
+        setActiveCallPartner({ id: data.from, name: data.fromName, color: data.fromColor || '#00a884' });
         setCallIsVideo(data.isVideo);
         setIsAudioMuted(false);
         setIsVideoMuted(!data.isVideo);
@@ -363,12 +353,7 @@ export function WebRTCProvider({ children }) {
         try {
             const stream = await getMediaStream(data.isVideo);
             localStreamRef.current = stream;
-
-            if (localVideoRef.current) {
-                localVideoRef.current.srcObject = stream;
-                localVideoRef.current.muted = true;
-                safePlay(localVideoRef.current);
-            }
+            setLocalStream(stream);
 
             const pc = createPeerConnection(data.from);
             stream.getTracks().forEach((track) => pc.addTrack(track, stream));
@@ -394,7 +379,7 @@ export function WebRTCProvider({ children }) {
             socket?.emit("call-reject", { to: data.from });
             alert("Failed to connect call: " + err.message);
         }
-    }, [pendingIncomingCall, stopRingtone, getMediaStream, safePlay, createPeerConnection, flushIceQueue, socket, startTimer, cleanupCall]);
+    }, [pendingIncomingCall, stopRingtone, getMediaStream, createPeerConnection, flushIceQueue, socket, startTimer, cleanupCall]);
 
     // Decline Incoming Call
     const declineCall = useCallback(() => {
@@ -512,6 +497,8 @@ export function WebRTCProvider({ children }) {
         isVideoMuted,
         isCompactMode,
         remoteVideoAvailable,
+        localStream,
+        remoteStream,
         localVideoRef,
         remoteVideoRef,
         remoteAudioRef,

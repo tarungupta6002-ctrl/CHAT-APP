@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useWebRTC } from '../context/WebRTCContext';
 
 export default function ActiveCallOverlay() {
@@ -12,6 +12,8 @@ export default function ActiveCallOverlay() {
         isCompactMode,
         callIsVideo,
         remoteVideoAvailable,
+        localStream,
+        remoteStream,
         localVideoRef,
         remoteVideoRef,
         remoteAudioRef,
@@ -21,13 +23,43 @@ export default function ActiveCallOverlay() {
         toggleCompact
     } = useWebRTC();
 
+    // Automatically bind local video stream whenever mounted or updated
+    useEffect(() => {
+        if (localVideoRef.current && localStream) {
+            localVideoRef.current.srcObject = localStream;
+            localVideoRef.current.play().catch((err) => console.log("Local video play err:", err));
+        }
+    }, [localStream, isCallActive]);
+
+    // Automatically bind remote video and audio stream with mobile tap fallback
+    useEffect(() => {
+        if (remoteVideoRef.current && remoteStream) {
+            remoteVideoRef.current.srcObject = remoteStream;
+            remoteVideoRef.current.play().catch((err) => {
+                console.warn("[WebRTC] Autoplay blocked, waiting for tap:", err);
+                const retry = () => {
+                    remoteVideoRef.current?.play().catch(() => {});
+                    if (remoteAudioRef.current) remoteAudioRef.current.play().catch(() => {});
+                    document.removeEventListener("touchstart", retry);
+                    document.removeEventListener("click", retry);
+                };
+                document.addEventListener("touchstart", retry, { once: true });
+                document.addEventListener("click", retry, { once: true });
+            });
+        }
+        if (remoteAudioRef.current && remoteStream) {
+            remoteAudioRef.current.srcObject = remoteStream;
+            remoteAudioRef.current.play().catch(() => {});
+        }
+    }, [remoteStream, isCallActive]);
+
     if (!isCallActive) return null;
 
     const partnerName = activeCallPartner.name || 'User';
     const initials = partnerName.slice(0, 2).toUpperCase();
-    const partnerColor = activeCallPartner.color || '#6366f1';
+    const partnerColor = activeCallPartner.color || '#00a884';
 
-    const showAvatarPlaceholder = !callIsVideo || !remoteVideoAvailable;
+    const showAvatarPlaceholder = !callIsVideo || (!remoteVideoAvailable && callStatus !== "Connected");
 
     return (
         <div className="active-call-overlay">
@@ -36,7 +68,7 @@ export default function ActiveCallOverlay() {
                 <div className="active-call-header">
                     <div className="active-call-peer-info">
                         <span className="call-status-dot"></span>
-                        <span>{partnerName} • {callStatus || 'Connecting'}</span>
+                        <span>{partnerName} • {callStatus || 'Connecting...'}</span>
                         <span className="call-timer-badge">{callTimer}</span>
                     </div>
                     <button
@@ -56,10 +88,11 @@ export default function ActiveCallOverlay() {
                         ref={remoteVideoRef}
                         autoPlay
                         playsInline
+                        webkit-playsinline="true"
                         style={{ display: showAvatarPlaceholder ? 'none' : 'block' }}
                     />
                     
-                    {/* Remote Audio element (Unmuted, guarantees audio playback) */}
+                    {/* Remote Audio element (Unmuted, guarantees audio playback even if video element fails) */}
                     <audio ref={remoteAudioRef} autoPlay playsInline />
 
                     {/* Remote Avatar Placeholder */}
@@ -71,7 +104,7 @@ export default function ActiveCallOverlay() {
                             >
                                 {initials}
                             </div>
-                            <span>{callStatus === 'Connected' ? partnerName : 'Connecting...'}</span>
+                            <span>{callStatus === 'Connected' ? partnerName : `${partnerName} (${callStatus || 'Connecting...'})`}</span>
                         </div>
                     )}
 
@@ -81,6 +114,7 @@ export default function ActiveCallOverlay() {
                             ref={localVideoRef}
                             autoPlay
                             playsInline
+                            webkit-playsinline="true"
                             muted
                             style={{ display: isVideoMuted ? 'none' : 'block' }}
                         />

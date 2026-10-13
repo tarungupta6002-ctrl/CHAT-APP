@@ -40,8 +40,18 @@ async function initDb() {
                 created_at INTEGER
             );
         `);
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY,
+                username TEXT UNIQUE COLLATE NOCASE,
+                password_hash TEXT,
+                avatar_color TEXT,
+                created_at INTEGER
+            );
+        `);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_username);`);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
     } catch (err) {
         console.error("[Database] Initialization error:", err);
     }
@@ -180,10 +190,99 @@ function mapRowToMessage(row) {
     };
 }
 
+// User Authentication & Management Queries
+async function createUser(id, username, passwordHash, avatarColor) {
+    try {
+        await db.execute({
+            sql: `INSERT INTO users (id, username, password_hash, avatar_color, created_at) VALUES (?, ?, ?, ?, ?)`,
+            args: [id, username, passwordHash, avatarColor, Date.now()]
+        });
+        return { id, username, color: avatarColor };
+    } catch (err) {
+        console.error("Error creating user in DB:", err);
+        throw err;
+    }
+}
+
+async function getUserByUsername(username) {
+    try {
+        const rs = await db.execute({
+            sql: `SELECT * FROM users WHERE username = ? COLLATE NOCASE LIMIT 1`,
+            args: [username]
+        });
+        if (rs.rows.length === 0) return null;
+        const row = rs.rows[0];
+        return {
+            id: row.id,
+            username: row.username,
+            passwordHash: row.password_hash,
+            color: row.avatar_color,
+            createdAt: row.created_at
+        };
+    } catch (err) {
+        console.error("Error fetching user by username:", err);
+        return null;
+    }
+}
+
+async function getAllUsers() {
+    try {
+        const rs = await db.execute(`SELECT id, username, avatar_color, created_at FROM users ORDER BY created_at DESC`);
+        return rs.rows.map((row) => ({
+            id: row.id,
+            username: row.username,
+            color: row.avatar_color,
+            createdAt: row.created_at
+        }));
+    } catch (err) {
+        console.error("Error fetching all users:", err);
+        return [];
+    }
+}
+
+async function getRecentChatsForUser(username) {
+    try {
+        const rs = await db.execute({
+            sql: `
+                SELECT * FROM messages
+                WHERE sender_username = ? OR recipient_username = ?
+                ORDER BY created_at DESC
+                LIMIT 200
+            `,
+            args: [username, username]
+        });
+
+        const chatsMap = new Map();
+        rs.rows.forEach((r) => {
+            const partner = (r.sender_username.toLowerCase() === username.toLowerCase()) 
+                ? r.recipient_username 
+                : r.sender_username;
+            
+            if (partner && !chatsMap.has(partner.toLowerCase())) {
+                chatsMap.set(partner.toLowerCase(), {
+                    partnerUsername: partner,
+                    partnerColor: (r.sender_username.toLowerCase() === partner.toLowerCase()) ? r.avatar_color : null,
+                    lastMessage: r.text || (r.image ? "📷 Photo" : (r.audio ? "🎙️ Voice note" : "")),
+                    lastTime: r.time,
+                    createdAt: r.created_at
+                });
+            }
+        });
+        return Array.from(chatsMap.values());
+    } catch (err) {
+        console.error("Error fetching recent chats:", err);
+        return [];
+    }
+}
+
 module.exports = {
     saveMessage,
     deleteMessage,
     editMessage,
     getGeneralHistory,
-    getDmHistory
+    getDmHistory,
+    createUser,
+    getUserByUsername,
+    getAllUsers,
+    getRecentChatsForUser
 };

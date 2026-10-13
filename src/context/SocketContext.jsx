@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
+import { useAuth } from './AuthContext';
 
 const SocketContext = createContext(null);
 
@@ -7,27 +8,30 @@ export const EMOJI_LIST = ["😀", "😂", "😍", "🥳", "😎", "🤔", "🙌
 export const QUICK_REACTIONS = ["👍", "❤️", "😂", "🔥", "🎉"];
 
 export function SocketProvider({ children }) {
+    const { user: authUser, isAuthenticated } = useAuth();
     const socketRef = useRef(null);
 
-    // User State
-    const [currentUser, setCurrentUser] = useState(() => {
-        const savedName = sessionStorage.getItem("chat_username") || "";
-        return { id: null, username: savedName, color: "#6366f1" };
-    });
+    // Connected user profile
+    const [currentUser, setCurrentUser] = useState(() => authUser || { id: null, username: '', color: '#00a884' });
     const [isJoined, setIsJoined] = useState(false);
 
-    // Online Users
+    // Online Users (Socket Map)
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [onlineCount, setOnlineCount] = useState(1);
 
-    // Conversation State
-    // currentChat: { type: 'general' } or { type: 'dm', partnerId, partnerName, partnerColor }
-    const [currentChat, setCurrentChat] = useState({ type: 'general' });
-    const [activeDmPartners, setActiveDmPartners] = useState([]);
+    // Registered DB Contacts
+    const [allRegisteredUsers, setAllRegisteredUsers] = useState([]);
+
+    // WhatsApp-Style Active Conversation Selection
+    // currentChat: null | { type: 'general' } | { type: 'dm', partnerId, partnerName, partnerColor }
+    const [currentChat, setCurrentChat] = useState(null);
+
+    // Active DM tabs & recent chats list
+    const [recentChats, setRecentChats] = useState([]);
     
-    // In-memory conversation messages: { general: [], [partnerId]: [] }
+    // In-memory conversation messages: { general: [], [partnerIdOrUsername]: [] }
     const [conversations, setConversations] = useState({ general: [] });
-    // Unread counts: { general: 0, [partnerId]: 0 }
+    // Unread counts: { general: 0, [partner]: 0 }
     const [unreadCounts, setUnreadCounts] = useState({ general: 0 });
 
     // Typing State
@@ -37,7 +41,6 @@ export function SocketProvider({ children }) {
     // UI States
     const [isSoundMuted, setIsSoundMuted] = useState(() => localStorage.getItem("chat_sound_muted") === "true");
     const [currentTheme, setCurrentTheme] = useState(() => localStorage.getItem("chat_theme") || "dark");
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     
     // Action Overlays
     const [replyingTo, setReplyingTo] = useState(null); // { id, username, text }
@@ -79,25 +82,55 @@ export function SocketProvider({ children }) {
         localStorage.setItem("chat_theme", currentTheme);
     }, [currentTheme]);
 
-    // Apply sound mute setting
-    useEffect(() => {
-        localStorage.setItem("chat_sound_muted", isSoundMuted ? "true" : "false");
-    }, [isSoundMuted]);
+    // Fetch registered users & recent chats
+    const fetchRegisteredData = useCallback(async (username) => {
+        try {
+            const [uRes, cRes] = await Promise.all([
+                fetch('/api/users'),
+                fetch(`/api/chats/recent?username=${encodeURIComponent(username)}`)
+            ]);
+            if (uRes.ok) {
+                const uData = await uRes.json();
+                setAllRegisteredUsers(uData.users || []);
+            }
+            if (cRes.ok) {
+                const cData = await cRes.json();
+                setRecentChats(cData.chats || []);
+            }
+        } catch (e) {
+            console.warn("Failed fetching contacts:", e);
+        }
+    }, []);
 
-    // Initialize Socket
+    // Update currentUser when auth changes
     useEffect(() => {
+        if (authUser) {
+            setCurrentUser(authUser);
+            fetchRegisteredData(authUser.username);
+        }
+    }, [authUser, fetchRegisteredData]);
+
+    // Initialize Socket Connection
+    useEffect(() => {
+        if (!isAuthenticated || !authUser) return;
+
         const socket = io();
         socketRef.current = socket;
 
         socket.on("connect", () => {
-            console.log("[Socket] Connected with ID:", socket.id);
+            console.log("[Socket] Connected:", socket.id);
+            // Join with user identity
+            socket.emit("user-join", {
+                username: authUser.username,
+                color: authUser.color
+            });
         });
 
         socket.on("join-success", (data) => {
-            setCurrentUser(data);
+            setCurrentUser((prev) => ({ ...prev, ...data }));
             setIsJoined(true);
-            sessionStorage.setItem("chat_username", data.username);
             socket.emit("get-users");
+            fetchRegisteredData(authUser.username);
         });
 
         socket.on("users-list", (list) => {
@@ -109,7 +142,6 @@ export function SocketProvider({ children }) {
         });
 
         socket.on("user-status", (statusData) => {
-            // Add system status message to general room
             setConversations((prev) => ({
                 ...prev,
                 general: [
@@ -132,50 +164,49 @@ export function SocketProvider({ children }) {
             if (type === "general") {
                 setConversations((prev) => ({ ...prev, general: mapped }));
             } else if (type === "dm" && partnerUsername) {
-                // Find matching active DM partner
-                setActiveDmPartners((prevPartners) => {
-                    const match = prevPartners.find((p) => p.username === partnerUsername);
-                    if (match) {
-                        setConversations((prevConvs) => ({
-                            ...prevConvs,
-                            [match.id]: mapped
-                        }));
-                    }
-                    return prevPartners;
-                });
+                setConversations((prev) => ({
+                    ...prev,
+                    [partnerUsername.toLowerCase()]: mapped
+                }));
             }
         });
 
         socket.on("message", (msg) => {
-            const isSelf = msg.senderId === socket.id;
+            const isSelf = msg.senderUsername === authUser.username || msg.username === authUser.username || msg.senderId === socket.id;
 
-            // Determine if message belongs to General or a DM
-            if (msg.recipientId) {
+            if (msg.recipientUsername || msg.recipientId) {
                 // DM Message
-                const partnerId = isSelf ? msg.recipientId : msg.senderId;
-                const partnerName = isSelf ? "Chat Partner" : msg.username;
-                const partnerColor = msg.avatarColor || "#6366f1";
+                const partnerName = (msg.username.toLowerCase() === authUser.username.toLowerCase())
+                    ? msg.recipientUsername
+                    : msg.username;
+                const partnerKey = partnerName ? partnerName.toLowerCase() : 'dm';
 
-                // Ensure partner exists in activeDmPartners
-                setActiveDmPartners((prev) => {
-                    if (!prev.some((p) => p.id === partnerId)) {
-                        return [...prev, { id: partnerId, username: partnerName, color: partnerColor }];
-                    }
-                    return prev;
-                });
-
-                // Append to conversations
                 setConversations((prev) => ({
                     ...prev,
-                    [partnerId]: [...(prev[partnerId] || []), { type: "message", data: msg }]
+                    [partnerKey]: [...(prev[partnerKey] || []), { type: "message", data: msg }]
                 }));
 
-                // Update unread if not currently in this chat
+                // Update recent chats list
+                setRecentChats((prev) => {
+                    const filtered = prev.filter((c) => c.partnerUsername.toLowerCase() !== partnerKey);
+                    return [
+                        {
+                            partnerUsername: partnerName,
+                            partnerColor: msg.avatarColor || '#00a884',
+                            lastMessage: msg.text || (msg.image ? '📷 Photo' : (msg.audio ? '🎙️ Voice note' : '')),
+                            lastTime: msg.time,
+                            createdAt: Date.now()
+                        },
+                        ...filtered
+                    ];
+                });
+
+                // Update unread if not actively open
                 setCurrentChat((curr) => {
-                    if (curr.type !== "dm" || curr.partnerId !== partnerId) {
+                    if (!curr || curr.type !== "dm" || curr.partnerName?.toLowerCase() !== partnerKey) {
                         setUnreadCounts((u) => ({
                             ...u,
-                            [partnerId]: (u[partnerId] || 0) + 1
+                            [partnerKey]: (u[partnerKey] || 0) + 1
                         }));
                         if (!isSelf) playChime();
                     }
@@ -189,7 +220,7 @@ export function SocketProvider({ children }) {
                 }));
 
                 setCurrentChat((curr) => {
-                    if (curr.type !== "general") {
+                    if (!curr || curr.type !== "general") {
                         setUnreadCounts((u) => ({
                             ...u,
                             general: (u.general || 0) + 1
@@ -273,14 +304,10 @@ export function SocketProvider({ children }) {
 
         socket.on("user-typing", (data) => {
             setCurrentChat((curr) => {
-                if (data.recipientId) {
-                    if (curr.type === "dm" && curr.partnerId === data.id) {
-                        setTypingInfo({ isTyping: true, text: `${data.username} is typing privately...` });
-                    }
-                } else {
-                    if (curr.type === "general") {
-                        setTypingInfo({ isTyping: true, text: `${data.username} is typing...` });
-                    }
+                if (data.recipientId && curr?.type === "dm" && curr.partnerId === data.id) {
+                    setTypingInfo({ isTyping: true, text: `${data.username} is typing...` });
+                } else if (!data.recipientId && curr?.type === "general") {
+                    setTypingInfo({ isTyping: true, text: `${data.username} is typing...` });
                 }
                 return curr;
             });
@@ -293,20 +320,21 @@ export function SocketProvider({ children }) {
         return () => {
             socket.disconnect();
         };
-    }, [playChime]);
-
-    // Send Join Request
-    const joinChat = useCallback((username) => {
-        if (!username || !username.trim()) return;
-        const clean = username.trim().slice(0, 20);
-        socketRef.current?.emit("user-join", clean);
-    }, []);
+    }, [isAuthenticated, authUser, playChime, fetchRegisteredData]);
 
     // Send Message
     const sendMessage = useCallback(({ text, image, audio, audioDuration, isViewOnce, replyTo }) => {
-        if (!socketRef.current) return;
+        if (!socketRef.current || !currentChat) return;
 
-        const recipientId = currentChat.type === "dm" ? currentChat.partnerId : null;
+        // Find recipient socket ID if user is online
+        let recipientId = currentChat.partnerId || null;
+        if (currentChat.type === "dm" && !recipientId && currentChat.partnerName) {
+            const foundOnline = onlineUsers.find(
+                (u) => u.username.toLowerCase() === currentChat.partnerName.toLowerCase()
+            );
+            if (foundOnline) recipientId = foundOnline.id;
+        }
+
         const payload = {
             text: text ? text.trim() : "",
             image: image || null,
@@ -314,21 +342,24 @@ export function SocketProvider({ children }) {
             audioDuration: audioDuration || null,
             isViewOnce: Boolean(isViewOnce),
             replyTo: replyTo || null,
-            recipientId: recipientId
+            recipientId: currentChat.type === "dm" ? recipientId : null,
+            recipientUsername: currentChat.type === "dm" ? currentChat.partnerName : null
         };
 
         socketRef.current.emit("user-message", payload);
 
-        // Stop typing immediately
-        const stopTypingPayload = recipientId ? { recipientId } : {};
-        socketRef.current.emit("stop-typing", stopTypingPayload);
+        if (recipientId) {
+            socketRef.current.emit("stop-typing", { recipientId });
+        } else {
+            socketRef.current.emit("stop-typing", {});
+        }
 
         setReplyingTo(null);
-    }, [currentChat]);
+    }, [currentChat, onlineUsers]);
 
     // Notify Typing
     const notifyTyping = useCallback(() => {
-        if (!socketRef.current) return;
+        if (!socketRef.current || !currentChat) return;
         const recipientId = currentChat.type === "dm" ? currentChat.partnerId : null;
         const payload = recipientId ? { recipientId } : {};
 
@@ -343,7 +374,7 @@ export function SocketProvider({ children }) {
     // Edit Message
     const editMessage = useCallback((messageId, newText) => {
         if (!socketRef.current || !messageId || !newText || !newText.trim()) return;
-        const recipientId = currentChat.type === "dm" ? currentChat.partnerId : null;
+        const recipientId = currentChat?.type === "dm" ? currentChat.partnerId : null;
         socketRef.current.emit("message-edit", {
             messageId,
             newText: newText.trim(),
@@ -354,7 +385,7 @@ export function SocketProvider({ children }) {
     // Delete Message
     const deleteMessage = useCallback((messageId) => {
         if (!socketRef.current || !messageId) return;
-        const recipientId = currentChat.type === "dm" ? currentChat.partnerId : null;
+        const recipientId = currentChat?.type === "dm" ? currentChat.partnerId : null;
         socketRef.current.emit("message-delete", {
             messageId,
             recipientId
@@ -374,67 +405,48 @@ export function SocketProvider({ children }) {
         socketRef.current.emit("view-once-opened", { messageId });
     }, []);
 
-    // Switch Tab & Clear unreads
-    const switchChat = useCallback((chatSpec) => {
+    // Switch active chat in WhatsApp Web
+    const selectChat = useCallback((chatSpec) => {
         setCurrentChat(chatSpec);
         setTypingInfo({ isTyping: false, text: '' });
 
         if (chatSpec.type === "general") {
             setUnreadCounts((u) => ({ ...u, general: 0 }));
-        } else if (chatSpec.type === "dm" && chatSpec.partnerId) {
-            setUnreadCounts((u) => ({ ...u, [chatSpec.partnerId]: 0 }));
+        } else if (chatSpec.type === "dm" && chatSpec.partnerName) {
+            const key = chatSpec.partnerName.toLowerCase();
+            setUnreadCounts((u) => ({ ...u, [key]: 0 }));
             // Request DM history from backend
-            if (chatSpec.partnerName) {
-                socketRef.current?.emit("get-dm-history", { partnerUsername: chatSpec.partnerName });
-            }
+            socketRef.current?.emit("get-dm-history", { partnerUsername: chatSpec.partnerName });
         }
     }, []);
 
-    // Open or switch to DM with specific user
-    const openDmWithUser = useCallback((user) => {
-        if (!user) return;
-        const isMe = user.id === socketRef.current?.id || user.id === "me";
-        const targetId = isMe ? socketRef.current?.id : user.id;
-        const displayName = isMe ? `${user.username} (Notes)` : user.username;
-        const dmPartner = { id: targetId, username: displayName, color: user.color || "#6366f1" };
+    // Start or open chat with a user
+    const startChatWithUser = useCallback((targetUser) => {
+        if (!targetUser) return;
+        // Check if online to grab their socket ID
+        const onlineEntry = onlineUsers.find(
+            (u) => u.username.toLowerCase() === targetUser.username.toLowerCase()
+        );
 
-        setActiveDmPartners((prev) => {
-            if (!prev.some((p) => p.id === targetId)) {
-                return [...prev, dmPartner];
-            }
-            return prev;
-        });
-
-        switchChat({
+        selectChat({
             type: "dm",
-            partnerId: targetId,
-            partnerName: displayName,
-            partnerColor: user.color || "#6366f1"
+            partnerId: onlineEntry ? onlineEntry.id : targetUser.id,
+            partnerName: targetUser.username,
+            partnerColor: targetUser.color || '#00a884'
         });
-        setSidebarOpen(false);
-    }, [switchChat]);
-
-    // Close a DM tab
-    const closeDmTab = useCallback((partnerId, e) => {
-        if (e) e.stopPropagation();
-        setActiveDmPartners((prev) => prev.filter((p) => p.id !== partnerId));
-        if (currentChat.type === "dm" && currentChat.partnerId === partnerId) {
-            switchChat({ type: "general" });
-        }
-    }, [currentChat, switchChat]);
+    }, [onlineUsers, selectChat]);
 
     const value = {
         socket: socketRef.current,
         currentUser,
         isJoined,
-        joinChat,
         onlineUsers,
         onlineCount,
+        allRegisteredUsers,
+        recentChats,
         currentChat,
-        switchChat,
-        activeDmPartners,
-        openDmWithUser,
-        closeDmTab,
+        selectChat,
+        startChatWithUser,
         conversations,
         unreadCounts,
         typingInfo,
@@ -449,8 +461,6 @@ export function SocketProvider({ children }) {
         setIsSoundMuted,
         currentTheme,
         setCurrentTheme,
-        sidebarOpen,
-        setSidebarOpen,
         replyingTo,
         setReplyingTo,
         editingMessage,
