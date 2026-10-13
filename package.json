@@ -8,12 +8,20 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "node --watch index.js"
+    "dev": "node --watch index.js",
+    "build": "vite build"
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
     "dotenv": "^18.0.7",
     "express": "^5.2.1",
-    "socket.io": "^4.8.4"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "socket.io": "^4.8.4",
+    "socket.io-client": "^4.8.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.4"
   }
 }

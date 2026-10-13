@@ -1,6 +1,7 @@
 const http = require("http");
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const { Server } = require("socket.io");
 const db = require("./database");
 
@@ -285,12 +286,22 @@ io.on("connection", (socket) => {
     });
 });
 
-// Serve static assets correctly using path.join
-app.use(express.static(path.join(__dirname, "public")));
-
-app.get("/", (req, res) => {
-    return res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+// Serve React production build from 'dist' if it exists, otherwise fallback to 'public'
+const distPath = path.join(__dirname, "dist");
+if (fs.existsSync(path.join(distPath, "index.html"))) {
+    app.use(express.static(distPath));
+    app.use((req, res, next) => {
+        if (req.method === "GET" && !req.path.startsWith("/socket.io")) {
+            return res.sendFile(path.join(distPath, "index.html"));
+        }
+        next();
+    });
+} else {
+    app.use(express.static(path.join(__dirname, "public")));
+    app.get("/", (req, res) => {
+        return res.sendFile(path.join(__dirname, "public", "index.html"));
+    });
+}
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
