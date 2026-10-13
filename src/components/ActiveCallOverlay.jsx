@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MeetingProvider, useMeeting, useParticipant } from '@videosdk.live/react-sdk';
 import { useWebRTC } from '../context/WebRTCContext';
 import { useAuth } from '../context/AuthContext';
@@ -10,42 +10,66 @@ function RemoteParticipantView({ participantId, partnerName, partnerColor, callI
 
     const { webcamStream, micStream, webcamOn, micOn } = useParticipant(participantId);
 
-    // Bind video stream
+    // Build remote video stream
+    const videoStream = useMemo(() => {
+        if (webcamOn && webcamStream?.track) {
+            const mediaStream = new MediaStream();
+            mediaStream.addTrack(webcamStream.track);
+            return mediaStream;
+        }
+        return null;
+    }, [webcamStream, webcamOn]);
+
+    // Build remote audio stream
+    const audioStream = useMemo(() => {
+        if (micOn && micStream?.track) {
+            const mediaStream = new MediaStream();
+            mediaStream.addTrack(micStream.track);
+            return mediaStream;
+        }
+        return null;
+    }, [micStream, micOn]);
+
+    // Bind remote video stream
     useEffect(() => {
         if (videoRef.current) {
-            if (webcamOn && webcamStream) {
-                const mediaStream = new MediaStream([webcamStream.track]);
-                videoRef.current.srcObject = mediaStream;
+            if (videoStream && callIsVideo) {
+                videoRef.current.srcObject = videoStream;
                 videoRef.current.play().catch((err) => console.log("Remote video play error:", err));
             } else {
                 videoRef.current.srcObject = null;
             }
         }
-    }, [webcamStream, webcamOn]);
+    }, [videoStream, callIsVideo]);
 
-    // Bind audio stream
+    // Bind remote audio stream
     useEffect(() => {
         if (audioRef.current) {
-            if (micOn && micStream) {
-                const mediaStream = new MediaStream([micStream.track]);
-                audioRef.current.srcObject = mediaStream;
+            if (audioStream) {
+                audioRef.current.srcObject = audioStream;
                 audioRef.current.play().catch((err) => console.log("Remote audio play error:", err));
             } else {
                 audioRef.current.srcObject = null;
             }
         }
-    }, [micStream, micOn]);
+    }, [audioStream]);
 
     const showAvatar = !callIsVideo || !webcamOn;
 
     return (
         <>
             <video
+                id="remote-video"
                 ref={videoRef}
                 autoPlay
                 playsInline
                 webkit-playsinline="true"
-                style={{ display: showAvatar ? 'none' : 'block' }}
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: showAvatar ? 'none' : 'block'
+                }}
             />
             <audio ref={audioRef} autoPlay playsInline />
 
@@ -64,34 +88,65 @@ function RemoteParticipantView({ participantId, partnerName, partnerColor, callI
     );
 }
 
-// Local Participant Video PiP Renderer
+// Local Participant Video PiP Renderer (Self Camera View)
 function LocalParticipantView({ participantId, isVideoMuted, callIsVideo }) {
     const videoRef = useRef(null);
     const { webcamStream, webcamOn } = useParticipant(participantId);
 
+    // Build local video stream
+    const videoStream = useMemo(() => {
+        if (webcamOn && webcamStream?.track) {
+            const mediaStream = new MediaStream();
+            mediaStream.addTrack(webcamStream.track);
+            return mediaStream;
+        }
+        return null;
+    }, [webcamStream, webcamOn]);
+
+    // Bind local video stream
     useEffect(() => {
         if (videoRef.current) {
-            if (webcamOn && webcamStream && !isVideoMuted && callIsVideo) {
-                const mediaStream = new MediaStream([webcamStream.track]);
-                videoRef.current.srcObject = mediaStream;
+            if (videoStream && !isVideoMuted && callIsVideo) {
+                videoRef.current.srcObject = videoStream;
                 videoRef.current.play().catch((err) => console.log("Local video play error:", err));
             } else {
                 videoRef.current.srcObject = null;
             }
         }
-    }, [webcamStream, webcamOn, isVideoMuted, callIsVideo]);
-
-    if (!callIsVideo || isVideoMuted || !webcamOn) return null;
+    }, [videoStream, isVideoMuted, callIsVideo]);
 
     return (
         <div className="local-pip-wrap">
             <video
+                id="local-video"
                 ref={videoRef}
                 autoPlay
                 playsInline
                 webkit-playsinline="true"
                 muted
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    transform: 'scaleX(-1)',
+                    display: isVideoMuted || !webcamOn ? 'none' : 'block'
+                }}
             />
+            {(isVideoMuted || !webcamOn) && (
+                <div style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#111b21',
+                    color: '#8696a0',
+                    fontSize: '0.75rem',
+                    textAlign: 'center'
+                }}>
+                    <span>Camera Off</span>
+                </div>
+            )}
             <span className="pip-label">You</span>
         </div>
     );
@@ -115,8 +170,6 @@ function VideoSDKCallStage() {
         toggleCompact
     } = useWebRTC();
 
-    const [hasJoined, setHasJoined] = useState(false);
-
     const {
         join,
         leave,
@@ -127,7 +180,6 @@ function VideoSDKCallStage() {
     } = useMeeting({
         onMeetingJoined: () => {
             console.log("[VideoSDK] Meeting joined successfully");
-            setHasJoined(true);
             setCallStatus("Connected");
             startTimer();
         },
@@ -168,10 +220,11 @@ function VideoSDKCallStage() {
     const initials = partnerName.slice(0, 2).toUpperCase();
     const partnerColor = activeCallPartner.color || '#00a884';
 
-    // Find remote participant (the participant that is not local)
-    const remoteParticipantId = localParticipant
-        ? [...participants.keys()].find((id) => id !== localParticipant.id)
-        : null;
+    // In VideoSDK, 'participants' Map contains remote participants
+    const localId = localParticipant?.id;
+    const remoteParticipantId = localId
+        ? [...participants.keys()].find((id) => id !== localId)
+        : [...participants.keys()][0];
 
     return (
         <div className="active-call-overlay">
@@ -218,13 +271,31 @@ function VideoSDKCallStage() {
                         </div>
                     )}
 
-                    {/* Local PiP Video Thumbnail */}
-                    {localParticipant && (
-                        <LocalParticipantView
-                            participantId={localParticipant.id}
-                            isVideoMuted={isVideoMuted}
-                            callIsVideo={callIsVideo}
-                        />
+                    {/* Local PiP Video Thumbnail (Self-View) */}
+                    {callIsVideo && (
+                        localId ? (
+                            <LocalParticipantView
+                                participantId={localId}
+                                isVideoMuted={isVideoMuted}
+                                callIsVideo={callIsVideo}
+                            />
+                        ) : (
+                            <div className="local-pip-wrap">
+                                <div style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: '#111b21',
+                                    color: '#8696a0',
+                                    fontSize: '0.72rem'
+                                }}>
+                                    <span>You</span>
+                                </div>
+                                <span className="pip-label">You</span>
+                            </div>
+                        )
                     )}
                 </div>
 
