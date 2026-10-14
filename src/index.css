@@ -4503,33 +4503,51 @@ body.light-theme .call-ctrl-btn {
   padding: 0 1rem;
 }
 
-/* Social Buttons Grid (Google, GitHub, Microsoft) */
-.social-buttons-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
+/* Google Authentication Button (GitHub & Microsoft removed) */
+.google-auth-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.social-btn {
+.gis-button-target {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.chathub-google-btn {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 0.62rem 0.5rem;
-  border: 1px solid #e2e8f0;
+  gap: 12px;
+  padding: 0.78rem 1.25rem;
+  border: 1.5px solid #e2e8f0;
   border-radius: 12px;
   background: #ffffff;
   cursor: pointer;
-  font-size: 0.86rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: #334155;
-  transition: all 0.15s ease;
+  color: #1e293b;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
-.social-btn:hover {
+.chathub-google-btn:hover {
   background: #f8fafc;
   border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transform: translateY(-1px);
+}
+
+.google-icon-svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .social-icon {

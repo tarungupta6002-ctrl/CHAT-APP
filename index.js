@@ -445,6 +445,13 @@ function verifyResetToken(token) {
 
 // --- REST API Authentication Endpoints ---
 
+// 0. Public Auth Configuration (Google Client ID)
+app.get("/api/auth/config", (req, res) => {
+    res.json({
+        googleClientId: (process.env.GOOGLE_CLIENT_ID || "").trim()
+    });
+});
+
 // 1. Send Registration OTP
 app.post("/api/auth/send-signup-otp", async (req, res) => {
     try {
