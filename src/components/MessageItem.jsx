@@ -173,7 +173,10 @@ export default function MessageItem({ item }) {
     }
 
     const msg = item.data;
-    const isSelf = msg.senderId && (msg.senderId === socket?.id || msg.senderId === currentUser.id);
+    const isSelf = Boolean(
+        (currentUser?.username && msg.username && msg.username.toLowerCase() === currentUser.username.toLowerCase()) ||
+        (msg.senderId && (msg.senderId === socket?.id || msg.senderId === currentUser?.id))
+    );
     const isOpenedViewOnce = msg.isViewOnce && (openedViewOnceIds.has(msg.id) || msg.viewOnceOpened);
     const initials = msg.username ? msg.username.slice(0, 2).toUpperCase() : '?';
     const avatarColor = msg.avatarColor || '#6366f1';
