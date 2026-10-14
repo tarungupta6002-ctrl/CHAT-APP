@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useWebRTC } from '../context/WebRTCContext';
+import { Users, Sparkles, ShieldCheck, ArrowRight, Plus } from 'lucide-react';
 
 export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllContacts, onViewAllGroups }) {
     const { currentUser, selectChat, allRegisteredUsers, onlineUsers, recentChats, onlineCount } = useSocket();
@@ -90,7 +91,7 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                     </div>
 
                     <div className="dash-hero-text">
-                        <span className="dash-wave-greet">👋 Welcome back,</span>
+                        <span className="dash-wave-greet"><Sparkles size={15} style={{ display: 'inline', marginRight: '6px', color: '#10b981', verticalAlign: 'middle' }} />Welcome back,</span>
                         <h1 className="dash-welcome-username">{displayName}</h1>
                         <div className="dash-hero-online-pill">
                             <svg className="hero-pill-icon" viewBox="0 0 20 20" fill="currentColor">
@@ -235,7 +236,9 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                 <div className="dash-contacts-grid">
                     {realRecentContacts.length === 0 ? (
                         <div className="dash-empty-contacts-card">
-                            <div className="empty-contact-icon">👥</div>
+                            <div className="empty-contact-icon">
+                                <Users size={32} />
+                            </div>
                             <h4>No contacts found yet</h4>
                             <p>Click "New Chat" to connect with registered users on ChatHub.</p>
                             <button
@@ -244,7 +247,7 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                                 style={{ marginTop: '0.75rem', width: 'auto', padding: '0.5rem 1.25rem' }}
                                 onClick={onNewChat}
                             >
-                                + Start New Chat
+                                <Plus size={16} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> Start New Chat
                             </button>
                         </div>
                     ) : (

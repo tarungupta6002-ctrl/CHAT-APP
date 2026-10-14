@@ -1,6 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
+import { 
+    Sparkles, 
+    AlertCircle, 
+    CheckCircle2, 
+    Pin, 
+    HelpCircle, 
+    FileText, 
+    MessageSquare, 
+    CheckSquare, 
+    ThumbsUp, 
+    ThumbsDown, 
+    Share2, 
+    User, 
+    Clock, 
+    Copy, 
+    Check, 
+    X 
+} from 'lucide-react';
 
 export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
     const { sendMessage } = useSocket();
@@ -397,7 +415,7 @@ export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
                     {errorData && (
                         <div className="ai-error-banner">
                             <div className="ai-error-left">
-                                <span className="ai-error-icon">⚠️</span>
+                                <AlertCircle size={18} className="ai-error-icon" />
                                 <div className="ai-error-details">
                                     <strong>Request Failed</strong>
                                     <p>{errorData.message}</p>
@@ -453,7 +471,7 @@ export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
                                             <ul className="ai-list decisions-list">
                                                 {summaryResult.decisions.map((d, i) => (
                                                     <li key={i}>
-                                                        <span className="ai-bullet-check">✓</span>
+                                                        <CheckCircle2 size={15} color="#10b981" className="ai-bullet-check" />
                                                         <span>{d}</span>
                                                     </li>
                                                 ))}
@@ -467,7 +485,7 @@ export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
                                             <ul className="ai-list action-list">
                                                 {summaryResult.actionItems.map((a, i) => (
                                                     <li key={i}>
-                                                        <span className="ai-bullet-point">📌</span>
+                                                        <Pin size={15} color="#3b82f6" className="ai-bullet-point" />
                                                         <span>{a}</span>
                                                     </li>
                                                 ))}
@@ -481,7 +499,7 @@ export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
                                             <ul className="ai-list questions-list">
                                                 {summaryResult.unresolvedQuestions.map((q, i) => (
                                                     <li key={i}>
-                                                        <span className="ai-bullet-q">❓</span>
+                                                        <HelpCircle size={15} color="#f59e0b" className="ai-bullet-q" />
                                                         <span>{q}</span>
                                                     </li>
                                                 ))}
@@ -492,7 +510,9 @@ export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
                             ) : (
                                 !errorData && (
                                     <div className="ai-empty-placeholder">
-                                        <div className="ai-empty-icon">📝</div>
+                                        <div className="ai-empty-icon">
+                                            <FileText size={32} />
+                                        </div>
                                         <h3>Summarize this conversation</h3>
                                         <p>Click "Generate Summary" above to get key topics, decisions, and action items from recent chat messages.</p>
                                     </div>
@@ -600,7 +620,9 @@ export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
                             ) : (
                                 !errorData && (
                                     <div className="ai-empty-placeholder">
-                                        <div className="ai-empty-icon">💬</div>
+                                        <div className="ai-empty-icon">
+                                            <MessageSquare size={32} />
+                                        </div>
                                         <h3>Ask any question about this chat</h3>
                                         <p>ChatHub AI searches only authorized messages from this chat and cites verified sources.</p>
                                     </div>
@@ -636,13 +658,13 @@ export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
                                                     <div className="ai-action-meta-row">
                                                         {item.assignee && (
                                                             <div className="ai-action-meta-pill">
-                                                                <span className="meta-icon">👤</span>
+                                                                <User size={13} className="meta-icon" />
                                                                 <span>{item.assignee}</span>
                                                             </div>
                                                         )}
                                                         {item.dueDate && (
                                                             <div className="ai-action-meta-pill due-pill">
-                                                                <span className="meta-icon">⏰</span>
+                                                                <Clock size={13} className="meta-icon" />
                                                                 <span>{item.dueDate}</span>
                                                             </div>
                                                         )}
@@ -660,7 +682,9 @@ export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
                             ) : (
                                 !errorData && (
                                     <div className="ai-empty-placeholder">
-                                        <div className="ai-empty-icon">📌</div>
+                                        <div className="ai-empty-icon">
+                                            <CheckSquare size={32} />
+                                        </div>
                                         <h3>Extract tasks & deadlines</h3>
                                         <p>Click "Extract Action Items" to extract actionable todos, explicit assignees, and deadlines.</p>
                                     </div>
@@ -681,10 +705,7 @@ export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
                                 className="ai-footer-btn copy-btn"
                                 onClick={handleCopy}
                             >
-                                <svg viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-                                    <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 2H9a3 3 0 01-3-2z" />
-                                </svg>
+                                {copiedText ? <Check size={15} /> : <Copy size={15} />}
                                 <span>{copiedText || 'Copy Result'}</span>
                             </button>
 
@@ -693,9 +714,7 @@ export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
                                 className="ai-footer-btn share-btn"
                                 onClick={() => setIsSharingConfirmOpen(true)}
                             >
-                                <svg viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
-                                </svg>
+                                <Share2 size={15} />
                                 <span>{shareSuccess ? 'Shared to Chat!' : 'Share to Chat'}</span>
                             </button>
                         </div>
@@ -710,7 +729,7 @@ export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
                                 onClick={() => handleSendFeedback('positive')}
                                 disabled={Boolean(feedbackSent)}
                             >
-                                👍
+                                <ThumbsUp size={15} />
                             </button>
                             <button
                                 type="button"
@@ -719,7 +738,7 @@ export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
                                 onClick={() => handleSendFeedback('negative')}
                                 disabled={Boolean(feedbackSent)}
                             >
-                                👎
+                                <ThumbsDown size={15} />
                             </button>
                             {feedbackSent && <span className="feedback-thanks">Thanks!</span>}
                         </div>
@@ -730,7 +749,9 @@ export default function ChatHubAiPanel({ isOpen, onClose, currentChat }) {
                 {isSharingConfirmOpen && (
                     <div className="ai-share-dialog-overlay" onClick={() => setIsSharingConfirmOpen(false)}>
                         <div className="ai-share-dialog" onClick={(e) => e.stopPropagation()}>
-                            <div className="ai-share-dialog-icon">🚀</div>
+                            <div className="ai-share-dialog-icon">
+                                <Share2 size={32} />
+                            </div>
                             <h3>Share to "{conversationTitle}"?</h3>
                             <p>
                                 This will send the generated AI result as a message to this chat room so other participants can view it.

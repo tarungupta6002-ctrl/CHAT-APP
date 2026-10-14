@@ -1,5 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
+import { 
+    MessageSquare, 
+    Mail, 
+    Users, 
+    UserCheck, 
+    Star, 
+    Archive, 
+    ArchiveRestore, 
+    Inbox,
+    Filter,
+    Search
+} from 'lucide-react';
 
 export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCategory, setActiveCategory }) {
     const {
@@ -293,9 +305,7 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                     }}
                 >
                     <div className="cat-item-left">
-                        <svg className="cat-svg-icon" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                        </svg>
+                        <MessageSquare size={18} className="cat-svg-icon" />
                         <span>All Chats</span>
                     </div>
                     {allChatsCount > 0 && (
@@ -310,10 +320,7 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                     onClick={() => setActiveCategory('unread')}
                 >
                     <div className="cat-item-left">
-                        <svg className="cat-svg-icon" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
-                            <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
-                        </svg>
+                        <Mail size={18} className="cat-svg-icon" />
                         <span>Unread</span>
                     </div>
                     {totalUnread > 0 && (
@@ -328,9 +335,7 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                     onClick={() => setActiveCategory('groups')}
                 >
                     <div className="cat-item-left">
-                        <svg className="cat-svg-icon" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                        </svg>
+                        <Users size={18} className="cat-svg-icon" />
                         <span>Groups</span>
                     </div>
                 </button>
@@ -342,9 +347,7 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                     onClick={() => setActiveCategory('contacts')}
                 >
                     <div className="cat-item-left">
-                        <svg className="cat-svg-icon" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                        </svg>
+                        <UserCheck size={18} className="cat-svg-icon" />
                         <span>Contacts</span>
                     </div>
                     {contactsList.length > 0 && (
@@ -359,9 +362,7 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                     onClick={() => setActiveCategory('starred')}
                 >
                     <div className="cat-item-left">
-                        <svg className="cat-svg-icon star-gold" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
+                        <Star size={18} className="cat-svg-icon star-gold" />
                         <span>Starred</span>
                     </div>
                     {starredTotalCount > 0 && (
@@ -376,10 +377,7 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                     onClick={() => setActiveCategory('archived')}
                 >
                     <div className="cat-item-left">
-                        <svg className="cat-svg-icon" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
-                            <path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" />
-                        </svg>
+                        <Archive size={18} className="cat-svg-icon" />
                         <span>Archived</span>
                     </div>
                     {archivedCount > 0 && (
@@ -445,7 +443,7 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                                         title="Unstar Message"
                                         onClick={(e) => removeStarredMessage(m.id, e)}
                                     >
-                                        ⭐
+                                        <Star size={15} fill="#f59e0b" color="#f59e0b" />
                                     </button>
                                 </div>
                                 <p className="starred-msg-snippet">{m.text}</p>
@@ -458,7 +456,17 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                 {displayList.length === 0 && (activeCategory !== 'starred' || displayedStarredMessages.length === 0) ? (
                     <div className="sidebar-empty-state">
                         <div className="empty-state-bubble">
-                            {activeCategory === 'archived' ? '📥' : activeCategory === 'starred' ? '⭐' : activeCategory === 'unread' ? '📬' : '💬'}
+                            {activeCategory === 'archived' ? (
+                                <Archive size={26} />
+                            ) : activeCategory === 'starred' ? (
+                                <Star size={26} color="#f59e0b" />
+                            ) : activeCategory === 'unread' ? (
+                                <Mail size={26} />
+                            ) : activeCategory === 'contacts' ? (
+                                <UserCheck size={26} />
+                            ) : (
+                                <MessageSquare size={26} />
+                            )}
                         </div>
                         <h4 className="empty-state-title">
                             {activeCategory === 'archived'
@@ -541,7 +549,7 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                                             title={isStarred ? 'Unstar Chat' : 'Star Chat'}
                                             onClick={(e) => toggleStarChat(chat.partnerUsername, e)}
                                         >
-                                            {isStarred ? '⭐' : '☆'}
+                                            {isStarred ? <Star size={15} fill="#f59e0b" color="#f59e0b" /> : <Star size={15} />}
                                         </button>
 
                                         {/* Archive / Unarchive Toggle */}
@@ -551,7 +559,7 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                                             title={isArchived ? 'Unarchive Chat (Move back to All Chats)' : 'Archive Chat'}
                                             onClick={(e) => toggleArchiveChat(chat.partnerUsername, e)}
                                         >
-                                            {isArchived ? '📤' : '📥'}
+                                            {isArchived ? <ArchiveRestore size={15} /> : <Archive size={15} />}
                                         </button>
                                     </div>
                                 )}

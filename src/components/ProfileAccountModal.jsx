@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
+import { X, Pencil, Camera, Upload, Check } from 'lucide-react';
 
 export default function ProfileAccountModal({ isOpen, onClose, initialMode = 'view' }) {
     const { user: authUser, updateProfile } = useAuth();
@@ -158,7 +159,7 @@ export default function ProfileAccountModal({ isOpen, onClose, initialMode = 'vi
                         </button>
                     </div>
                     <button type="button" className="close-profile-btn" onClick={onClose} title="Close">
-                        ✕
+                        <X size={18} />
                     </button>
                 </div>
 
@@ -241,7 +242,8 @@ export default function ProfileAccountModal({ isOpen, onClose, initialMode = 'vi
                                 className="profile-primary-btn"
                                 onClick={() => setActiveTab('edit')}
                             >
-                                ✎ Edit Profile & Change Photo
+                                <Pencil size={15} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                                Edit Profile & Change Photo
                             </button>
                         </div>
                     </div>
@@ -270,7 +272,7 @@ export default function ProfileAccountModal({ isOpen, onClose, initialMode = 'vi
                                         <span className="avatar-edit-initials">{initials}</span>
                                     )}
                                     <div className="avatar-edit-overlay">
-                                        <span>📷</span>
+                                        <Camera size={20} color="#ffffff" />
                                     </div>
                                 </div>
 
@@ -287,7 +289,8 @@ export default function ProfileAccountModal({ isOpen, onClose, initialMode = 'vi
                                         className="avatar-choose-btn"
                                         onClick={() => fileInputRef.current?.click()}
                                     >
-                                        📁 Upload Photo
+                                        <Upload size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                                        Upload Photo
                                     </button>
                                     {avatarUrlInput && (
                                         <button

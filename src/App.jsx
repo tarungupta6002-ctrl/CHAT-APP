@@ -1,7 +1,9 @@
 import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { SocketProvider } from './context/SocketContext';
 import { WebRTCProvider } from './context/WebRTCContext';
+import { MessageSquare } from 'lucide-react';
 import LandingPage from './components/LandingPage';
 import AuthPage from './components/AuthPage';
 import WhatsAppLayout from './components/WhatsAppLayout';
@@ -16,13 +18,13 @@ function AppRouter() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: '#f8fafc',
+                backgroundColor: 'var(--chathub-bg-deep, #070d14)',
                 color: '#10b981',
                 fontSize: '1.25rem',
                 fontWeight: 700,
                 fontFamily: 'Inter, system-ui, sans-serif'
             }}>
-                <span style={{ marginRight: '8px' }}>💬</span> Loading ChatHub...
+                <MessageSquare size={24} style={{ marginRight: '10px' }} /> Loading ChatHub...
             </div>
         );
     }
@@ -46,8 +48,10 @@ function AppRouter() {
 
 export default function App() {
     return (
-        <AuthProvider>
-            <AppRouter />
-        </AuthProvider>
+        <ThemeProvider>
+            <AuthProvider>
+                <AppRouter />
+            </AuthProvider>
+        </ThemeProvider>
     );
 }

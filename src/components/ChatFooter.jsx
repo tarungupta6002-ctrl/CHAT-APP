@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSocket } from '../context/SocketContext';
+import { Paperclip, Smile, Mic, X, Check, Eye, Send } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 
 export default function ChatFooter() {
@@ -225,7 +226,7 @@ export default function ChatFooter() {
                                 if (fileInputRef.current) fileInputRef.current.value = '';
                             }}
                         >
-                            ✕
+                            <X size={15} />
                         </button>
                     </div>
                     <div className="preview-controls">
@@ -234,12 +235,12 @@ export default function ChatFooter() {
                             className={`view-once-toggle-btn ${isViewOnceActive ? 'active' : ''}`}
                             onClick={() => setIsViewOnceActive((prev) => !prev)}
                         >
-                            <span className="view-once-circle">①</span>
+                            <Eye size={15} className="view-once-circle" />
                             <span className="view-once-label">View Once</span>
                         </button>
                         <span className="preview-info">
                             {isViewOnceActive
-                                ? '🔒 View Once active (disappears after 1 view)'
+                                ? 'View Once active (disappears after 1 view)'
                                 : 'Standard photo attached'}
                         </span>
                     </div>
@@ -263,7 +264,8 @@ export default function ChatFooter() {
                             title="Discard voice note"
                             onClick={cancelVoiceRecording}
                         >
-                            ✕ Cancel
+                            <X size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
+                            Cancel
                         </button>
                         <button
                             type="button"
@@ -271,7 +273,8 @@ export default function ChatFooter() {
                             title="Send voice note"
                             onClick={stopAndSendVoiceRecording}
                         >
-                            ✓ Send
+                            <Check size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
+                            Send
                         </button>
                     </div>
                 </div>
@@ -291,7 +294,7 @@ export default function ChatFooter() {
                         title="Cancel Reply"
                         onClick={() => setReplyingTo(null)}
                     >
-                        ✕
+                        <X size={14} />
                     </button>
                 </div>
             )}
@@ -316,7 +319,7 @@ export default function ChatFooter() {
                         title="Attach Image"
                         onClick={() => fileInputRef.current?.click()}
                     >
-                        📎
+                        <Paperclip size={18} />
                     </button>
                     <button
                         type="button"
@@ -325,7 +328,7 @@ export default function ChatFooter() {
                         title="Insert emoji"
                         onClick={() => setIsEmojiPickerOpen((prev) => !prev)}
                     >
-                        😊
+                        <Smile size={18} />
                     </button>
                     <button
                         type="button"
@@ -339,7 +342,7 @@ export default function ChatFooter() {
                             }
                         }}
                     >
-                        🎙️
+                        <Mic size={18} />
                     </button>
 
                     <input
@@ -362,9 +365,7 @@ export default function ChatFooter() {
                         title="Send message"
                         aria-label="Send message"
                     >
-                        <svg viewBox="0 0 24 24">
-                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                        </svg>
+                        <Send size={18} />
                     </button>
                 </form>
             </footer>

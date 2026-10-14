@@ -217,8 +217,9 @@ async function runTests() {
         return `${b64}.${sig}`;
     }
 
-    const aliceToken = makeTestToken("alice", "u_alice_test");
-    const eveToken = makeTestToken("eve_intruder", "u_eve_test");
+    const runSuffix = Date.now();
+    const aliceToken = makeTestToken(`alice_${runSuffix}`, `u_alice_${runSuffix}`);
+    const eveToken = makeTestToken(`eve_${runSuffix}`, `u_eve_${runSuffix}`);
 
     await test("GET /api/ai/usage without token returns 401 Unauthorized", async () => {
         const res = await fetch(`${BASE_URL}/api/ai/usage`);
@@ -371,13 +372,14 @@ async function runTests() {
         assert(Array.isArray(data.result.sourceReferences));
     });
 
-    await test("Provider Failure: Unconfigured Gemini key gracefully returns 503 PROVIDER_NOT_CONFIGURED", async () => {
+    await test("Provider Failure: Unconfigured provider gracefully returns 503 PROVIDER_NOT_CONFIGURED", async () => {
+        const freshUserToken = makeTestToken("provider_tester", "u_prov_test");
         const res = await fetch(`${BASE_URL}/api/ai/conversations/general/ask`, {
             method: "POST",
             headers: {
-                "Authorization": `Bearer ${aliceToken}`,
+                "Authorization": `Bearer ${freshUserToken}`,
                 "Content-Type": "application/json",
-                "x-ai-provider": "gemini" // Force gemini without key
+                "x-ai-provider": "openai" // Force unconfigured provider
             },
             body: JSON.stringify({ question: "What is our plan?", maxMessages: 10 })
         });
@@ -399,7 +401,7 @@ async function runTests() {
         assert.strictEqual(res.status, 200);
         const data = await res.json();
         assert(typeof data.token === "string" && data.token.length > 20);
-        assert.strictEqual(data.participantId, "alice");
+        assert.strictEqual(data.participantId, `alice_${runSuffix}`);
     });
 
     await test("GET /api/calls/history returns 200 array", async () => {

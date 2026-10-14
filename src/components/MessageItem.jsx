@@ -1,5 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSocket, QUICK_REACTIONS } from '../context/SocketContext';
+import { 
+    Play, 
+    Pause, 
+    Reply, 
+    Star, 
+    Pencil, 
+    Trash2, 
+    Ban, 
+    Eye, 
+    Check, 
+    UserCheck, 
+    UserMinus 
+} from 'lucide-react';
 
 function VoiceNotePlayer({ audioSrc, durationText }) {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -70,7 +83,7 @@ function VoiceNotePlayer({ audioSrc, durationText }) {
                 className="voice-play-btn"
                 onClick={togglePlay}
             >
-                {isPlaying ? '⏸' : '▶'}
+                {isPlaying ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" style={{ marginLeft: '2px' }} />}
             </button>
             <div className="voice-track-area">
                 <div className="voice-progress-bar" onClick={handleSeek}>
@@ -146,10 +159,13 @@ export default function MessageItem({ item }) {
     // System Status message
     if (item.type === "status" || item.type === "system") {
         const s = item.data;
-        const icon = s.status === 'joined' ? '⚡' : '👋';
         return (
             <div className="system-event">
-                <span>{icon}</span>
+                {s.status === 'joined' ? (
+                    <UserCheck size={14} style={{ display: 'inline', marginRight: '5px', verticalAlign: 'middle', color: '#10b981' }} />
+                ) : (
+                    <UserMinus size={14} style={{ display: 'inline', marginRight: '5px', verticalAlign: 'middle', color: '#94a3b8' }} />
+                )}
                 <strong>{s.username}</strong> {s.status === 'joined' ? 'joined the chat' : 'left the chat'}
                 <span style={{ opacity: 0.7 }}>• {s.time}</span>
             </div>
@@ -259,11 +275,11 @@ export default function MessageItem({ item }) {
                                     setReplyingTo({
                                         id: msg.id,
                                         username: msg.username,
-                                        text: msg.text || (msg.image ? '📷 Photo' : (msg.audio ? '🎙️ Voice Note' : 'Message'))
+                                        text: msg.text || (msg.image ? 'Photo' : (msg.audio ? 'Voice Note' : 'Message'))
                                     });
                                 }}
                             >
-                                ↩️
+                                <Reply size={15} />
                             </button>
                             <button
                                 type="button"
@@ -271,7 +287,7 @@ export default function MessageItem({ item }) {
                                 title={isStarred ? "Unstar Message" : "Star Message"}
                                 onClick={handleToggleStar}
                             >
-                                {isStarred ? '⭐' : '☆'}
+                                <Star size={15} fill={isStarred ? "#f59e0b" : "none"} color={isStarred ? "#f59e0b" : "currentColor"} />
                             </button>
                             {isSelf && (
                                 <>
@@ -285,7 +301,7 @@ export default function MessageItem({ item }) {
                                                 setEditingMessage({ id: msg.id, text: msg.text });
                                             }}
                                         >
-                                            ✏️
+                                            <Pencil size={15} />
                                         </button>
                                     )}
                                     <button
@@ -299,7 +315,7 @@ export default function MessageItem({ item }) {
                                             }
                                         }}
                                     >
-                                        🗑️
+                                        <Trash2 size={15} />
                                     </button>
                                 </>
                             )}
@@ -309,7 +325,10 @@ export default function MessageItem({ item }) {
                     <div className="msg-bubble">
                         {/* Deleted message state */}
                         {msg.isDeleted ? (
-                            <span className="deleted-msg-text">🚫 This message was deleted</span>
+                            <span className="deleted-msg-text">
+                                <Ban size={15} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                                This message was deleted
+                            </span>
                         ) : (
                             <>
                                 {/* Quoted / Reply Preview */}
@@ -330,7 +349,7 @@ export default function MessageItem({ item }) {
                                         onClick={handleViewOnceClick}
                                     >
                                         <div className="capsule-icon">
-                                            {isOpenedViewOnce ? '✓' : '①'}
+                                            {isOpenedViewOnce ? <Check size={14} /> : <Eye size={14} />}
                                         </div>
                                         <div className="capsule-text">
                                             <span className="capsule-title">Photo</span>
@@ -366,7 +385,11 @@ export default function MessageItem({ item }) {
 
                                 {/* Metadata & Checkmark */}
                                 <div className="msg-meta">
-                                    {isStarred && <span className="msg-star-badge" title="Starred">⭐</span>}
+                                    {isStarred && (
+                                        <span className="msg-star-badge" title="Starred">
+                                            <Star size={11} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />
+                                        </span>
+                                    )}
                                     <span>{msg.time}</span>
                                     {isSelf && (
                                         <svg className="check-icon" viewBox="0 0 16 16">

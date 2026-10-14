@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useSocket } from '../context/SocketContext';
+import { X, MessageSquare, Search } from 'lucide-react';
 
 export default function NewChatModal({ isOpen, onClose }) {
     const { allRegisteredUsers, onlineUsers, currentUser, startChatWithUser } = useSocket();
@@ -47,7 +48,7 @@ export default function NewChatModal({ isOpen, onClose }) {
             <div className="new-chat-card" onClick={(e) => e.stopPropagation()}>
                 <div className="new-chat-header">
                     <h3>New Chat</h3>
-                    <button type="button" className="close-sidebar-btn" onClick={onClose}>✕</button>
+                    <button type="button" className="close-sidebar-btn" onClick={onClose}><X size={16} /></button>
                 </div>
 
                 <div className="sidebar-search-box" style={{ margin: '0.75rem 0' }}>
@@ -92,7 +93,10 @@ export default function NewChatModal({ isOpen, onClose }) {
                                         </span>
                                     </div>
                                 </div>
-                                <span className="dm-action-hint">Chat 💬</span>
+                                <span className="dm-action-hint">
+                                    <MessageSquare size={13} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
+                                    Chat
+                                </span>
                             </div>
                         ))
                     )}

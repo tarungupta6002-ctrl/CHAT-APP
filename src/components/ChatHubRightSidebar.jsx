@@ -2,11 +2,29 @@ import React, { useState, useMemo } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useWebRTC } from '../context/WebRTCContext';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { 
+    Image as ImageIcon, 
+    ChevronRight, 
+    User, 
+    ShieldCheck, 
+    Bell, 
+    Palette, 
+    LogOut, 
+    Settings, 
+    MessageSquarePlus, 
+    Users, 
+    Phone, 
+    Video,
+    Sun,
+    Moon
+} from 'lucide-react';
 
 export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSettings, onEditProfile, onViewProfileAccount }) {
     const { currentUser, setLightboxData, currentChat, conversations } = useSocket();
     const { initiateCall } = useWebRTC();
     const { logout } = useAuth();
+    const { theme, toggleTheme, isDark } = useTheme();
 
     const displayName = currentUser?.fullName || currentUser?.name || 'Tarun Gupta';
     const userHandle = currentUser?.username ? `@${currentUser.username}` : '@tarun123';
@@ -108,9 +126,7 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
                         title="Start a new chat conversation"
                     >
                         <div className="tile-icon green">
-                            <svg viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                            </svg>
+                            <MessageSquarePlus size={20} />
                         </div>
                         <span className="tile-label green">New Chat</span>
                     </button>
@@ -122,9 +138,7 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
                         title="Create a new group"
                     >
                         <div className="tile-icon white">
-                            <svg viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                            </svg>
+                            <Users size={20} />
                         </div>
                         <span className="tile-label">Create Group</span>
                     </button>
@@ -136,9 +150,7 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
                         title="Start a voice call"
                     >
                         <div className="tile-icon white">
-                            <svg viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 4V3z" />
-                            </svg>
+                            <Phone size={20} />
                         </div>
                         <span className="tile-label">Start Call</span>
                     </button>
@@ -150,9 +162,7 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
                         title="Start a video call"
                     >
                         <div className="tile-icon white">
-                            <svg viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                            </svg>
+                            <Video size={20} />
                         </div>
                         <span className="tile-label">Start Video Call</span>
                     </button>
@@ -181,7 +191,7 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
 
                 {realSharedMedia.length === 0 ? (
                     <div className="empty-shared-media-box">
-                        <span className="empty-media-icon">🖼️</span>
+                        <span className="empty-media-icon"><ImageIcon size={30} /></span>
                         <p className="empty-media-text">No shared media yet</p>
                         <span className="empty-media-sub">
                             Photos and media sent in this chat will appear here.
@@ -227,54 +237,46 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
                         onClick={onViewProfileAccount || onOpenSettings}
                     >
                         <div className="settings-nav-item-left">
-                            <svg className="settings-item-svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                            </svg>
+                            <User size={17} className="settings-item-svg" />
                             <span>Profile & Account</span>
                         </div>
-                        <span className="settings-nav-arrow">›</span>
+                        <ChevronRight size={15} className="settings-nav-arrow" />
                     </button>
 
                     <button
                         type="button"
                         className="settings-nav-item"
-                        onClick={() => alert("🔒 Privacy & Security: Your ChatHub messages and voice/video sessions are protected with real-time end-to-end security.")}
+                        onClick={() => alert("Privacy & Security: Your ChatHub messages and voice/video sessions are protected with real-time end-to-end security.")}
                     >
                         <div className="settings-nav-item-left">
-                            <svg className="settings-item-svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                            </svg>
+                            <ShieldCheck size={17} className="settings-item-svg" />
                             <span>Privacy & Security</span>
                         </div>
-                        <span className="settings-nav-arrow">›</span>
+                        <ChevronRight size={15} className="settings-nav-arrow" />
                     </button>
 
                     <button
                         type="button"
                         className="settings-nav-item"
-                        onClick={() => alert("🔔 Notifications: Audio chimes and unread badge alerts are active.")}
+                        onClick={() => alert("Notifications: Audio chimes and unread badge alerts are active.")}
                     >
                         <div className="settings-nav-item-left">
-                            <svg className="settings-item-svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                            </svg>
+                            <Bell size={17} className="settings-item-svg" />
                             <span>Notifications</span>
                         </div>
-                        <span className="settings-nav-arrow">›</span>
+                        <ChevronRight size={15} className="settings-nav-arrow" />
                     </button>
 
                     <button
                         type="button"
                         className="settings-nav-item"
-                        onClick={() => alert("🌐 Appearance: ChatHub is active in dark navy & emerald theme.")}
+                        onClick={toggleTheme}
                     >
                         <div className="settings-nav-item-left">
-                            <svg className="settings-item-svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.231 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-7.942 2c.089 1.546.383 2.97.837 4.118A6.004 6.004 0 014.083 11h1.946zm2.035 0c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556H8.064zm5.907 0c-.089 1.546-.383 2.97-.837 4.118A6.004 6.004 0 0015.917 11h-1.946z" clipRule="evenodd" />
-                            </svg>
-                            <span>Appearance</span>
+                            {isDark ? <Sun size={17} className="settings-item-svg" /> : <Moon size={17} className="settings-item-svg" />}
+                            <span>Appearance: {isDark ? 'Dark Theme' : 'Light Theme'}</span>
                         </div>
-                        <span className="settings-nav-arrow">›</span>
+                        <ChevronRight size={15} className="settings-nav-arrow" />
                     </button>
 
                     <button
@@ -287,12 +289,10 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
                         }}
                     >
                         <div className="settings-nav-item-left">
-                            <svg className="settings-item-svg logout-svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
-                            </svg>
+                            <LogOut size={17} className="settings-item-svg logout-svg" />
                             <span className="logout-text">Log Out</span>
                         </div>
-                        <span className="settings-nav-arrow">›</span>
+                        <ChevronRight size={15} className="settings-nav-arrow" />
                     </button>
                 </nav>
             </div>

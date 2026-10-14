@@ -1,8 +1,23 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useSocket } from '../context/SocketContext';
+import { useTheme } from '../context/ThemeContext';
+import { 
+    Sun, 
+    Moon, 
+    Bell, 
+    Search, 
+    SquarePen, 
+    CheckCheck, 
+    Trash2, 
+    Inbox,
+    MessageSquare,
+    Image,
+    Mic
+} from 'lucide-react';
 
 export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, onOpenProfile }) {
     const { currentUser, selectChat, onlineCount, conversations } = useSocket();
+    const { theme, toggleTheme, isDark } = useTheme();
     const searchInputRef = useRef(null);
     const notifWrapperRef = useRef(null);
 
@@ -27,7 +42,7 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
                 if (!senderName || senderName.toLowerCase() === myName) return;
 
                 const msgId = String(mData.id || `${chatKey}-${mData.time || Math.random()}`);
-                const text = mData.text || (mData.image ? '📷 Photo' : (mData.audio ? '🎙️ Voice note' : 'New message'));
+                const text = mData.text || (mData.image ? 'Photo' : (mData.audio ? 'Voice note' : 'New message'));
                 const time = mData.time || 'Recent';
                 const isUnread = !readNotifIds.has(msgId);
 
@@ -135,9 +150,7 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
             {/* Left: ChatHub Logo + Compose Box Icon */}
             <div className="dash-brand-area">
                 <div className="dash-brand-logo">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2C6.477 2 2 6.145 2 11.259c0 2.92 1.472 5.534 3.785 7.214L4.85 22.1a.75.75 0 0 0 1.05.86l4.285-1.897c.587.13 1.194.196 1.815.196 5.523 0 10-4.145 10-9.259S17.523 2 12 2zm-3.5 10.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm3.5 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm3.5 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z" />
-                    </svg>
+                    <MessageSquare size={22} />
                 </div>
                 <span className="dash-brand-title">ChatHub</span>
 
@@ -148,19 +161,14 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
                     title="Start New Conversation"
                     onClick={onNewChat}
                 >
-                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
-                        <path d="M14.5 2.5a2.121 2.121 0 0 1 3 3L10 13l-4 1 1-4 7.5-7.5z" />
-                    </svg>
+                    <SquarePen size={18} />
                 </button>
             </div>
 
             {/* Center: Global Search Bar */}
             <div className="dash-search-container">
                 <div className="dash-search-box">
-                    <svg className="search-icon-svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                    </svg>
+                    <Search size={18} className="search-icon-svg" />
                     <input
                         ref={searchInputRef}
                         type="text"
@@ -172,8 +180,19 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
                 </div>
             </div>
 
-            {/* Right: Notification Dropdown & Profile Chip (Calling icons removed) */}
+            {/* Right: Theme Toggle, Notification Dropdown & Profile Chip */}
             <div className="dash-header-controls">
+                {/* Dark / Light Theme Mode Toggle Button */}
+                <button
+                    type="button"
+                    className="dash-icon-btn theme-toggle-btn"
+                    title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                    onClick={toggleTheme}
+                    aria-label="Toggle theme"
+                >
+                    {isDark ? <Sun size={19} className="theme-icon sun" /> : <Moon size={19} className="theme-icon moon" />}
+                </button>
+
                 {/* Notification Bell with Dropdown Panel */}
                 <div className="dash-notif-wrapper" ref={notifWrapperRef}>
                     <button
@@ -183,9 +202,7 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
                         onClick={() => setIsNotifOpen((prev) => !prev)}
                         aria-expanded={isNotifOpen}
                     >
-                        <svg viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                        </svg>
+                        <Bell size={19} />
                         {unreadCount > 0 && (
                             <span className="notif-count-badge">{unreadCount}</span>
                         )}
@@ -210,6 +227,7 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
                                                 className="notif-action-text-btn"
                                                 onClick={handleMarkAllAsRead}
                                             >
+                                                <CheckCheck size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
                                                 Mark all read
                                             </button>
                                         )}
@@ -219,6 +237,7 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
                                                 className="notif-action-text-btn danger"
                                                 onClick={handleClearAll}
                                             >
+                                                <Trash2 size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
                                                 Clear
                                             </button>
                                         )}
@@ -249,9 +268,7 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
                                 {displayedNotifications.length === 0 ? (
                                     <div className="notif-empty-state">
                                         <div className="notif-empty-icon">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                            </svg>
+                                            <Inbox size={32} />
                                         </div>
                                         <p className="notif-empty-text">No notifications found</p>
                                         <span className="notif-empty-sub">You're all caught up with your messages!</span>
