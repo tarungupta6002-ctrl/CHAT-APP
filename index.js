@@ -1268,7 +1268,7 @@ app.post("/api/ai/conversations/:conversationId/summary", authenticateToken, asy
         if (err.code === "QUOTA_EXCEEDED") {
             return res.status(429).json({ error: err.message, code: "QUOTA_EXCEEDED" });
         }
-        return res.status(500).json({ error: "Failed to generate conversation summary." });
+        return res.status(500).json({ error: err.message || "Failed to generate conversation summary.", code: err.code || "AI_ERROR" });
     }
 });
 
@@ -1359,7 +1359,7 @@ app.post("/api/ai/conversations/:conversationId/ask", authenticateToken, async (
         if (err.code === "QUOTA_EXCEEDED") {
             return res.status(429).json({ error: err.message, code: "QUOTA_EXCEEDED" });
         }
-        return res.status(500).json({ error: "Failed to answer conversation question." });
+        return res.status(500).json({ error: err.message || "Failed to answer conversation question.", code: err.code || "AI_ERROR" });
     }
 });
 
@@ -1445,7 +1445,7 @@ app.post("/api/ai/conversations/:conversationId/action-items", authenticateToken
         if (err.code === "QUOTA_EXCEEDED") {
             return res.status(429).json({ error: err.message, code: "QUOTA_EXCEEDED" });
         }
-        return res.status(500).json({ error: "Failed to extract action items." });
+        return res.status(500).json({ error: err.message || "Failed to extract action items.", code: err.code || "AI_ERROR" });
     }
 });
 
