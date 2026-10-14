@@ -78,6 +78,8 @@ async function initDb() {
         try { await db.execute(`ALTER TABLE users ADD COLUMN email TEXT;`); } catch (_) {}
         try { await db.execute(`ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 1;`); } catch (_) {}
         try { await db.execute(`ALTER TABLE users ADD COLUMN google_id TEXT;`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE users ADD COLUMN dob TEXT;`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE users ADD COLUMN bio TEXT;`); } catch (_) {}
 
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_username);`);
@@ -261,6 +263,8 @@ async function getUserByUsername(username) {
             fullName: row.full_name || row.username,
             email: row.email,
             username: row.username,
+            dob: row.dob || '',
+            bio: row.bio || '',
             passwordHash: row.password_hash,
             color: row.avatar_color,
             isVerified: row.is_verified,
@@ -314,6 +318,8 @@ async function getUserByIdentifier(identifier) {
             fullName: row.full_name || row.username,
             email: row.email,
             username: row.username,
+            dob: row.dob || '',
+            bio: row.bio || '',
             passwordHash: row.password_hash,
             color: row.avatar_color,
             isVerified: row.is_verified,
@@ -374,6 +380,48 @@ async function linkGoogleAccount(userId, googleId) {
     } catch (err) {
         console.error("Error linking google account:", err);
         return false;
+    }
+}
+
+async function updateUserProfile({ userId, currentUsername, fullName, username, dob, bio, avatarColor }) {
+    try {
+        const cleanUsername = username ? username.trim() : currentUsername;
+        const cleanFullName = fullName ? fullName.trim() : cleanUsername;
+        
+        // If username changed, check availability
+        if (cleanUsername.toLowerCase() !== currentUsername.toLowerCase()) {
+            const clash = await getUserByUsername(cleanUsername);
+            if (clash && clash.id !== userId) {
+                return { success: false, error: "Username is already taken by another user." };
+            }
+        }
+
+        await db.execute({
+            sql: `
+                UPDATE users 
+                SET full_name = ?, username = ?, dob = ?, bio = ?, avatar_color = COALESCE(?, avatar_color)
+                WHERE username = ? COLLATE NOCASE OR id = ?
+            `,
+            args: [cleanFullName, cleanUsername, dob || '', bio || '', avatarColor || null, currentUsername, userId]
+        });
+
+        // If username changed, update sent and received messages history
+        if (cleanUsername.toLowerCase() !== currentUsername.toLowerCase()) {
+            await db.execute({
+                sql: `UPDATE messages SET sender_username = ? WHERE sender_username = ? COLLATE NOCASE`,
+                args: [cleanUsername, currentUsername]
+            });
+            await db.execute({
+                sql: `UPDATE messages SET recipient_username = ? WHERE recipient_username = ? COLLATE NOCASE`,
+                args: [cleanUsername, currentUsername]
+            });
+        }
+
+        const updated = await getUserByUsername(cleanUsername);
+        return { success: true, user: updated };
+    } catch (err) {
+        console.error("Error updating user profile in DB:", err);
+        return { success: false, error: err.message || "Failed to update profile." };
     }
 }
 
@@ -452,10 +500,14 @@ async function deleteOtp(id) {
 
 async function getAllUsers() {
     try {
-        const rs = await db.execute(`SELECT id, username, avatar_color, created_at FROM users ORDER BY created_at DESC`);
+        const rs = await db.execute(`SELECT id, full_name, email, username, avatar_color, dob, bio, created_at FROM users ORDER BY created_at DESC`);
         return rs.rows.map((row) => ({
             id: row.id,
+            fullName: row.full_name || row.username,
+            email: row.email,
             username: row.username,
+            dob: row.dob || '',
+            bio: row.bio || '',
             color: row.avatar_color,
             createdAt: row.created_at
         }));
@@ -575,5 +627,6 @@ module.exports = {
     saveOtp,
     getLatestOtp,
     incrementOtpAttempts,
-    deleteOtp
+    deleteOtp,
+    updateUserProfile
 };

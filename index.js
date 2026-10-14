@@ -659,7 +659,10 @@ app.post("/api/auth/login", async (req, res) => {
                 username: user.username,
                 fullName: user.fullName || user.username,
                 email: user.email,
-                color: user.color
+                dob: user.dob || '',
+                bio: user.bio || '',
+                color: user.color,
+                createdAt: user.createdAt
             },
             token
         });
@@ -855,7 +858,10 @@ app.post("/api/auth/google", async (req, res) => {
                 username: user.username,
                 fullName: user.fullName || user.username,
                 email: user.email,
-                color: user.color
+                dob: user.dob || '',
+                bio: user.bio || '',
+                color: user.color,
+                createdAt: user.createdAt
             },
             token
         });
@@ -926,9 +932,65 @@ app.get("/api/auth/me", async (req, res) => {
             username: user.username,
             fullName: user.fullName || user.username,
             email: user.email,
-            color: user.color
+            dob: user.dob || '',
+            bio: user.bio || '',
+            color: user.color,
+            createdAt: user.createdAt
         }
     });
+});
+
+// 11. Update Profile (Name, Username, Date of Birth, Bio, Avatar Color)
+app.post("/api/user/profile", async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        let tokenUsername = null;
+        if (authHeader && authHeader.startsWith("Bearer ")) {
+            const decoded = verifyToken(authHeader.split(" ")[1]);
+            if (decoded) tokenUsername = decoded.username;
+        }
+
+        const { userId, currentUsername, fullName, username, dob, bio, color } = req.body;
+        const targetUsername = currentUsername || tokenUsername;
+        if (!targetUsername) {
+            return res.status(401).json({ error: "Unauthorized: Missing username." });
+        }
+
+        const result = await db.updateUserProfile({
+            userId,
+            currentUsername: targetUsername,
+            fullName: fullName ? fullName.trim() : "",
+            username: username ? username.trim() : targetUsername,
+            dob: dob ? dob.trim() : "",
+            bio: bio ? bio.trim() : "",
+            avatarColor: color || null
+        });
+
+        if (!result.success) {
+            return res.status(400).json({ error: result.error });
+        }
+
+        const updatedUser = result.user;
+        const newToken = createToken(updatedUser);
+
+        return res.json({
+            success: true,
+            user: {
+                id: updatedUser.id,
+                username: updatedUser.username,
+                fullName: updatedUser.fullName,
+                email: updatedUser.email,
+                dob: updatedUser.dob || '',
+                bio: updatedUser.bio || '',
+                color: updatedUser.color,
+                createdAt: updatedUser.createdAt
+            },
+            token: newToken
+        });
+    } catch (err) {
+        console.error("Update profile API error:", err);
+        return res.status(500).json({ error: "Failed to update profile." });
+    }
 });
 
 app.get("/api/users", async (req, res) => {

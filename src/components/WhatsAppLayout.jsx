@@ -10,12 +10,18 @@ import EditModal from './EditModal';
 import LightboxModal from './LightboxModal';
 import IncomingCallModal from './IncomingCallModal';
 import ActiveCallOverlay from './ActiveCallOverlay';
+import ProfileAccountModal from './ProfileAccountModal';
 
 export default function WhatsAppLayout() {
     const { currentChat, selectChat } = useSocket();
     const [searchQuery, setSearchQuery] = useState('');
     const [isNewChatOpen, setIsNewChatOpen] = useState(false);
     const [activeCategory, setActiveCategory] = useState('all');
+    const [profileModalState, setProfileModalState] = useState({ isOpen: false, mode: 'view' });
+
+    const openProfileView = () => setProfileModalState({ isOpen: true, mode: 'view' });
+    const openProfileEdit = () => setProfileModalState({ isOpen: true, mode: 'edit' });
+    const closeProfileModal = () => setProfileModalState((prev) => ({ ...prev, isOpen: false }));
 
     return (
         <div className={`chathub-app-shell ${currentChat ? 'has-active-chat' : 'no-active-chat'}`}>
@@ -24,7 +30,7 @@ export default function WhatsAppLayout() {
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 onNewChat={() => setIsNewChatOpen(true)}
-                onOpenProfile={() => setIsNewChatOpen(true)}
+                onOpenProfile={openProfileView}
             />
 
             {/* 3-Column Main Body */}
@@ -61,7 +67,9 @@ export default function WhatsAppLayout() {
                 <ChatHubRightSidebar
                     onNewChat={() => setIsNewChatOpen(true)}
                     onCreateGroup={() => selectChat({ type: 'general', partnerName: 'ChatHub Community', partnerColor: '#2563eb' })}
-                    onOpenSettings={() => setIsNewChatOpen(true)}
+                    onOpenSettings={openProfileView}
+                    onEditProfile={openProfileEdit}
+                    onViewProfileAccount={openProfileView}
                 />
             </main>
 
@@ -70,6 +78,11 @@ export default function WhatsAppLayout() {
                 isOpen={isNewChatOpen}
                 onClose={() => setIsNewChatOpen(false)}
             />
+            <ProfileAccountModal
+                isOpen={profileModalState.isOpen}
+                initialMode={profileModalState.mode}
+                onClose={closeProfileModal}
+            />
             <EditModal />
             <LightboxModal />
             <IncomingCallModal />
@@ -77,3 +90,4 @@ export default function WhatsAppLayout() {
         </div>
     );
 }
+

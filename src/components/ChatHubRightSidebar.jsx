@@ -3,17 +3,23 @@ import { useSocket } from '../context/SocketContext';
 import { useWebRTC } from '../context/WebRTCContext';
 import { useAuth } from '../context/AuthContext';
 
-export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSettings }) {
+export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSettings, onEditProfile, onViewProfileAccount }) {
     const { currentUser, setLightboxData } = useSocket();
     const { initiateCall } = useWebRTC();
     const { logout } = useAuth();
 
-    const [statusText, setStatusText] = useState(() => {
-        return localStorage.getItem('chathub_custom_status') || 'Hey there! I am using ChatHub.';
-    });
-
-    const displayName = currentUser?.fullName || (currentUser?.username?.toLowerCase() === 'tarun123' ? 'Tarun Gupta' : (currentUser?.username || 'Tarun Gupta'));
+    const displayName = currentUser?.fullName || currentUser?.name || 'Tarun Gupta';
     const userHandle = currentUser?.username ? `@${currentUser.username}` : '@tarun123';
+    const statusText = currentUser?.bio || localStorage.getItem('chathub_custom_status') || 'Hey there! I am using ChatHub.';
+
+    // Dynamic initials
+    const getInitials = (str) => {
+        if (!str) return 'TG';
+        const parts = str.trim().split(/\s+/);
+        if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+        return str.slice(0, 2).toUpperCase();
+    };
+    const initials = getInitials(displayName);
 
     // Shared media items matching the reference screenshot
     const sharedMedia = [
@@ -78,7 +84,7 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
                             className="dash-profile-avatar"
                             style={{ backgroundColor: currentUser?.color || '#2563eb' }}
                         >
-                            TA
+                            {initials}
                         </div>
                         <span className="profile-online-dot" title="Online"></span>
                     </div>
@@ -90,7 +96,7 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
                                 type="button"
                                 className="profile-edit-btn"
                                 title="Edit profile"
-                                onClick={onOpenSettings}
+                                onClick={onEditProfile || onOpenSettings}
                             >
                                 <svg viewBox="0 0 20 20" fill="currentColor">
                                     <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
@@ -107,7 +113,7 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
                 <button
                     type="button"
                     className="profile-edit-profile-btn"
-                    onClick={onOpenSettings}
+                    onClick={onEditProfile || onOpenSettings}
                 >
                     <svg className="edit-gear-icon" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
@@ -237,7 +243,7 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
                     <button
                         type="button"
                         className="settings-nav-item"
-                        onClick={onOpenSettings}
+                        onClick={onViewProfileAccount || onOpenSettings}
                     >
                         <div className="settings-nav-item-left">
                             <svg className="settings-item-svg" viewBox="0 0 20 20" fill="currentColor">

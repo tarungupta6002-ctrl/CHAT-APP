@@ -6,8 +6,17 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
     const { currentUser, selectChat, allRegisteredUsers, onlineUsers } = useSocket();
     const { initiateCall } = useWebRTC();
 
-    // Actual user name - prioritize "Tarun Gupta" or currentUser's full name
-    const displayName = currentUser?.fullName || (currentUser?.username?.toLowerCase() === 'tarun123' ? 'Tarun Gupta' : (currentUser?.username || 'Tarun Gupta'));
+    // User Name: separate Name (Full Name) and Username (Handle)
+    const displayName = currentUser?.fullName || currentUser?.name || 'Tarun Gupta';
+
+    // Calculate dynamic initials from Name
+    const getInitials = (str) => {
+        if (!str) return 'TG';
+        const parts = str.trim().split(/\s+/);
+        if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+        return str.slice(0, 2).toUpperCase();
+    };
+    const userInitials = getInitials(displayName);
 
     // Realistic Recent Contacts matching the screenshot
     const contacts = useMemo(() => [
@@ -56,7 +65,7 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                             className="dash-hero-avatar"
                             style={{ backgroundColor: currentUser?.color || '#2563eb' }}
                         >
-                            TA
+                            {userInitials}
                         </div>
                         <span className="hero-online-badge-dot"></span>
                     </div>

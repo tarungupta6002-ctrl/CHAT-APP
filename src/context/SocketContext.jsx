@@ -15,6 +15,12 @@ export function SocketProvider({ children }) {
     const [currentUser, setCurrentUser] = useState(() => authUser || { id: null, username: '', color: '#00a884' });
     const [isJoined, setIsJoined] = useState(false);
 
+    useEffect(() => {
+        if (authUser) {
+            setCurrentUser(authUser);
+        }
+    }, [authUser]);
+
     // Online Users (Socket Map)
     const [onlineUsers, setOnlineUsers] = useState([]);
     const [onlineCount, setOnlineCount] = useState(1);

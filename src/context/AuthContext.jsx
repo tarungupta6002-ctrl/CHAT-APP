@@ -250,6 +250,45 @@ export function AuthProvider({ children }) {
         navigateTo('landing');
     }, [navigateTo]);
 
+    // 10. Update Profile (Name, Username, Date of Birth, Bio, Avatar Color)
+    const updateProfile = useCallback(async ({ fullName, username, dob, bio, color }) => {
+        try {
+            const currentUsername = user?.username;
+            const res = await fetch("/api/user/profile", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { "Authorization": `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({
+                    userId: user?.id,
+                    currentUsername,
+                    fullName,
+                    username,
+                    dob,
+                    bio,
+                    color
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                return { success: false, error: data.error || "Failed to update profile." };
+            }
+
+            setUser(data.user);
+            if (data.token) {
+                setToken(data.token);
+                localStorage.setItem("chathub_token", data.token);
+            }
+            localStorage.setItem("chathub_user", JSON.stringify(data.user));
+            return { success: true, user: data.user };
+        } catch (err) {
+            console.error("updateProfile error:", err);
+            return { success: false, error: err.message || "Failed to update profile." };
+        }
+    }, [user, token]);
+
     const value = {
         user,
         token,
@@ -271,6 +310,7 @@ export function AuthProvider({ children }) {
         verifyResetOtp,
         resetPassword,
         googleLogin,
+        updateProfile,
         logout
     };
 
