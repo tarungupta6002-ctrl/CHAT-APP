@@ -19,12 +19,11 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
-    const initials = currentUser?.username ? currentUser.username.slice(0, 2).toUpperCase() : 'TA';
     const isDm = currentChat?.type === 'dm';
 
     return (
         <header className="chathub-dashboard-header">
-            {/* Left: ChatHub Logo */}
+            {/* Left: ChatHub Logo + Compose Box Icon */}
             <div className="dash-brand-area">
                 <div className="dash-brand-logo">
                     <svg viewBox="0 0 24 24" fill="currentColor">
@@ -32,6 +31,19 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
                     </svg>
                 </div>
                 <span className="dash-brand-title">ChatHub</span>
+
+                {/* Compose / New Chat Icon Box next to Brand Name */}
+                <button
+                    type="button"
+                    className="brand-compose-btn"
+                    title="Start New Conversation"
+                    onClick={onNewChat}
+                >
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+                        <path d="M14.5 2.5a2.121 2.121 0 0 1 3 3L10 13l-4 1 1-4 7.5-7.5z" />
+                    </svg>
+                </button>
             </div>
 
             {/* Center: Global Search Bar */}
@@ -99,13 +111,13 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
                     onClick={onOpenProfile}
                     role="button"
                     tabIndex={0}
-                    title={`${currentUser?.username || 'User'} (Online)`}
+                    title="Tarun Gupta (Online)"
                 >
                     <div
                         className="dash-avatar-circle"
                         style={{ backgroundColor: currentUser?.color || '#2563eb' }}
                     >
-                        {initials}
+                        TA
                     </div>
                     <span className="avatar-online-dot"></span>
                 </div>

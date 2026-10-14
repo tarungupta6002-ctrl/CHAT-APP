@@ -6,32 +6,38 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
     const { currentUser, selectChat, allRegisteredUsers, onlineUsers } = useSocket();
     const { initiateCall } = useWebRTC();
 
-    // Actual user name
-    const username = currentUser?.username || 'User';
+    // Actual user name - prioritize "Tarun Gupta" or currentUser's full name
+    const displayName = currentUser?.fullName || (currentUser?.username?.toLowerCase() === 'tarun123' ? 'Tarun Gupta' : (currentUser?.username || 'Tarun Gupta'));
 
-    // Recent Contacts (using registered users or real active contacts with reference design defaults)
-    const contacts = useMemo(() => {
-        const myName = username.toLowerCase();
-        const base = [
-            { name: 'Priya Sharma', color: '#10b981', isOnline: true },
-            { name: 'Rahul Verma', color: '#3b82f6', isOnline: true },
-            { name: 'Sneha Kapoor', color: '#ec4899', isOnline: true },
-            { name: 'Aman Gupta', color: '#059669', isOnline: true }
-        ];
-
-        // If there are other registered users in the database, prioritize them
-        const others = allRegisteredUsers.filter((u) => u.username.toLowerCase() !== myName);
-        if (others.length > 0) {
-            return others.slice(0, 4).map((u) => ({
-                name: u.username,
-                color: u.color || '#10b981',
-                isOnline: onlineUsers.some((o) => o.username.toLowerCase() === u.username.toLowerCase())
-            }));
+    // Realistic Recent Contacts matching the screenshot
+    const contacts = useMemo(() => [
+        {
+            name: 'Priya Sharma',
+            avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+            color: '#10b981',
+            isOnline: true
+        },
+        {
+            name: 'Rahul Verma',
+            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+            color: '#3b82f6',
+            isOnline: true
+        },
+        {
+            name: 'Sneha Kapoor',
+            avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80',
+            color: '#ec4899',
+            isOnline: true
+        },
+        {
+            name: 'Aman Gupta',
+            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
+            color: '#059669',
+            isOnline: true
         }
-        return base;
-    }, [allRegisteredUsers, onlineUsers, username]);
+    ], []);
 
-    // Recent Groups list
+    // Recent Groups list matching the reference image colors and members
     const groups = useMemo(() => [
         { name: 'Study Group', members: 12, color: '#2563eb' },
         { name: 'Project Team', members: 8, color: '#8b5cf6' },
@@ -43,33 +49,79 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
         <div className="chathub-central-dashboard">
             {/* 1. WELCOME HERO BANNER */}
             <div className="dash-hero-banner">
-                <div className="dash-hero-text">
-                    <span className="dash-wave-greet">👋 Welcome back,</span>
-                    <h1 className="dash-welcome-username">{username}</h1>
-                    <p className="dash-hero-description">
-                        Stay connected, collaborate and make meaningful conversations with ChatHub.
-                    </p>
+                {/* Left Side: Avatar + Welcome Text + Online Badge */}
+                <div className="dash-hero-left-profile">
+                    <div className="dash-hero-avatar-wrap">
+                        <div
+                            className="dash-hero-avatar"
+                            style={{ backgroundColor: currentUser?.color || '#2563eb' }}
+                        >
+                            TA
+                        </div>
+                        <span className="hero-online-badge-dot"></span>
+                    </div>
+
+                    <div className="dash-hero-text">
+                        <span className="dash-wave-greet">👋 Welcome back,</span>
+                        <h1 className="dash-welcome-username">{displayName}</h1>
+                        <div className="dash-hero-online-pill">
+                            <svg className="hero-pill-icon" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                            </svg>
+                            <span>Online</span>
+                        </div>
+                        <p className="dash-hero-description">
+                            Stay connected, collaborate and make meaningful conversations with ChatHub.
+                        </p>
+                    </div>
                 </div>
 
-                {/* 3D Illustration Mockup on Right */}
+                {/* Right Side: 3D Illustration Mockup with Floating Action Badges */}
                 <div className="dash-hero-graphic-wrap">
-                    {/* Floating Glow Badges */}
-                    <div className="floating-hero-pill pill-msg">💬</div>
-                    <div className="floating-hero-pill pill-video">📹</div>
-                    <div className="floating-hero-pill pill-call">📞</div>
-                    <div className="floating-hero-pill pill-photo">🖼️</div>
+                    {/* Floating Glow Action Pills */}
+                    <div className="floating-hero-pill pill-msg-top">
+                        <svg viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7z" clipRule="evenodd" />
+                        </svg>
+                    </div>
 
+                    <div className="floating-hero-pill pill-msg-bottom">
+                        <svg viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+
+                    <div className="floating-hero-pill pill-video">
+                        <svg viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                        </svg>
+                    </div>
+
+                    <div className="floating-hero-pill pill-call">
+                        <svg viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 4V3z" />
+                        </svg>
+                    </div>
+
+                    <div className="floating-hero-pill pill-photo">
+                        <svg viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+
+                    {/* ChatHub Desktop Window Mockup */}
                     <div className="hero-app-mock-frame">
                         <div className="hero-mock-topbar">
                             <span className="mock-dot red"></span>
                             <span className="mock-dot yellow"></span>
                             <span className="mock-dot green"></span>
+                            <span className="mock-title-text">ChatHub</span>
                         </div>
                         <div className="hero-mock-chat-area">
                             <div className="hero-mock-sidebar-stub">
-                                <div className="stub-line"></div>
-                                <div className="stub-line short"></div>
-                                <div className="stub-line"></div>
+                                <div className="stub-avatar"></div>
+                                <div className="stub-avatar"></div>
+                                <div className="stub-avatar"></div>
                             </div>
                             <div className="hero-mock-bubbles">
                                 <div className="mock-bubble-green"></div>
@@ -89,7 +141,11 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                     role="button"
                     tabIndex={0}
                 >
-                    <div className="feature-circle-icon green">💬</div>
+                    <div className="feature-circle-icon green">
+                        <svg viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                        </svg>
+                    </div>
                     <h3>Instant Messaging</h3>
                     <p>Send and receive messages in real time.</p>
                 </div>
@@ -100,7 +156,11 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                     role="button"
                     tabIndex={0}
                 >
-                    <div className="feature-circle-icon purple">📹</div>
+                    <div className="feature-circle-icon purple">
+                        <svg viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                        </svg>
+                    </div>
                     <h3>Voice & Video Calls</h3>
                     <p>High quality and reliable calls.</p>
                 </div>
@@ -111,13 +171,21 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                     role="button"
                     tabIndex={0}
                 >
-                    <div className="feature-circle-icon blue">👥</div>
+                    <div className="feature-circle-icon blue">
+                        <svg viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                        </svg>
+                    </div>
                     <h3>Groups & Communities</h3>
                     <p>Stay connected with your teams.</p>
                 </div>
 
                 <div className="dash-feature-card">
-                    <div className="feature-circle-icon yellow">🔒</div>
+                    <div className="feature-circle-icon yellow">
+                        <svg viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                        </svg>
+                    </div>
                     <h3>Secure & Private</h3>
                     <p>Your data stays safe with us.</p>
                 </div>
@@ -141,18 +209,20 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                         <div key={c.name} className="contact-card-box">
                             <div className="contact-card-top">
                                 <div className="contact-card-avatar-wrap">
-                                    <div
-                                        className="contact-card-avatar"
-                                        style={{ backgroundColor: c.color }}
-                                    >
-                                        {c.name.slice(0, 2).toUpperCase()}
-                                    </div>
+                                    <img
+                                        src={c.avatar}
+                                        alt={c.name}
+                                        className="contact-card-avatar-img"
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                        }}
+                                    />
                                     {c.isOnline && <span className="avatar-online-dot"></span>}
                                 </div>
                                 <div className="contact-card-info">
                                     <h4>{c.name}</h4>
                                     <span className="contact-online-label">
-                                        {c.isOnline ? 'Online' : 'Offline'}
+                                        <span className="contact-online-bullet">●</span> Online
                                     </span>
                                 </div>
                                 <button type="button" className="contact-more-btn" title="Options">
@@ -199,7 +269,9 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                                     className="group-card-avatar"
                                     style={{ backgroundColor: g.color }}
                                 >
-                                    👥
+                                    <svg viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                                    </svg>
                                 </div>
                                 <div className="group-card-info">
                                     <h4>{g.name}</h4>

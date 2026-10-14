@@ -7674,6 +7674,11 @@ body.light-theme .call-ctrl-btn {
   .dash-hero-text {
     max-width: 100%;
   }
+  .dash-hero-left-profile {
+    flex-direction: column;
+    text-align: center;
+    max-width: 100%;
+  }
   .dash-hero-graphic-wrap {
     width: 100%;
     height: 140px;
@@ -7687,6 +7692,284 @@ body.light-theme .call-ctrl-btn {
   }
 }
 
+/* --------------------------------------------------------------------------
+   8. ENHANCED CHATHUB ICONS & TARUN GUPTA HERO PROFILE
+   -------------------------------------------------------------------------- */
+.brand-compose-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--chathub-border-subtle);
+  color: var(--chathub-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  transition: all 0.15s ease;
+}
 
+.brand-compose-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
 
+.brand-compose-btn svg {
+  width: 16px;
+  height: 16px;
+}
 
+/* Hero Left Profile with Tarun Gupta & Online Badge */
+.dash-hero-left-profile {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  max-width: 60%;
+}
+
+.dash-hero-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.dash-hero-avatar {
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-size: 1.85rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+
+.hero-online-badge-dot {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--chathub-emerald);
+  border: 3px solid #0e1c2a;
+}
+
+.dash-hero-online-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.65rem;
+  background-color: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 9999px;
+  color: var(--chathub-emerald);
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin: 0.2rem 0 0.6rem 0;
+}
+
+.hero-pill-icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* Floating Action Badges on Hero Illustration */
+.floating-hero-pill.pill-msg-top {
+  top: 5px;
+  left: 10px;
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+}
+
+.floating-hero-pill.pill-msg-bottom {
+  bottom: 10px;
+  left: 20px;
+  background: #10b981;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+}
+
+.floating-hero-pill.pill-video {
+  top: 20px;
+  right: 10px;
+  background: #8b5cf6;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+}
+
+.floating-hero-pill.pill-call {
+  bottom: 25px;
+  right: 40px;
+  background: #0ea5e9;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4);
+}
+
+.floating-hero-pill.pill-photo {
+  bottom: 10px;
+  right: 0px;
+  background: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+}
+
+.floating-hero-pill svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mock-title-text {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--chathub-text-muted);
+  margin-left: 0.4rem;
+}
+
+.stub-avatar {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Navigation Category SVGs */
+.cat-svg-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--chathub-text-muted);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.nav-category-item:hover .cat-svg-icon,
+.nav-category-item.active .cat-svg-icon {
+  color: #ffffff;
+}
+
+.section-divider-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--chathub-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.section-search-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.chat-item-avatar-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.chat-group-svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Recent Contacts & Groups Enhancements */
+.contact-card-avatar-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+.contact-online-bullet {
+  font-size: 0.65rem;
+  color: var(--chathub-emerald);
+  margin-right: 0.2rem;
+}
+
+.group-card-avatar svg {
+  width: 22px;
+  height: 22px;
+}
+
+.feature-circle-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Right Sidebar Profile Enhancements */
+.profile-user-handle {
+  font-size: 0.82rem;
+  color: var(--chathub-text-dim);
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.profile-edit-profile-btn {
+  width: 100%;
+  padding: 0.65rem;
+  background-color: #172a3a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 0.88rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-top: 0.35rem;
+}
+
+.profile-edit-profile-btn:hover {
+  background-color: var(--chathub-bg-card-hover);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.edit-gear-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--chathub-text-muted);
+}
+
+.quick-action-tile.highlight-green {
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.tile-label.green {
+  color: var(--chathub-emerald);
+  font-weight: 600;
+}
+
+.settings-item-svg {
+  width: 18px;
+  height: 18px;
+  color: var(--chathub-text-muted);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.settings-nav-item:hover .settings-item-svg {
+  color: #ffffff;
+}
+
+.logout-svg,
+.logout-text {
+  color: #ef4444 !important;
+}
+
+.settings-nav-item.logout-item:hover .logout-svg,
+.settings-nav-item.logout-item:hover .logout-text {
+  color: #dc2626 !important;
+}
