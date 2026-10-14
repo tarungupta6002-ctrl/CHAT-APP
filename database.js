@@ -392,6 +392,34 @@ async function linkGoogleAccount(userId, googleId) {
         return false;
     }
 }
+async function getUserById(id) {
+    if (!id) return null;
+    try {
+        const rs = await db.execute({
+            sql: `SELECT * FROM users WHERE id = ? LIMIT 1`,
+            args: [id]
+        });
+        if (rs.rows.length === 0) return null;
+        const row = rs.rows[0];
+        return {
+            id: row.id,
+            fullName: row.full_name || row.username,
+            email: row.email,
+            username: row.username,
+            dob: row.dob || '',
+            bio: row.bio || '',
+            passwordHash: row.password_hash,
+            color: row.avatar_color,
+            avatarUrl: row.avatar_url || '',
+            isVerified: row.is_verified,
+            googleId: row.google_id,
+            createdAt: row.created_at
+        };
+    } catch (err) {
+        console.error("Error fetching user by id:", err);
+        return null;
+    }
+}
 
 async function updateUserProfile({ userId, currentUsername, fullName, username, dob, bio, avatarColor, avatarUrl }) {
     try {
@@ -406,13 +434,25 @@ async function updateUserProfile({ userId, currentUsername, fullName, username, 
             }
         }
 
+        const existing = (await getUserByUsername(currentUsername)) || (userId ? await getUserById(userId) : null);
+        const resolvedAvatarUrl = avatarUrl !== undefined ? (avatarUrl || '') : (existing?.avatarUrl || '');
+
         await db.execute({
             sql: `
                 UPDATE users 
-                SET full_name = ?, username = ?, dob = ?, bio = ?, avatar_color = COALESCE(?, avatar_color), avatar_url = COALESCE(?, avatar_url)
+                SET full_name = ?, username = ?, dob = ?, bio = ?, avatar_color = COALESCE(?, avatar_color), avatar_url = ?
                 WHERE username = ? COLLATE NOCASE OR id = ?
             `,
-            args: [cleanFullName, cleanUsername, dob || '', bio || '', avatarColor || null, avatarUrl !== undefined ? avatarUrl : null, currentUsername, userId]
+            args: [
+                cleanFullName, 
+                cleanUsername, 
+                dob || '', 
+                bio || '', 
+                avatarColor || null, 
+                resolvedAvatarUrl, 
+                currentUsername, 
+                userId || null
+            ]
         });
 
         // If username changed, update sent and received messages history
@@ -427,13 +467,14 @@ async function updateUserProfile({ userId, currentUsername, fullName, username, 
             });
         }
 
-        const updated = await getUserByUsername(cleanUsername);
+        const updated = (await getUserByUsername(cleanUsername)) || (userId ? await getUserById(userId) : null);
         return { success: true, user: updated };
     } catch (err) {
         console.error("Error updating user profile in DB:", err);
         return { success: false, error: err.message || "Failed to update profile." };
     }
 }
+
 
 // --- OTP Management Queries ---
 async function saveOtp({ email, otpHash, purpose, payload = null, expiresInMinutes = 5 }) {
@@ -639,5 +680,6 @@ module.exports = {
     getLatestOtp,
     incrementOtpAttempts,
     deleteOtp,
+    getUserById,
     updateUserProfile
 };

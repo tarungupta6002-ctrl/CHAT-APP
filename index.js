@@ -10,7 +10,8 @@ const db = require("./database");
 const { sendOtpEmail } = require("./emailService");
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "15mb" }));
+app.use(express.urlencoded({ limit: "15mb", extended: true }));
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -75,7 +76,8 @@ function broadcastUsersList() {
     const list = Array.from(users.entries()).map(([id, u]) => ({
         id: id,
         username: u.username,
-        color: u.color
+        color: u.color,
+        avatarUrl: u.avatarUrl || ''
     }));
     io.emit("users-list", list);
     io.emit("users-count", list.length);
@@ -105,14 +107,22 @@ io.on("connection", (socket) => {
         const cleanName = rawName.trim() ? rawName.trim().slice(0, 20) : `User-${socket.id.slice(0, 4)}`;
         
         let color = typeof data === "object" && data.color ? data.color : null;
-        if (!color) {
+        let avatarUrl = typeof data === "object" && data.avatarUrl ? data.avatarUrl : null;
+        if (!color || avatarUrl === null) {
             const dbUser = await db.getUserByUsername(cleanName);
-            color = dbUser ? dbUser.color : getRandomColor();
+            if (dbUser) {
+                if (!color) color = dbUser.color;
+                if (avatarUrl === null) avatarUrl = dbUser.avatarUrl || '';
+            } else {
+                if (!color) color = getRandomColor();
+                if (avatarUrl === null) avatarUrl = '';
+            }
         }
 
         const userObj = {
             username: cleanName,
-            color: color
+            color: color,
+            avatarUrl: avatarUrl || ''
         };
         users.set(socket.id, userObj);
 
@@ -120,7 +130,8 @@ io.on("connection", (socket) => {
         socket.emit("join-success", {
             id: socket.id,
             username: cleanName,
-            color: userObj.color
+            color: userObj.color,
+            avatarUrl: userObj.avatarUrl
         });
 
         // Send persisted General Room history from SQLite / Turso
@@ -136,6 +147,19 @@ io.on("connection", (socket) => {
             status: "joined",
             time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
         });
+    });
+
+    // Handle user profile updates in real-time
+    socket.on("user-update-profile", (data) => {
+        if (!data || !socket.id) return;
+        const existing = users.get(socket.id);
+        if (existing) {
+            if (data.username) existing.username = data.username;
+            if (data.color) existing.color = data.color;
+            if (data.avatarUrl !== undefined) existing.avatarUrl = data.avatarUrl;
+            users.set(socket.id, existing);
+            broadcastUsersList();
+        }
     });
 
     // Request active users list on demand

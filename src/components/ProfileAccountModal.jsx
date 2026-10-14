@@ -3,8 +3,9 @@ import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProfileAccountModal({ isOpen, onClose, initialMode = 'view' }) {
-    const { currentUser } = useSocket();
-    const { updateProfile } = useAuth();
+    const { user: authUser, updateProfile } = useAuth();
+    const { currentUser: socketUser, refreshUserData } = useSocket();
+    const currentUser = authUser || socketUser;
     const fileInputRef = useRef(null);
 
     const [activeTab, setActiveTab] = useState(initialMode); // 'view' | 'edit'
@@ -33,7 +34,7 @@ export default function ProfileAccountModal({ isOpen, onClose, initialMode = 'vi
             setErrorMsg('');
             setSuccessMsg('');
         }
-    }, [isOpen, initialMode, currentUser]);
+    }, [isOpen, initialMode]);
 
     if (!isOpen) return null;
 
@@ -127,10 +128,11 @@ export default function ProfileAccountModal({ isOpen, onClose, initialMode = 'vi
         } else {
             setSuccessMsg('Profile picture & details updated successfully!');
             localStorage.setItem('chathub_custom_status', bioInput.trim());
+            refreshUserData?.();
             setTimeout(() => {
                 setActiveTab('view');
                 setSuccessMsg('');
-            }, 1000);
+            }, 800);
         }
     };
 

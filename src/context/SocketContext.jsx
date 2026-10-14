@@ -108,11 +108,32 @@ export function SocketProvider({ children }) {
         }
     }, []);
 
+    const refreshUserData = useCallback(() => {
+        if (authUser?.username) {
+            fetchRegisteredData(authUser.username);
+        }
+        if (socketRef.current && authUser) {
+            socketRef.current.emit("user-update-profile", {
+                username: authUser.username,
+                color: authUser.color,
+                avatarUrl: authUser.avatarUrl || ''
+            });
+            socketRef.current.emit("get-users");
+        }
+    }, [authUser, fetchRegisteredData]);
+
     // Update currentUser when auth changes
     useEffect(() => {
         if (authUser) {
             setCurrentUser(authUser);
             fetchRegisteredData(authUser.username);
+            if (socketRef.current) {
+                socketRef.current.emit("user-update-profile", {
+                    username: authUser.username,
+                    color: authUser.color,
+                    avatarUrl: authUser.avatarUrl || ''
+                });
+            }
         }
     }, [authUser, fetchRegisteredData]);
 
@@ -128,7 +149,8 @@ export function SocketProvider({ children }) {
             // Join with user identity
             socket.emit("user-join", {
                 username: authUser.username,
-                color: authUser.color
+                color: authUser.color,
+                avatarUrl: authUser.avatarUrl || ''
             });
         });
 
@@ -445,6 +467,7 @@ export function SocketProvider({ children }) {
     const value = {
         socket: socketRef.current,
         currentUser,
+        refreshUserData,
         isJoined,
         onlineUsers,
         onlineCount,
