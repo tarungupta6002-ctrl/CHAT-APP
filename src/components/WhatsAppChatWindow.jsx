@@ -18,7 +18,7 @@ export default function WhatsAppChatWindow() {
                             <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z" />
                         </svg>
                     </div>
-                    <h2>PulseChat Web</h2>
+                    <h2>ChatHub Web</h2>
                     <p>
                         Select a conversation from the sidebar or click <strong>+ New</strong> to start chatting.
                         Experience high-definition audio & video calls and view-once media.
@@ -44,14 +44,15 @@ export default function WhatsAppChatWindow() {
             {/* WhatsApp Chat Header */}
             <header className="whatsapp-chat-header">
                 <div className="chat-header-left">
-                    {/* Back button for mobile */}
+                    {/* Back to Dashboard button */}
                     <button
                         type="button"
-                        className="mobile-back-btn"
-                        title="Back to Chats"
+                        className="back-to-dash-btn"
+                        title="Back to Dashboard"
                         onClick={() => selectChat(null)}
                     >
-                        ←
+                        <span className="dash-back-arrow">←</span>
+                        <span className="dash-back-text">Dashboard</span>
                     </button>
 
                     <div

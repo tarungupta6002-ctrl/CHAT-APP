@@ -34,7 +34,7 @@ export default function MessagesContainer() {
                 }}>
                     <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>💬</div>
                     <div style={{ fontWeight: 600, fontSize: '1rem', color: 'var(--text-primary)' }}>
-                        {currentChat.type === 'general' ? 'Welcome to PulseChat General Room!' : `Private chat with ${currentChat.partnerName}`}
+                        {currentChat.type === 'general' ? 'Welcome to ChatHub General Room!' : `Private chat with ${currentChat.partnerName}`}
                     </div>
                     <div style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
                         Say hello, send a voice note, or share a photo to get the conversation started.

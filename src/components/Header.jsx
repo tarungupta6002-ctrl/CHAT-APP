@@ -42,7 +42,7 @@ export default function Header() {
                     </svg>
                 </div>
                 <div className="brand-info">
-                    <h1>PulseChat</h1>
+                    <h1>ChatHub</h1>
                     <button
                         type="button"
                         className="online-users-badge-btn"
