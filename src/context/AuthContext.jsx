@@ -250,8 +250,8 @@ export function AuthProvider({ children }) {
         navigateTo('landing');
     }, [navigateTo]);
 
-    // 10. Update Profile (Name, Username, Date of Birth, Bio, Avatar Color)
-    const updateProfile = useCallback(async ({ fullName, username, dob, bio, color }) => {
+    // 10. Update Profile (Name, Username, Date of Birth, Bio, Avatar Color, Avatar Picture)
+    const updateProfile = useCallback(async ({ fullName, username, dob, bio, color, avatarUrl }) => {
         try {
             const currentUsername = user?.username;
             const res = await fetch("/api/user/profile", {
@@ -267,7 +267,8 @@ export function AuthProvider({ children }) {
                     username,
                     dob,
                     bio,
-                    color
+                    color,
+                    avatarUrl
                 })
             });
 

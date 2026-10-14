@@ -662,6 +662,7 @@ app.post("/api/auth/login", async (req, res) => {
                 dob: user.dob || '',
                 bio: user.bio || '',
                 color: user.color,
+                avatarUrl: user.avatarUrl || '',
                 createdAt: user.createdAt
             },
             token
@@ -845,6 +846,7 @@ app.post("/api/auth/google", async (req, res) => {
                 username: chosenUsername,
                 passwordHash: "",
                 avatarColor: getRandomColor(),
+                avatarUrl: payload.picture || "",
                 googleId,
                 isVerified: 1
             });
@@ -861,6 +863,7 @@ app.post("/api/auth/google", async (req, res) => {
                 dob: user.dob || '',
                 bio: user.bio || '',
                 color: user.color,
+                avatarUrl: user.avatarUrl || payload.picture || '',
                 createdAt: user.createdAt
             },
             token
@@ -935,6 +938,7 @@ app.get("/api/auth/me", async (req, res) => {
             dob: user.dob || '',
             bio: user.bio || '',
             color: user.color,
+            avatarUrl: user.avatarUrl || '',
             createdAt: user.createdAt
         }
     });
@@ -950,7 +954,7 @@ app.post("/api/user/profile", async (req, res) => {
             if (decoded) tokenUsername = decoded.username;
         }
 
-        const { userId, currentUsername, fullName, username, dob, bio, color } = req.body;
+        const { userId, currentUsername, fullName, username, dob, bio, color, avatarUrl } = req.body;
         const targetUsername = currentUsername || tokenUsername;
         if (!targetUsername) {
             return res.status(401).json({ error: "Unauthorized: Missing username." });
@@ -963,7 +967,8 @@ app.post("/api/user/profile", async (req, res) => {
             username: username ? username.trim() : targetUsername,
             dob: dob ? dob.trim() : "",
             bio: bio ? bio.trim() : "",
-            avatarColor: color || null
+            avatarColor: color || null,
+            avatarUrl: avatarUrl !== undefined ? avatarUrl : null
         });
 
         if (!result.success) {
@@ -983,6 +988,7 @@ app.post("/api/user/profile", async (req, res) => {
                 dob: updatedUser.dob || '',
                 bio: updatedUser.bio || '',
                 color: updatedUser.color,
+                avatarUrl: updatedUser.avatarUrl || '',
                 createdAt: updatedUser.createdAt
             },
             token: newToken

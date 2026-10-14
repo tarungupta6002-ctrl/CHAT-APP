@@ -80,7 +80,11 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                             className="dash-hero-avatar"
                             style={{ backgroundColor: currentUser?.color || '#2563eb' }}
                         >
-                            {userInitials}
+                            {currentUser?.avatarUrl ? (
+                                <img src={currentUser.avatarUrl} alt={displayName} className="dash-hero-avatar-img" />
+                            ) : (
+                                userInitials
+                            )}
                         </div>
                         <span className="hero-online-badge-dot"></span>
                     </div>

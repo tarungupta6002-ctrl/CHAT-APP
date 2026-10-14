@@ -53,7 +53,11 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
                             className="dash-profile-avatar"
                             style={{ backgroundColor: currentUser?.color || '#2563eb' }}
                         >
-                            {initials}
+                            {currentUser?.avatarUrl ? (
+                                <img src={currentUser.avatarUrl} alt={displayName} className="dash-profile-avatar-img" />
+                            ) : (
+                                initials
+                            )}
                         </div>
                         <span className="profile-online-dot" title="Online"></span>
                     </div>

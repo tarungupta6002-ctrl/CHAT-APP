@@ -325,7 +325,11 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
                         className="dash-avatar-circle"
                         style={{ backgroundColor: currentUser?.color || '#2563eb' }}
                     >
-                        {initials}
+                        {currentUser?.avatarUrl ? (
+                            <img src={currentUser.avatarUrl} alt={displayName} className="dash-avatar-img" />
+                        ) : (
+                            initials
+                        )}
                     </div>
                     <span className="avatar-online-dot"></span>
                 </div>

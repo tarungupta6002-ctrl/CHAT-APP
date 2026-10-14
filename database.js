@@ -80,6 +80,7 @@ async function initDb() {
         try { await db.execute(`ALTER TABLE users ADD COLUMN google_id TEXT;`); } catch (_) {}
         try { await db.execute(`ALTER TABLE users ADD COLUMN dob TEXT;`); } catch (_) {}
         try { await db.execute(`ALTER TABLE users ADD COLUMN bio TEXT;`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE users ADD COLUMN avatar_url TEXT;`); } catch (_) {}
 
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_username);`);
@@ -226,15 +227,15 @@ function mapRowToMessage(row) {
 }
 
 // User Authentication & Management Queries
-async function createUser({ id, fullName = "", email = "", username, passwordHash = "", avatarColor = "#10b981", googleId = null, isVerified = 1 }) {
+async function createUser({ id, fullName = "", email = "", username, passwordHash = "", avatarColor = "#10b981", avatarUrl = "", googleId = null, isVerified = 1 }) {
     try {
         const userId = id || `u_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
         await db.execute({
             sql: `
-                INSERT INTO users (id, full_name, email, username, password_hash, avatar_color, google_id, is_verified, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO users (id, full_name, email, username, password_hash, avatar_color, avatar_url, google_id, is_verified, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
-            args: [userId, fullName, email.toLowerCase(), username, passwordHash, avatarColor, googleId, isVerified, Date.now()]
+            args: [userId, fullName, email.toLowerCase(), username, passwordHash, avatarColor, avatarUrl || null, googleId, isVerified, Date.now()]
         });
         return {
             id: userId,
@@ -242,6 +243,7 @@ async function createUser({ id, fullName = "", email = "", username, passwordHas
             email: email.toLowerCase(),
             username,
             color: avatarColor,
+            avatarUrl: avatarUrl || '',
             isVerified
         };
     } catch (err) {
@@ -267,6 +269,7 @@ async function getUserByUsername(username) {
             bio: row.bio || '',
             passwordHash: row.password_hash,
             color: row.avatar_color,
+            avatarUrl: row.avatar_url || '',
             isVerified: row.is_verified,
             googleId: row.google_id,
             createdAt: row.created_at
@@ -291,8 +294,11 @@ async function getUserByEmail(email) {
             fullName: row.full_name || row.username,
             email: row.email,
             username: row.username,
+            dob: row.dob || '',
+            bio: row.bio || '',
             passwordHash: row.password_hash,
             color: row.avatar_color,
+            avatarUrl: row.avatar_url || '',
             isVerified: row.is_verified,
             googleId: row.google_id,
             createdAt: row.created_at
@@ -322,6 +328,7 @@ async function getUserByIdentifier(identifier) {
             bio: row.bio || '',
             passwordHash: row.password_hash,
             color: row.avatar_color,
+            avatarUrl: row.avatar_url || '',
             isVerified: row.is_verified,
             googleId: row.google_id,
             createdAt: row.created_at
@@ -346,7 +353,10 @@ async function getUserByGoogleId(googleId) {
             fullName: row.full_name || row.username,
             email: row.email,
             username: row.username,
+            dob: row.dob || '',
+            bio: row.bio || '',
             color: row.avatar_color,
+            avatarUrl: row.avatar_url || '',
             isVerified: row.is_verified,
             googleId: row.google_id,
             createdAt: row.created_at
@@ -383,7 +393,7 @@ async function linkGoogleAccount(userId, googleId) {
     }
 }
 
-async function updateUserProfile({ userId, currentUsername, fullName, username, dob, bio, avatarColor }) {
+async function updateUserProfile({ userId, currentUsername, fullName, username, dob, bio, avatarColor, avatarUrl }) {
     try {
         const cleanUsername = username ? username.trim() : currentUsername;
         const cleanFullName = fullName ? fullName.trim() : cleanUsername;
@@ -399,10 +409,10 @@ async function updateUserProfile({ userId, currentUsername, fullName, username, 
         await db.execute({
             sql: `
                 UPDATE users 
-                SET full_name = ?, username = ?, dob = ?, bio = ?, avatar_color = COALESCE(?, avatar_color)
+                SET full_name = ?, username = ?, dob = ?, bio = ?, avatar_color = COALESCE(?, avatar_color), avatar_url = COALESCE(?, avatar_url)
                 WHERE username = ? COLLATE NOCASE OR id = ?
             `,
-            args: [cleanFullName, cleanUsername, dob || '', bio || '', avatarColor || null, currentUsername, userId]
+            args: [cleanFullName, cleanUsername, dob || '', bio || '', avatarColor || null, avatarUrl !== undefined ? avatarUrl : null, currentUsername, userId]
         });
 
         // If username changed, update sent and received messages history
@@ -500,7 +510,7 @@ async function deleteOtp(id) {
 
 async function getAllUsers() {
     try {
-        const rs = await db.execute(`SELECT id, full_name, email, username, avatar_color, dob, bio, created_at FROM users ORDER BY created_at DESC`);
+        const rs = await db.execute(`SELECT id, full_name, email, username, avatar_color, avatar_url, dob, bio, created_at FROM users ORDER BY created_at DESC`);
         return rs.rows.map((row) => ({
             id: row.id,
             fullName: row.full_name || row.username,
@@ -509,6 +519,7 @@ async function getAllUsers() {
             dob: row.dob || '',
             bio: row.bio || '',
             color: row.avatar_color,
+            avatarUrl: row.avatar_url || '',
             createdAt: row.created_at
         }));
     } catch (err) {
