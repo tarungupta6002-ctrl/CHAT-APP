@@ -58,42 +58,58 @@ export default function AuthPage() {
     // Initialize Google Identity Services
     useEffect(() => {
         if (!googleClientId) return;
-        if (!window.google?.accounts?.id) return;
         if (currentView !== 'login' && currentView !== 'signup') return;
 
-        try {
-            window.google.accounts.id.initialize({
-                client_id: googleClientId,
-                callback: async (response) => {
-                    if (response?.credential) {
-                        try {
-                            setLoading(true);
-                            setError('');
-                            await googleLogin(response.credential);
-                        } catch (err) {
-                            setError(err.message || 'Google authentication failed');
-                        } finally {
-                            setLoading(false);
-                        }
-                    }
-                },
-                auto_select: false,
-                cancel_on_tap_outside: true
-            });
+        let attempts = 0;
+        const initGIS = () => {
+            if (window.google?.accounts?.id) {
+                try {
+                    window.google.accounts.id.initialize({
+                        client_id: googleClientId,
+                        callback: async (response) => {
+                            if (response?.credential) {
+                                try {
+                                    setLoading(true);
+                                    setError('');
+                                    await googleLogin(response.credential);
+                                } catch (err) {
+                                    setError(err.message || 'Google authentication failed');
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }
+                        },
+                        auto_select: false,
+                        cancel_on_tap_outside: true
+                    });
 
-            if (googleBtnContainerRef.current) {
-                googleBtnContainerRef.current.innerHTML = '';
-                window.google.accounts.id.renderButton(googleBtnContainerRef.current, {
-                    theme: 'outline',
-                    size: 'large',
-                    text: currentView === 'signup' ? 'signup_with' : 'signin_with',
-                    shape: 'rectangular',
-                    logo_alignment: 'left',
-                    width: 380
-                });
+                    if (googleBtnContainerRef.current) {
+                        googleBtnContainerRef.current.innerHTML = '';
+                        window.google.accounts.id.renderButton(googleBtnContainerRef.current, {
+                            theme: 'outline',
+                            size: 'large',
+                            text: currentView === 'signup' ? 'signup_with' : 'signin_with',
+                            shape: 'rectangular',
+                            logo_alignment: 'left',
+                            width: 380
+                        });
+                    }
+                    return true;
+                } catch (err) {
+                    console.warn('GIS error:', err);
+                }
             }
-        } catch (err) {
-            console.warn('GIS error:', err);
+            return false;
+        };
+
+        if (!initGIS()) {
+            const checkTimer = setInterval(() => {
+                attempts++;
+                if (initGIS() || attempts > 20) {
+                    clearInterval(checkTimer);
+                }
+            }, 250);
+            return () => clearInterval(checkTimer);
         }
     }, [googleClientId, currentView, googleLogin]);
 
