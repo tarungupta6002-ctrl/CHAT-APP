@@ -91,6 +91,7 @@ function VoiceNotePlayer({ audioSrc, durationText }) {
 export default function MessageItem({ item }) {
     const {
         currentUser,
+        currentChat,
         socket,
         openDmWithUser,
         setReplyingTo,
@@ -101,6 +102,46 @@ export default function MessageItem({ item }) {
         markViewOnceOpened,
         setLightboxData
     } = useSocket();
+
+    const [isStarred, setIsStarred] = useState(false);
+
+    useEffect(() => {
+        if (!item?.data?.id) return;
+        try {
+            const key = `chathub_starred_msgs_${currentUser?.username || 'guest'}`;
+            const saved = JSON.parse(localStorage.getItem(key) || '[]');
+            setIsStarred(saved.some((m) => m.id === item.data.id));
+        } catch {}
+    }, [item?.data?.id, currentUser]);
+
+    const handleToggleStar = (e) => {
+        e.stopPropagation();
+        if (!item?.data?.id) return;
+        const key = `chathub_starred_msgs_${currentUser?.username || 'guest'}`;
+        try {
+            const saved = JSON.parse(localStorage.getItem(key) || '[]');
+            let next;
+            if (isStarred) {
+                next = saved.filter((m) => m.id !== item.data.id);
+                setIsStarred(false);
+            } else {
+                next = [
+                    ...saved,
+                    {
+                        id: item.data.id,
+                        text: item.data.text || (item.data.image ? '📷 Photo' : (item.data.audio ? '🎙️ Voice Note' : 'Message')),
+                        username: item.data.username,
+                        time: item.data.time || 'Recent',
+                        chatType: currentChat?.type || 'general',
+                        partnerName: currentChat?.partnerName || item.data.username
+                    }
+                ];
+                setIsStarred(true);
+            }
+            localStorage.setItem(key, JSON.stringify(next));
+            window.dispatchEvent(new Event('storage'));
+        } catch {}
+    };
 
     // System Status message
     if (item.type === "status" || item.type === "system") {
@@ -224,6 +265,14 @@ export default function MessageItem({ item }) {
                             >
                                 ↩️
                             </button>
+                            <button
+                                type="button"
+                                className={`msg-action-btn ${isStarred ? 'starred' : ''}`}
+                                title={isStarred ? "Unstar Message" : "Star Message"}
+                                onClick={handleToggleStar}
+                            >
+                                {isStarred ? '⭐' : '☆'}
+                            </button>
                             {isSelf && (
                                 <>
                                     {msg.text && (
@@ -317,6 +366,7 @@ export default function MessageItem({ item }) {
 
                                 {/* Metadata & Checkmark */}
                                 <div className="msg-meta">
+                                    {isStarred && <span className="msg-star-badge" title="Starred">⭐</span>}
                                     <span>{msg.time}</span>
                                     {isSelf && (
                                         <svg className="check-icon" viewBox="0 0 16 16">

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useWebRTC } from '../context/WebRTCContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSettings, onEditProfile, onViewProfileAccount }) {
-    const { currentUser, setLightboxData } = useSocket();
+    const { currentUser, setLightboxData, currentChat, conversations } = useSocket();
     const { initiateCall } = useWebRTC();
     const { logout } = useAuth();
 
@@ -21,58 +21,27 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
     };
     const initials = getInitials(displayName);
 
-    // Shared media items matching the reference screenshot
-    const sharedMedia = [
-        {
-            id: 1,
-            title: 'Mountain Landscape',
-            src: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80',
-            type: 'image'
-        },
-        {
-            id: 2,
-            title: 'Project Roadmap Document',
-            src: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&w=600&q=80',
-            type: 'doc'
-        },
-        {
-            id: 3,
-            title: 'Golden Retriever',
-            src: 'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=600&q=80',
-            type: 'image'
-        },
-        {
-            id: 4,
-            title: 'Code Editor Screenshot',
-            src: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80',
-            type: 'image'
-        },
-        {
-            id: 5,
-            title: 'Green Succulent Plant',
-            src: 'https://images.unsplash.com/photo-1509423350716-97f9360b4e09?auto=format&fit=crop&w=600&q=80',
-            type: 'image'
-        },
-        {
-            id: 6,
-            title: 'Quarterly Summary PDF',
-            src: 'https://images.unsplash.com/photo-1568667256549-094345857637?auto=format&fit=crop&w=600&q=80',
-            type: 'doc'
-        },
-        {
-            id: 7,
-            title: 'Sunset over Lake',
-            src: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80',
-            type: 'image'
-        },
-        {
-            id: 8,
-            title: 'ChatHub Media Archive',
-            src: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80',
-            type: 'image',
-            badge: '+34'
-        }
-    ];
+    // Real Shared Media from current active conversation (no dummy photos)
+    const activeKey = !currentChat || currentChat.type === 'general'
+        ? 'general'
+        : (currentChat.partnerName ? currentChat.partnerName.toLowerCase() : 'dm');
+
+    const activeMsgs = conversations[activeKey] || [];
+    const realSharedMedia = useMemo(() => {
+        const media = [];
+        activeMsgs.forEach((m, idx) => {
+            const mData = m.data || m;
+            if (mData.image && !mData.isViewOnce) {
+                media.push({
+                    id: mData.id || `media-${idx}`,
+                    src: mData.image,
+                    title: mData.text || `${mData.username || 'User'}'s image`,
+                    type: 'image'
+                });
+            }
+        });
+        return media.reverse();
+    }, [activeMsgs]);
 
     return (
         <aside className="chathub-right-sidebar">
@@ -189,48 +158,56 @@ export default function ChatHubRightSidebar({ onNewChat, onCreateGroup, onOpenSe
             {/* 3. Shared Media */}
             <div className="dash-sidebar-block">
                 <div className="dash-sidebar-block-header between">
-                    <h4>Shared Media</h4>
-                    <button
-                        type="button"
-                        className="sidebar-view-all-link"
-                        onClick={() => {
-                            setLightboxData({
-                                src: sharedMedia[0].src,
-                                title: sharedMedia[0].title
-                            });
-                        }}
-                    >
-                        View all →
-                    </button>
-                </div>
-
-                <div className="shared-media-grid">
-                    {sharedMedia.map((m) => (
-                        <div
-                            key={m.id}
-                            className={`media-thumb-cell ${m.badge ? 'has-badge' : ''}`}
+                    <h4>Shared Media {realSharedMedia.length > 0 && `(${realSharedMedia.length})`}</h4>
+                    {realSharedMedia.length > 0 && (
+                        <button
+                            type="button"
+                            className="sidebar-view-all-link"
                             onClick={() => {
                                 setLightboxData({
-                                    src: m.src,
-                                    title: m.title
+                                    src: realSharedMedia[0].src,
+                                    title: realSharedMedia[0].title
                                 });
                             }}
-                            title={m.title}
-                            role="button"
-                            tabIndex={0}
                         >
-                            <img
-                                src={m.src}
-                                alt={m.title}
-                                loading="lazy"
-                                onError={(e) => {
-                                    e.target.style.display = 'none';
-                                }}
-                            />
-                            {m.badge && <span className="media-more-overlay">{m.badge}</span>}
-                        </div>
-                    ))}
+                            View all →
+                        </button>
+                    )}
                 </div>
+
+                {realSharedMedia.length === 0 ? (
+                    <div className="empty-shared-media-box">
+                        <span className="empty-media-icon">🖼️</span>
+                        <p className="empty-media-text">No shared media yet</p>
+                        <span className="empty-media-sub">
+                            Photos and media sent in this chat will appear here.
+                        </span>
+                    </div>
+                ) : (
+                    <div className="shared-media-grid">
+                        {realSharedMedia.slice(0, 8).map((m) => (
+                            <div
+                                key={m.id}
+                                className="media-thumb-cell"
+                                onClick={() => {
+                                    setLightboxData({
+                                        src: m.src,
+                                        title: m.title
+                                    });
+                                }}
+                                title={m.title}
+                                role="button"
+                                tabIndex={0}
+                            >
+                                <img
+                                    src={m.src}
+                                    alt={m.title}
+                                    loading="lazy"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* 4. Account & Settings */}

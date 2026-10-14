@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSocket } from '../context/SocketContext';
 
 export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCategory, setActiveCategory }) {
@@ -9,156 +9,261 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
         recentChats,
         onlineUsers,
         allRegisteredUsers,
-        unreadCounts
+        unreadCounts,
+        conversations
     } = useSocket();
 
-    // Default reference contacts list matching the screenshot
-    const fallbackSeedChats = useMemo(() => [
-        {
-            partnerUsername: 'Priya Sharma',
-            avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
-            partnerColor: '#10b981',
-            lastMessage: 'Hey! Are you free for a call?',
-            lastTime: '10:24 AM',
-            unread: 2,
-            isOnline: true,
-            isGroup: false
-        },
-        {
-            partnerUsername: 'Rahul Verma',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-            partnerColor: '#3b82f6',
-            lastMessage: "Okay, I'll join in 5 mins",
-            lastTime: '09:18 AM',
-            unread: 1,
-            isOnline: true,
-            isGroup: false
-        },
-        {
-            partnerUsername: 'Study Group',
-            partnerColor: '#2563eb',
-            lastMessage: 'Aman: Shared a file',
-            lastTime: 'Yesterday',
-            unread: 0,
-            isOnline: false,
-            isGroup: true
-        },
-        {
-            partnerUsername: 'Sneha Kapoor',
-            avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80',
-            partnerColor: '#ec4899',
-            lastMessage: "Let's catch up later 😊",
-            lastTime: 'Yesterday',
-            unread: 0,
-            isOnline: false,
-            isGroup: false
-        },
-        {
-            partnerUsername: 'Project Team',
-            partnerColor: '#8b5cf6',
-            lastMessage: 'You: Updated the document',
-            lastTime: 'Mon',
-            unread: 0,
-            isOnline: false,
-            isGroup: true
-        },
-        {
-            partnerUsername: 'Aman Gupta',
-            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
-            partnerColor: '#059669',
-            lastMessage: 'Thanks!',
-            lastTime: 'Mon',
-            unread: 0,
-            isOnline: false,
-            isGroup: false
-        },
-        {
-            partnerUsername: 'College Friends',
-            avatar: 'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=150&q=80',
-            partnerColor: '#f59e0b',
-            lastMessage: 'Riya: 📷 Photo',
-            lastTime: 'Sun',
-            unread: 0,
-            isOnline: false,
-            isGroup: true
+    // 1. WhatsApp-Style Archived Chats (Persisted per user)
+    const [archivedUsernames, setArchivedUsernames] = useState(() => {
+        try {
+            const saved = localStorage.getItem(`chathub_archived_${currentUser?.username || 'guest'}`);
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
         }
-    ], []);
+    });
 
-    // Consolidated real & active conversations
-    const displayChats = useMemo(() => {
+    // 2. WhatsApp-Style Starred Chats (Persisted per user)
+    const [starredUsernames, setStarredUsernames] = useState(() => {
+        try {
+            const saved = localStorage.getItem(`chathub_starred_chats_${currentUser?.username || 'guest'}`);
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    // 3. WhatsApp-Style Starred Messages (Persisted per user)
+    const [starredMessages, setStarredMessages] = useState(() => {
+        try {
+            const saved = localStorage.getItem(`chathub_starred_msgs_${currentUser?.username || 'guest'}`);
+            return saved ? JSON.parse(saved) : [];
+        } catch {
+            return [];
+        }
+    });
+
+    // Re-sync storage if currentUser changes or window focuses
+    useEffect(() => {
+        const syncStorage = () => {
+            const u = currentUser?.username || 'guest';
+            try {
+                const a = localStorage.getItem(`chathub_archived_${u}`);
+                if (a) setArchivedUsernames(JSON.parse(a));
+                const s = localStorage.getItem(`chathub_starred_chats_${u}`);
+                if (s) setStarredUsernames(JSON.parse(s));
+                const m = localStorage.getItem(`chathub_starred_msgs_${u}`);
+                if (m) setStarredMessages(JSON.parse(m));
+            } catch {}
+        };
+        syncStorage();
+        window.addEventListener('storage', syncStorage);
+        return () => window.removeEventListener('storage', syncStorage);
+    }, [currentUser]);
+
+    // Archive / Unarchive handler
+    const toggleArchiveChat = (partnerName, e) => {
+        e?.stopPropagation();
+        const key = partnerName.toLowerCase();
+        setArchivedUsernames((prev) => {
+            const next = prev.includes(key) ? prev.filter((u) => u !== key) : [...prev, key];
+            localStorage.setItem(
+                `chathub_archived_${currentUser?.username || 'guest'}`,
+                JSON.stringify(next)
+            );
+            return next;
+        });
+    };
+
+    // Star / Unstar Chat handler
+    const toggleStarChat = (partnerName, e) => {
+        e?.stopPropagation();
+        const key = partnerName.toLowerCase();
+        setStarredUsernames((prev) => {
+            const next = prev.includes(key) ? prev.filter((u) => u !== key) : [...prev, key];
+            localStorage.setItem(
+                `chathub_starred_chats_${currentUser?.username || 'guest'}`,
+                JSON.stringify(next)
+            );
+            return next;
+        });
+    };
+
+    // Unstar individual message
+    const removeStarredMessage = (msgId, e) => {
+        e?.stopPropagation();
+        setStarredMessages((prev) => {
+            const next = prev.filter((m) => m.id !== msgId);
+            localStorage.setItem(
+                `chathub_starred_msgs_${currentUser?.username || 'guest'}`,
+                JSON.stringify(next)
+            );
+            return next;
+        });
+    };
+
+    // Real Conversations Map (No dummy data)
+    const { baseChats, totalUnread } = useMemo(() => {
         const myName = currentUser?.username ? currentUser.username.toLowerCase() : '';
         const map = new Map();
+        let unreadTotal = 0;
 
-        // 1. Add real recent chats from DB
-        recentChats.forEach((c) => {
-            if (c.partnerUsername && c.partnerUsername.toLowerCase() !== myName) {
-                map.set(c.partnerUsername.toLowerCase(), {
-                    partnerUsername: c.partnerUsername,
-                    partnerColor: c.partnerColor || '#10b981',
+        // 1. Add real recent chats from DB history
+        (recentChats || []).forEach((c) => {
+            const uname = c.partnerUsername || c.username;
+            if (uname && uname.toLowerCase() !== myName) {
+                const unread = unreadCounts[uname.toLowerCase()] || 0;
+                unreadTotal += unread;
+                map.set(uname.toLowerCase(), {
+                    partnerUsername: uname,
+                    fullName: c.fullName || uname,
+                    partnerColor: c.partnerColor || c.color || '#10b981',
                     lastMessage: c.lastMessage || 'Connected',
                     lastTime: c.lastTime || '',
-                    unread: unreadCounts[c.partnerUsername.toLowerCase()] || 0,
+                    unread: unread,
                     isOnline: false,
                     isGroup: false
                 });
             }
         });
 
-        // 2. Add real online users
-        onlineUsers.forEach((u) => {
-            if (u.username && u.username.toLowerCase() !== myName) {
-                const existing = map.get(u.username.toLowerCase()) || {
+        // 2. Also inspect in-memory conversations for active DMs not in recentChats yet
+        Object.entries(conversations || {}).forEach(([chatKey, msgs]) => {
+            if (chatKey === 'general' || !Array.isArray(msgs) || msgs.length === 0) return;
+            const uname = chatKey;
+            if (uname.toLowerCase() !== myName && !map.has(uname.toLowerCase())) {
+                const lastMsg = msgs[msgs.length - 1];
+                const text = lastMsg.data?.text || lastMsg.text || (lastMsg.data?.image ? '📷 Photo' : 'Voice note');
+                const time = lastMsg.data?.time || lastMsg.time || '';
+                const unread = unreadCounts[uname.toLowerCase()] || 0;
+                map.set(uname.toLowerCase(), {
+                    partnerUsername: uname,
+                    fullName: uname,
+                    partnerColor: '#10b981',
+                    lastMessage: text,
+                    lastTime: time,
+                    unread: unread,
+                    isOnline: false,
+                    isGroup: false
+                });
+            }
+        });
+
+        // 3. Mark live online sockets
+        map.forEach((item, key) => {
+            const isLive = (onlineUsers || []).some((u) => u.username?.toLowerCase() === key);
+            if (isLive) item.isOnline = true;
+        });
+
+        // 4. Always include official ChatHub Community general room
+        const communityUnread = unreadCounts['general'] || 0;
+        unreadTotal += communityUnread;
+        const generalMsgs = conversations?.general || [];
+        const lastGenMsg = generalMsgs.length > 0 ? generalMsgs[generalMsgs.length - 1] : null;
+
+        map.set('general', {
+            partnerUsername: 'ChatHub Community',
+            fullName: 'ChatHub Community',
+            partnerColor: '#2563eb',
+            lastMessage: lastGenMsg ? `${lastGenMsg.data?.username || lastGenMsg.username}: ${lastGenMsg.data?.text || lastGenMsg.text || 'Shared a file'}` : 'Global chat room for all members',
+            lastTime: lastGenMsg ? (lastGenMsg.data?.time || lastGenMsg.time) : '',
+            unread: communityUnread,
+            isOnline: true,
+            isGroup: true
+        });
+
+        return {
+            baseChats: Array.from(map.values()),
+            totalUnread: unreadTotal
+        };
+    }, [recentChats, conversations, onlineUsers, currentUser, unreadCounts]);
+
+    // Registered Contacts list (all users excluding current user)
+    const contactsList = useMemo(() => {
+        const myName = currentUser?.username ? currentUser.username.toLowerCase() : '';
+        return (allRegisteredUsers || [])
+            .filter((u) => u.username && u.username.toLowerCase() !== myName)
+            .map((u) => {
+                const isOnline = (onlineUsers || []).some(
+                    (o) => o.username?.toLowerCase() === u.username.toLowerCase()
+                );
+                return {
                     partnerUsername: u.username,
-                    partnerColor: u.color || '#10b981',
-                    lastMessage: 'Online now',
+                    fullName: u.fullName || u.username,
+                    partnerColor: u.color || '#3b82f6',
+                    lastMessage: isOnline ? 'Online now' : 'ChatHub member',
                     lastTime: '',
-                    unread: 0,
-                    isOnline: true,
+                    unread: unreadCounts[u.username.toLowerCase()] || 0,
+                    isOnline,
                     isGroup: false
                 };
-                existing.isOnline = true;
-                existing.partnerColor = u.color || existing.partnerColor;
-                map.set(u.username.toLowerCase(), existing);
-            }
-        });
+            });
+    }, [allRegisteredUsers, currentUser, onlineUsers, unreadCounts]);
 
-        // 3. Complement with reference design chats
-        fallbackSeedChats.forEach((seed) => {
-            if (!map.has(seed.partnerUsername.toLowerCase()) && seed.partnerUsername.toLowerCase() !== myName) {
-                map.set(seed.partnerUsername.toLowerCase(), seed);
-            }
-        });
+    // Filtered Display List based on active category
+    const displayList = useMemo(() => {
+        let list = [];
 
-        // 4. Update online status with live sockets
-        map.forEach((item, key) => {
-            const hasSocket = onlineUsers.some((u) => u.username.toLowerCase() === key);
-            if (hasSocket) item.isOnline = true;
-        });
-
-        let list = Array.from(map.values());
-
-        // Category Filter
-        if (activeCategory === 'unread') {
-            list = list.filter((c) => (c.unread || 0) > 0 || (unreadCounts[c.partnerUsername.toLowerCase()] || 0) > 0);
+        if (activeCategory === 'contacts') {
+            list = contactsList;
+        } else if (activeCategory === 'archived') {
+            // WhatsApp style: ONLY archived chats
+            list = baseChats.filter((c) =>
+                archivedUsernames.includes(c.partnerUsername.toLowerCase())
+            );
+        } else if (activeCategory === 'starred') {
+            // WhatsApp style: Starred chats
+            list = baseChats.filter((c) =>
+                starredUsernames.includes(c.partnerUsername.toLowerCase())
+            );
+        } else if (activeCategory === 'unread') {
+            // Active chats with unread messages, excluding archived
+            list = baseChats.filter(
+                (c) =>
+                    !archivedUsernames.includes(c.partnerUsername.toLowerCase()) &&
+                    (c.unread > 0 || (unreadCounts[c.partnerUsername.toLowerCase()] || 0) > 0)
+            );
         } else if (activeCategory === 'groups') {
-            list = list.filter((c) => c.isGroup);
-        } else if (activeCategory === 'contacts') {
-            list = list.filter((c) => !c.isGroup);
+            list = baseChats.filter((c) => c.isGroup);
+        } else {
+            // 'all': All active conversations, EXCEPT archived ones!
+            list = baseChats.filter(
+                (c) => !archivedUsernames.includes(c.partnerUsername.toLowerCase())
+            );
         }
 
-        // Search Filter
+        // Search Query filter
         const q = searchQuery.trim().toLowerCase();
         if (q) {
-            list = list.filter((c) =>
-                c.partnerUsername.toLowerCase().includes(q) ||
-                (c.lastMessage && c.lastMessage.toLowerCase().includes(q))
+            list = list.filter(
+                (c) =>
+                    c.partnerUsername.toLowerCase().includes(q) ||
+                    (c.fullName && c.fullName.toLowerCase().includes(q)) ||
+                    (c.lastMessage && c.lastMessage.toLowerCase().includes(q))
             );
         }
 
         return list;
-    }, [recentChats, onlineUsers, currentUser, searchQuery, activeCategory, unreadCounts, fallbackSeedChats]);
+    }, [activeCategory, baseChats, contactsList, archivedUsernames, starredUsernames, unreadCounts, searchQuery]);
 
-    const totalUnreadCount = 2;
+    // Starred messages filtered by search
+    const displayedStarredMessages = useMemo(() => {
+        if (activeCategory !== 'starred') return [];
+        const q = searchQuery.trim().toLowerCase();
+        if (!q) return starredMessages;
+        return starredMessages.filter(
+            (m) =>
+                (m.text && m.text.toLowerCase().includes(q)) ||
+                (m.username && m.username.toLowerCase().includes(q))
+        );
+    }, [activeCategory, starredMessages, searchQuery]);
+
+    // Dynamic Badges
+    const allChatsCount = baseChats.filter(
+        (c) => !archivedUsernames.includes(c.partnerUsername.toLowerCase())
+    ).length;
+    const archivedCount = archivedUsernames.length;
+    const starredTotalCount = starredUsernames.length + starredMessages.length;
 
     return (
         <aside className="chathub-dash-left-sidebar">
@@ -178,6 +283,7 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
 
             {/* Navigation Categories with Crisp SVG Icons */}
             <nav className="sidebar-nav-categories">
+                {/* 1. All Chats */}
                 <button
                     type="button"
                     className={`nav-category-item ${activeCategory === 'all' ? 'active' : ''}`}
@@ -192,9 +298,12 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                         </svg>
                         <span>All Chats</span>
                     </div>
-                    <span className="cat-badge-pill green">8</span>
+                    {allChatsCount > 0 && (
+                        <span className="cat-badge-pill green">{allChatsCount}</span>
+                    )}
                 </button>
 
+                {/* 2. Unread */}
                 <button
                     type="button"
                     className={`nav-category-item ${activeCategory === 'unread' ? 'active' : ''}`}
@@ -207,9 +316,12 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                         </svg>
                         <span>Unread</span>
                     </div>
-                    <span className="cat-badge-pill green">{totalUnreadCount}</span>
+                    {totalUnread > 0 && (
+                        <span className="cat-badge-pill green">{totalUnread}</span>
+                    )}
                 </button>
 
+                {/* 3. Groups */}
                 <button
                     type="button"
                     className={`nav-category-item ${activeCategory === 'groups' ? 'active' : ''}`}
@@ -223,6 +335,7 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                     </div>
                 </button>
 
+                {/* 4. Contacts */}
                 <button
                     type="button"
                     className={`nav-category-item ${activeCategory === 'contacts' ? 'active' : ''}`}
@@ -234,21 +347,29 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                         </svg>
                         <span>Contacts</span>
                     </div>
+                    {contactsList.length > 0 && (
+                        <span className="cat-badge-pill neutral">{contactsList.length}</span>
+                    )}
                 </button>
 
+                {/* 5. Starred (WhatsApp style) */}
                 <button
                     type="button"
                     className={`nav-category-item ${activeCategory === 'starred' ? 'active' : ''}`}
                     onClick={() => setActiveCategory('starred')}
                 >
                     <div className="cat-item-left">
-                        <svg className="cat-svg-icon" viewBox="0 0 20 20" fill="currentColor">
+                        <svg className="cat-svg-icon star-gold" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                         </svg>
                         <span>Starred</span>
                     </div>
+                    {starredTotalCount > 0 && (
+                        <span className="cat-badge-pill gold">{starredTotalCount}</span>
+                    )}
                 </button>
 
+                {/* 6. Archived (WhatsApp style) */}
                 <button
                     type="button"
                     className={`nav-category-item ${activeCategory === 'archived' ? 'active' : ''}`}
@@ -261,6 +382,9 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                         </svg>
                         <span>Archived</span>
                     </div>
+                    {archivedCount > 0 && (
+                        <span className="cat-badge-pill green">{archivedCount}</span>
+                    )}
                 </button>
             </nav>
 
@@ -270,12 +394,22 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                     <svg className="section-search-icon" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                     </svg>
-                    <span>Recent Chats</span>
+                    <span>
+                        {activeCategory === 'archived'
+                            ? 'Archived Chats'
+                            : activeCategory === 'starred'
+                            ? 'Starred Items'
+                            : activeCategory === 'contacts'
+                            ? 'Registered Contacts'
+                            : activeCategory === 'groups'
+                            ? 'Group Chats'
+                            : 'Recent Chats'}
+                    </span>
                 </div>
                 <button
                     type="button"
                     className="filter-toggle-icon-btn"
-                    title="Filter / Sort Chats"
+                    title="Toggle Unread"
                     onClick={() => setActiveCategory(activeCategory === 'unread' ? 'all' : 'unread')}
                 >
                     <svg viewBox="0 0 20 20" fill="currentColor">
@@ -284,36 +418,90 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                 </button>
             </div>
 
-            {/* Recent Conversations List */}
+            {/* Conversations & Items List */}
             <div className="sidebar-recent-chats-list">
-                {displayChats.map((chat) => {
-                    const isSelected = currentChat?.partnerName?.toLowerCase() === chat.partnerUsername.toLowerCase();
-                    const initials = chat.partnerUsername.slice(0, 2).toUpperCase();
+                {/* Special Section: Starred Messages */}
+                {activeCategory === 'starred' && displayedStarredMessages.length > 0 && (
+                    <div className="sidebar-starred-messages-section">
+                        <div className="starred-section-label">⭐ Starred Messages ({displayedStarredMessages.length})</div>
+                        {displayedStarredMessages.map((m) => (
+                            <div
+                                key={m.id}
+                                className="sidebar-starred-msg-card"
+                                onClick={() => {
+                                    if (m.chatType === 'general') {
+                                        selectChat({ type: 'general', partnerName: 'ChatHub Community', partnerColor: '#2563eb' });
+                                    } else {
+                                        selectChat({ type: 'dm', partnerName: m.partnerName || m.username, partnerColor: '#10b981' });
+                                    }
+                                }}
+                            >
+                                <div className="starred-msg-card-top">
+                                    <span className="starred-msg-sender">{m.username}</span>
+                                    <span className="starred-msg-time">{m.time}</span>
+                                    <button
+                                        type="button"
+                                        className="starred-msg-unstar-btn"
+                                        title="Unstar Message"
+                                        onClick={(e) => removeStarredMessage(m.id, e)}
+                                    >
+                                        ⭐
+                                    </button>
+                                </div>
+                                <p className="starred-msg-snippet">{m.text}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
 
-                    return (
-                        <div
-                            key={chat.partnerUsername}
-                            className={`dash-chat-item ${isSelected ? 'active' : ''}`}
-                            onClick={() => {
-                                if (chat.isGroup) {
-                                    selectChat({ type: 'general', partnerName: chat.partnerUsername, partnerColor: chat.partnerColor });
-                                } else {
-                                    selectChat({ type: 'dm', partnerName: chat.partnerUsername, partnerColor: chat.partnerColor });
-                                }
-                            }}
-                        >
-                            {/* Avatar */}
-                            <div className="chat-item-avatar-wrap">
-                                {chat.avatar ? (
-                                    <img
-                                        src={chat.avatar}
-                                        alt={chat.partnerUsername}
-                                        className="chat-item-avatar-img"
-                                        onError={(e) => {
-                                            e.target.style.display = 'none';
-                                        }}
-                                    />
-                                ) : (
+                {/* Empty State */}
+                {displayList.length === 0 && (activeCategory !== 'starred' || displayedStarredMessages.length === 0) ? (
+                    <div className="sidebar-empty-state">
+                        <div className="empty-state-bubble">
+                            {activeCategory === 'archived' ? '📥' : activeCategory === 'starred' ? '⭐' : activeCategory === 'unread' ? '📬' : '💬'}
+                        </div>
+                        <h4 className="empty-state-title">
+                            {activeCategory === 'archived'
+                                ? 'No archived chats'
+                                : activeCategory === 'starred'
+                                ? 'No starred items'
+                                : activeCategory === 'unread'
+                                ? 'No unread messages'
+                                : activeCategory === 'contacts'
+                                ? 'No contacts found'
+                                : 'No conversations yet'}
+                        </h4>
+                        <p className="empty-state-sub">
+                            {activeCategory === 'archived'
+                                ? 'Hover over any chat and click the archive button to move it here.'
+                                : activeCategory === 'starred'
+                                ? 'Star messages in chat or star contacts to access them quickly.'
+                                : activeCategory === 'contacts'
+                                ? 'Ask friends to create an account on ChatHub!'
+                                : 'Click "+ New Chat" to start messaging real users.'}
+                        </p>
+                    </div>
+                ) : (
+                    displayList.map((chat) => {
+                        const isSelected = currentChat?.partnerName?.toLowerCase() === chat.partnerUsername.toLowerCase();
+                        const initials = (chat.fullName || chat.partnerUsername).slice(0, 2).toUpperCase();
+                        const isArchived = archivedUsernames.includes(chat.partnerUsername.toLowerCase());
+                        const isStarred = starredUsernames.includes(chat.partnerUsername.toLowerCase());
+
+                        return (
+                            <div
+                                key={chat.partnerUsername}
+                                className={`dash-chat-item ${isSelected ? 'active' : ''} ${isArchived ? 'is-archived' : ''}`}
+                                onClick={() => {
+                                    if (chat.isGroup) {
+                                        selectChat({ type: 'general', partnerName: chat.partnerUsername, partnerColor: chat.partnerColor });
+                                    } else {
+                                        selectChat({ type: 'dm', partnerName: chat.partnerUsername, partnerColor: chat.partnerColor });
+                                    }
+                                }}
+                            >
+                                {/* Avatar */}
+                                <div className="chat-item-avatar-wrap">
                                     <div
                                         className="chat-item-avatar"
                                         style={{ backgroundColor: chat.partnerColor || '#10b981' }}
@@ -326,26 +514,51 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                                             initials
                                         )}
                                     </div>
-                                )}
-                                {chat.isOnline && <span className="online-badge-dot"></span>}
-                            </div>
+                                    {chat.isOnline && <span className="online-badge-dot"></span>}
+                                </div>
 
-                            {/* Info */}
-                            <div className="chat-item-body">
-                                <div className="chat-item-row-top">
-                                    <h4 className="chat-item-name">{chat.partnerUsername}</h4>
-                                    <span className="chat-item-time">{chat.lastTime || 'Just now'}</span>
+                                {/* Info */}
+                                <div className="chat-item-body">
+                                    <div className="chat-item-row-top">
+                                        <h4 className="chat-item-name">{chat.fullName || chat.partnerUsername}</h4>
+                                        <span className="chat-item-time">{chat.lastTime || (chat.isOnline ? 'Online' : '')}</span>
+                                    </div>
+                                    <div className="chat-item-row-bottom">
+                                        <p className="chat-item-msg">{chat.lastMessage}</p>
+                                        {chat.unread > 0 && (
+                                            <span className="chat-unread-count-pill">{chat.unread}</span>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="chat-item-row-bottom">
-                                    <p className="chat-item-msg">{chat.lastMessage}</p>
-                                    {chat.unread > 0 && (
-                                        <span className="chat-unread-count-pill">{chat.unread}</span>
-                                    )}
-                                </div>
+
+                                {/* WhatsApp Style Hover Actions: Star & Archive */}
+                                {!chat.isGroup && (
+                                    <div className="chat-item-hover-actions">
+                                        {/* Star Toggle */}
+                                        <button
+                                            type="button"
+                                            className={`chat-hover-btn star ${isStarred ? 'active' : ''}`}
+                                            title={isStarred ? 'Unstar Chat' : 'Star Chat'}
+                                            onClick={(e) => toggleStarChat(chat.partnerUsername, e)}
+                                        >
+                                            {isStarred ? '⭐' : '☆'}
+                                        </button>
+
+                                        {/* Archive / Unarchive Toggle */}
+                                        <button
+                                            type="button"
+                                            className="chat-hover-btn archive"
+                                            title={isArchived ? 'Unarchive Chat (Move back to All Chats)' : 'Archive Chat'}
+                                            onClick={(e) => toggleArchiveChat(chat.partnerUsername, e)}
+                                        >
+                                            {isArchived ? '📤' : '📥'}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })
+                )}
             </div>
         </aside>
     );

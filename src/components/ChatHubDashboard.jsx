@@ -3,56 +3,71 @@ import { useSocket } from '../context/SocketContext';
 import { useWebRTC } from '../context/WebRTCContext';
 
 export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllContacts, onViewAllGroups }) {
-    const { currentUser, selectChat, allRegisteredUsers, onlineUsers } = useSocket();
+    const { currentUser, selectChat, allRegisteredUsers, onlineUsers, recentChats, onlineCount } = useSocket();
     const { initiateCall } = useWebRTC();
 
     // User Name: separate Name (Full Name) and Username (Handle)
-    const displayName = currentUser?.fullName || currentUser?.name || 'Tarun Gupta';
+    const displayName = currentUser?.fullName || currentUser?.name || 'User';
 
     // Calculate dynamic initials from Name
     const getInitials = (str) => {
-        if (!str) return 'TG';
+        if (!str) return 'U';
         const parts = str.trim().split(/\s+/);
         if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
         return str.slice(0, 2).toUpperCase();
     };
     const userInitials = getInitials(displayName);
 
-    // Realistic Recent Contacts matching the screenshot
-    const contacts = useMemo(() => [
-        {
-            name: 'Priya Sharma',
-            avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
-            color: '#10b981',
-            isOnline: true
-        },
-        {
-            name: 'Rahul Verma',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-            color: '#3b82f6',
-            isOnline: true
-        },
-        {
-            name: 'Sneha Kapoor',
-            avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80',
-            color: '#ec4899',
-            isOnline: true
-        },
-        {
-            name: 'Aman Gupta',
-            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
-            color: '#059669',
-            isOnline: true
-        }
-    ], []);
+    // Real Contacts: Users the logged-in user has actually chatted with or real registered users
+    const realRecentContacts = useMemo(() => {
+        const myUsername = currentUser?.username?.toLowerCase() || '';
+        const list = [];
+        const seen = new Set();
 
-    // Recent Groups list matching the reference image colors and members
-    const groups = useMemo(() => [
-        { name: 'Study Group', members: 12, color: '#2563eb' },
-        { name: 'Project Team', members: 8, color: '#8b5cf6' },
-        { name: 'College Friends', members: 15, color: '#f59e0b' },
-        { name: 'Family', members: 6, color: '#ef4444' }
-    ], []);
+        // 1. First prioritize real users the current user actually talked with
+        (recentChats || []).forEach((c) => {
+            const uname = c.partnerUsername || c.username;
+            if (uname && uname.toLowerCase() !== myUsername && !seen.has(uname.toLowerCase())) {
+                seen.add(uname.toLowerCase());
+                const isOnline = (onlineUsers || []).some(
+                    (u) => u.username?.toLowerCase() === uname.toLowerCase()
+                );
+                list.push({
+                    username: uname,
+                    fullName: c.fullName || uname,
+                    color: c.partnerColor || c.color || '#10b981',
+                    isOnline
+                });
+            }
+        });
+
+        // 2. If recent chat list is short, complement with real registered users from DB
+        (allRegisteredUsers || []).forEach((u) => {
+            if (u.username && u.username.toLowerCase() !== myUsername && !seen.has(u.username.toLowerCase())) {
+                seen.add(u.username.toLowerCase());
+                const isOnline = (onlineUsers || []).some(
+                    (o) => o.username?.toLowerCase() === u.username.toLowerCase()
+                );
+                list.push({
+                    username: u.username,
+                    fullName: u.fullName || u.username,
+                    color: u.color || '#3b82f6',
+                    isOnline
+                });
+            }
+        });
+
+        return list.slice(0, 8);
+    }, [recentChats, allRegisteredUsers, onlineUsers, currentUser]);
+
+    // Real Groups: ChatHub Community official group
+    const realGroups = useMemo(() => [
+        {
+            name: 'ChatHub Community',
+            membersText: `${onlineCount || 1} online`,
+            color: '#2563eb'
+        }
+    ], [onlineCount]);
 
     return (
         <div className="chathub-central-dashboard">
@@ -214,46 +229,61 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                 </div>
 
                 <div className="dash-contacts-grid">
-                    {contacts.map((c) => (
-                        <div key={c.name} className="contact-card-box">
-                            <div className="contact-card-top">
-                                <div className="contact-card-avatar-wrap">
-                                    <img
-                                        src={c.avatar}
-                                        alt={c.name}
-                                        className="contact-card-avatar-img"
-                                        onError={(e) => {
-                                            e.target.style.display = 'none';
-                                        }}
-                                    />
-                                    {c.isOnline && <span className="avatar-online-dot"></span>}
-                                </div>
-                                <div className="contact-card-info">
-                                    <h4>{c.name}</h4>
-                                    <span className="contact-online-label">
-                                        <span className="contact-online-bullet">●</span> Online
-                                    </span>
-                                </div>
-                                <button type="button" className="contact-more-btn" title="Options">
-                                    ⋮
-                                </button>
-                            </div>
-
+                    {realRecentContacts.length === 0 ? (
+                        <div className="dash-empty-contacts-card">
+                            <div className="empty-contact-icon">👥</div>
+                            <h4>No contacts found yet</h4>
+                            <p>Click "New Chat" to connect with registered users on ChatHub.</p>
                             <button
                                 type="button"
                                 className="contact-message-btn"
-                                onClick={() => {
-                                    selectChat({
-                                        type: 'dm',
-                                        partnerName: c.name,
-                                        partnerColor: c.color
-                                    });
-                                }}
+                                style={{ marginTop: '0.75rem', width: 'auto', padding: '0.5rem 1.25rem' }}
+                                onClick={onNewChat}
                             >
-                                Message
+                                + Start New Chat
                             </button>
                         </div>
-                    ))}
+                    ) : (
+                        realRecentContacts.map((c) => {
+                            const cInitials = getInitials(c.fullName || c.username);
+                            return (
+                                <div key={c.username} className="contact-card-box">
+                                    <div className="contact-card-top">
+                                        <div className="contact-card-avatar-wrap">
+                                            <div
+                                                className="contact-card-avatar-fallback"
+                                                style={{ backgroundColor: c.color }}
+                                            >
+                                                {cInitials}
+                                            </div>
+                                            {c.isOnline && <span className="avatar-online-dot"></span>}
+                                        </div>
+                                        <div className="contact-card-info">
+                                            <h4>{c.fullName || c.username}</h4>
+                                            <span className="contact-handle-sub">@{c.username}</span>
+                                            <span className={`contact-online-label ${c.isOnline ? 'online' : 'offline'}`}>
+                                                <span className="contact-online-bullet">●</span> {c.isOnline ? 'Online' : 'Offline'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        className="contact-message-btn"
+                                        onClick={() => {
+                                            selectChat({
+                                                type: 'dm',
+                                                partnerName: c.username,
+                                                partnerColor: c.color
+                                            });
+                                        }}
+                                    >
+                                        Message
+                                    </button>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             </div>
 
@@ -271,7 +301,7 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                 </div>
 
                 <div className="dash-groups-grid">
-                    {groups.map((g) => (
+                    {realGroups.map((g) => (
                         <div key={g.name} className="group-card-box">
                             <div className="group-card-top">
                                 <div
@@ -284,7 +314,7 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                                 </div>
                                 <div className="group-card-info">
                                     <h4>{g.name}</h4>
-                                    <span className="group-members-label">{g.members} members</span>
+                                    <span className="group-members-label">{g.membersText}</span>
                                 </div>
                             </div>
 
@@ -299,7 +329,7 @@ export default function ChatHubDashboard({ onNewChat, onOpenGroup, onViewAllCont
                                     });
                                 }}
                             >
-                                Message
+                                Open Group Chat
                             </button>
                         </div>
                     ))}

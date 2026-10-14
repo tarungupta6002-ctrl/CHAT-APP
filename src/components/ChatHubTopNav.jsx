@@ -9,49 +9,44 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
     // Notification dropdown state
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [notifFilter, setNotifFilter] = useState('all'); // 'all' | 'unread'
+    const [clearedNotifs, setClearedNotifs] = useState(false);
+    const [readNotifIds, setReadNotifIds] = useState(() => new Set());
 
-    // Initial default notifications from contacts & incoming messages
-    const [notifications, setNotifications] = useState([
-        {
-            id: 'notif-1',
-            sender: 'Priya Sharma',
-            avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
-            color: '#10b981',
-            message: 'Hey! Are you free for a call?',
-            time: '10:24 AM',
-            unread: true,
-            type: 'dm'
-        },
-        {
-            id: 'notif-2',
-            sender: 'Rahul Verma',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-            color: '#3b82f6',
-            message: "Okay, I'll join in 5 mins",
-            time: '09:18 AM',
-            unread: true,
-            type: 'dm'
-        },
-        {
-            id: 'notif-3',
-            sender: 'ChatHub Community',
-            color: '#2563eb',
-            message: 'Welcome new members! Say hello in the community group.',
-            time: 'Yesterday',
-            unread: false,
-            type: 'general'
-        },
-        {
-            id: 'notif-4',
-            sender: 'Sneha Kapoor',
-            avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80',
-            color: '#ec4899',
-            message: "Let's catch up later 😊",
-            time: 'Yesterday',
-            unread: false,
-            type: 'dm'
-        }
-    ]);
+    // Dynamically derive real notifications from incoming messages in conversations
+    const notifications = useMemo(() => {
+        if (clearedNotifs) return [];
+        const myName = currentUser?.username?.toLowerCase() || '';
+        const list = [];
+
+        // Scan conversations for messages sent by other users
+        Object.entries(conversations || {}).forEach(([chatKey, msgs]) => {
+            if (!Array.isArray(msgs)) return;
+            msgs.forEach((m) => {
+                const mData = m.data || m;
+                const senderName = mData.username;
+                if (!senderName || senderName.toLowerCase() === myName) return;
+
+                const msgId = String(mData.id || `${chatKey}-${mData.time || Math.random()}`);
+                const text = mData.text || (mData.image ? '📷 Photo' : (mData.audio ? '🎙️ Voice note' : 'New message'));
+                const time = mData.time || 'Recent';
+                const isUnread = !readNotifIds.has(msgId);
+
+                list.push({
+                    id: msgId,
+                    sender: senderName,
+                    color: mData.color || '#10b981',
+                    avatar: null,
+                    message: text,
+                    time: time,
+                    unread: isUnread,
+                    type: chatKey === 'general' ? 'general' : 'dm'
+                });
+            });
+        });
+
+        // Return latest messages first
+        return list.reverse().slice(0, 15);
+    }, [conversations, currentUser, clearedNotifs, readNotifIds]);
 
     // Unread count
     const unreadCount = useMemo(() => {
@@ -68,9 +63,7 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
 
     // Mark single notification as read and open that chat
     const handleNotificationClick = (notif) => {
-        setNotifications((prev) =>
-            prev.map((n) => (n.id === notif.id ? { ...n, unread: false } : n))
-        );
+        setReadNotifIds((prev) => new Set([...prev, notif.id]));
         setIsNotifOpen(false);
 
         if (notif.type === 'general') {
@@ -91,13 +84,14 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
     // Mark all notifications as read
     const handleMarkAllAsRead = (e) => {
         e.stopPropagation();
-        setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+        const allIds = notifications.map((n) => n.id);
+        setReadNotifIds((prev) => new Set([...prev, ...allIds]));
     };
 
     // Clear all notifications
     const handleClearAll = (e) => {
         e.stopPropagation();
-        setNotifications([]);
+        setClearedNotifs(true);
     };
 
     // Close notification panel on click outside or Escape
