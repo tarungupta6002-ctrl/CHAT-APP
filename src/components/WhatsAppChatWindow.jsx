@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useWebRTC } from '../context/WebRTCContext';
 import MessagesContainer from './MessagesContainer';
 import TypingBar from './TypingBar';
 import ChatFooter from './ChatFooter';
+import ChatHubAiPanel from './ChatHubAiPanel';
 
 export default function WhatsAppChatWindow() {
     const { currentChat, selectChat, onlineUsers } = useSocket();
     const { initiateCall } = useWebRTC();
+    const [isAiOpen, setIsAiOpen] = useState(false);
 
     if (!currentChat) {
         return (
@@ -70,8 +72,21 @@ export default function WhatsAppChatWindow() {
                     </div>
                 </div>
 
-                {/* Right Call Action Buttons */}
+                {/* Right Call & AI Action Buttons */}
                 <div className="chat-header-actions">
+                    {/* Ask AI Action Button */}
+                    <button
+                        type="button"
+                        className="ai-header-action-btn"
+                        title="Ask ChatHub AI about this conversation"
+                        onClick={() => setIsAiOpen(true)}
+                    >
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="ai-btn-sparkle">
+                            <path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z" />
+                        </svg>
+                        <span>Ask AI</span>
+                    </button>
+
                     {isDm && (
                         <>
                             <button
@@ -109,6 +124,14 @@ export default function WhatsAppChatWindow() {
 
             {/* Chat Input Footer */}
             <ChatFooter />
+
+            {/* ChatHub AI Assistant Slide-in Panel */}
+            <ChatHubAiPanel
+                isOpen={isAiOpen}
+                onClose={() => setIsAiOpen(false)}
+                currentChat={currentChat}
+            />
         </section>
     );
 }
+

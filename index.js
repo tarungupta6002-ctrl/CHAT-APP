@@ -8,6 +8,7 @@ const jwt = require("jsonwebtoken");
 const { Server } = require("socket.io");
 const db = require("./database");
 const { sendOtpEmail } = require("./emailService");
+const aiService = require("./aiService");
 
 const app = express();
 app.use(express.json({ limit: "15mb" }));
@@ -1128,6 +1129,347 @@ app.get("/api/calls/history", authenticateToken, async (req, res) => {
         return res.json({ calls: history });
     } catch (err) {
         return res.status(500).json({ error: "Failed to fetch call history" });
+    }
+});
+
+// --- ChatHub AI Assistant API Routes ---
+
+const DAILY_AI_QUOTA = parseInt(process.env.AI_DAILY_QUOTA, 10) || 25;
+
+// Helper to get daily period timestamp (midnight UTC)
+function getDailyPeriodStart() {
+    const now = new Date();
+    return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+}
+
+// Check and enforce user AI quota
+async function checkAiQuota(userId) {
+    const periodStart = getDailyPeriodStart();
+    const usage = await db.getAiUsage(userId, periodStart);
+    if (usage.requestCount >= DAILY_AI_QUOTA) {
+        return {
+            allowed: false,
+            usage,
+            limit: DAILY_AI_QUOTA
+        };
+    }
+    return {
+        allowed: true,
+        usage,
+        limit: DAILY_AI_QUOTA,
+        periodStart
+    };
+}
+
+// 1. Get Current User AI Usage & Quota
+app.get("/api/ai/usage", authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id || req.user.username;
+        const periodStart = getDailyPeriodStart();
+        const usage = await db.getAiUsage(userId, periodStart);
+        const providerStatus = aiService.getProviderStatus();
+
+        return res.json({
+            periodStart,
+            limit: DAILY_AI_QUOTA,
+            requestCount: usage.requestCount,
+            remaining: Math.max(0, DAILY_AI_QUOTA - usage.requestCount),
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            provider: providerStatus
+        });
+    } catch (err) {
+        console.error("AI usage fetch error:", err);
+        return res.status(500).json({ error: "Failed to fetch AI usage statistics." });
+    }
+});
+
+// 2. Summarize Selected Conversation
+app.post("/api/ai/conversations/:conversationId/summary", authenticateToken, async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const { maxMessages = 50 } = req.body;
+        const username = req.user.username;
+        const userId = req.user.id || username;
+        const providerOverride = req.headers["x-ai-provider"] || null;
+
+        // Verify conversation access & fetch bounded messages
+        const convResult = await db.getRecentConversationMessages(conversationId, username, maxMessages);
+        if (!convResult.authorized) {
+            return res.status(403).json({
+                error: convResult.error || "Forbidden: You are not authorized to access this conversation.",
+                code: "UNAUTHORIZED_CONVERSATION"
+            });
+        }
+
+        // Check daily quota
+        const quotaCheck = await checkAiQuota(userId);
+        if (!quotaCheck.allowed) {
+            return res.status(429).json({
+                error: "Daily AI request limit reached. Please try again tomorrow.",
+                code: "QUOTA_EXCEEDED",
+                limit: quotaCheck.limit,
+                requestCount: quotaCheck.usage.requestCount
+            });
+        }
+
+        const requestId = `req_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+        const summary = await aiService.generateSummary({
+            messages: convResult.messages,
+            conversationType: convResult.conversationType,
+            maxMessages,
+            providerOverride
+        });
+
+        // Atomic usage accounting
+        await db.incrementAiUsage({
+            userId,
+            periodStart: quotaCheck.periodStart,
+            inputTokens: summary.inputTokens,
+            outputTokens: summary.outputTokens,
+            estimatedCost: 0
+        });
+
+        // Persist AI result
+        await db.saveAiResult({
+            userId,
+            conversationId,
+            type: "summary",
+            status: "success",
+            requestId,
+            model: summary.model,
+            inputMessageCount: summary.inputMessageCount,
+            result: summary
+        });
+
+        return res.json({
+            success: true,
+            requestId,
+            conversationId,
+            conversationType: convResult.conversationType,
+            partnerName: convResult.partnerName,
+            summary,
+            remainingQuota: Math.max(0, DAILY_AI_QUOTA - (quotaCheck.usage.requestCount + 1))
+        });
+    } catch (err) {
+        console.error("AI summary error:", err);
+        if (err.code === "PROVIDER_NOT_CONFIGURED") {
+            return res.status(503).json({
+                error: "ChatHub AI provider is not configured. Please set GEMINI_API_KEY in the environment.",
+                code: "PROVIDER_NOT_CONFIGURED"
+            });
+        }
+        if (err.code === "REQUEST_TIMEOUT") {
+            return res.status(504).json({
+                error: "AI summary generation timed out. Please try with fewer messages.",
+                code: "REQUEST_TIMEOUT"
+            });
+        }
+        if (err.code === "QUOTA_EXCEEDED") {
+            return res.status(429).json({ error: err.message, code: "QUOTA_EXCEEDED" });
+        }
+        return res.status(500).json({ error: "Failed to generate conversation summary." });
+    }
+});
+
+// 3. Ask Questions About Selected Conversation
+app.post("/api/ai/conversations/:conversationId/ask", authenticateToken, async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const { question, maxMessages = 50 } = req.body;
+        const username = req.user.username;
+        const userId = req.user.id || username;
+        const providerOverride = req.headers["x-ai-provider"] || null;
+
+        if (!question || !question.trim()) {
+            return res.status(400).json({ error: "Question cannot be empty.", code: "INVALID_INPUT" });
+        }
+
+        // Verify conversation access
+        const convResult = await db.getRecentConversationMessages(conversationId, username, maxMessages);
+        if (!convResult.authorized) {
+            return res.status(403).json({
+                error: convResult.error || "Forbidden: You are not authorized to access this conversation.",
+                code: "UNAUTHORIZED_CONVERSATION"
+            });
+        }
+
+        // Check quota
+        const quotaCheck = await checkAiQuota(userId);
+        if (!quotaCheck.allowed) {
+            return res.status(429).json({
+                error: "Daily AI request limit reached. Please try again tomorrow.",
+                code: "QUOTA_EXCEEDED",
+                limit: quotaCheck.limit,
+                requestCount: quotaCheck.usage.requestCount
+            });
+        }
+
+        const requestId = `req_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+        const answerResult = await aiService.askConversation({
+            messages: convResult.messages,
+            question: question.trim(),
+            conversationType: convResult.conversationType,
+            maxMessages,
+            providerOverride
+        });
+
+        await db.incrementAiUsage({
+            userId,
+            periodStart: quotaCheck.periodStart,
+            inputTokens: answerResult.inputTokens,
+            outputTokens: answerResult.outputTokens,
+            estimatedCost: 0
+        });
+
+        await db.saveAiResult({
+            userId,
+            conversationId,
+            type: "ask",
+            status: "success",
+            requestId,
+            model: answerResult.model,
+            inputMessageCount: answerResult.inputMessageCount,
+            result: { question: question.trim(), ...answerResult }
+        });
+
+        return res.json({
+            success: true,
+            requestId,
+            conversationId,
+            conversationType: convResult.conversationType,
+            partnerName: convResult.partnerName,
+            result: answerResult,
+            remainingQuota: Math.max(0, DAILY_AI_QUOTA - (quotaCheck.usage.requestCount + 1))
+        });
+    } catch (err) {
+        console.error("AI ask error:", err);
+        if (err.code === "PROVIDER_NOT_CONFIGURED") {
+            return res.status(503).json({
+                error: "ChatHub AI provider is not configured. Please set GEMINI_API_KEY in the environment.",
+                code: "PROVIDER_NOT_CONFIGURED"
+            });
+        }
+        if (err.code === "REQUEST_TIMEOUT") {
+            return res.status(504).json({
+                error: "AI response timed out. Please try again.",
+                code: "REQUEST_TIMEOUT"
+            });
+        }
+        if (err.code === "QUOTA_EXCEEDED") {
+            return res.status(429).json({ error: err.message, code: "QUOTA_EXCEEDED" });
+        }
+        return res.status(500).json({ error: "Failed to answer conversation question." });
+    }
+});
+
+// 4. Extract Action Items, Tasks, and Deadlines
+app.post("/api/ai/conversations/:conversationId/action-items", authenticateToken, async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        const { maxMessages = 50 } = req.body;
+        const username = req.user.username;
+        const userId = req.user.id || username;
+        const providerOverride = req.headers["x-ai-provider"] || null;
+
+        // Verify conversation access
+        const convResult = await db.getRecentConversationMessages(conversationId, username, maxMessages);
+        if (!convResult.authorized) {
+            return res.status(403).json({
+                error: convResult.error || "Forbidden: You are not authorized to access this conversation.",
+                code: "UNAUTHORIZED_CONVERSATION"
+            });
+        }
+
+        // Check quota
+        const quotaCheck = await checkAiQuota(userId);
+        if (!quotaCheck.allowed) {
+            return res.status(429).json({
+                error: "Daily AI request limit reached. Please try again tomorrow.",
+                code: "QUOTA_EXCEEDED",
+                limit: quotaCheck.limit,
+                requestCount: quotaCheck.usage.requestCount
+            });
+        }
+
+        const requestId = `req_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+        const itemsResult = await aiService.extractActionItems({
+            messages: convResult.messages,
+            conversationType: convResult.conversationType,
+            maxMessages,
+            providerOverride
+        });
+
+        await db.incrementAiUsage({
+            userId,
+            periodStart: quotaCheck.periodStart,
+            inputTokens: itemsResult.inputTokens,
+            outputTokens: itemsResult.outputTokens,
+            estimatedCost: 0
+        });
+
+        await db.saveAiResult({
+            userId,
+            conversationId,
+            type: "action-items",
+            status: "success",
+            requestId,
+            model: itemsResult.model,
+            inputMessageCount: itemsResult.inputMessageCount,
+            result: itemsResult
+        });
+
+        return res.json({
+            success: true,
+            requestId,
+            conversationId,
+            conversationType: convResult.conversationType,
+            partnerName: convResult.partnerName,
+            result: itemsResult,
+            remainingQuota: Math.max(0, DAILY_AI_QUOTA - (quotaCheck.usage.requestCount + 1))
+        });
+    } catch (err) {
+        console.error("AI action items error:", err);
+        if (err.code === "PROVIDER_NOT_CONFIGURED") {
+            return res.status(503).json({
+                error: "ChatHub AI provider is not configured. Please set GEMINI_API_KEY in the environment.",
+                code: "PROVIDER_NOT_CONFIGURED"
+            });
+        }
+        if (err.code === "REQUEST_TIMEOUT") {
+            return res.status(504).json({
+                error: "AI action item extraction timed out. Please try again.",
+                code: "REQUEST_TIMEOUT"
+            });
+        }
+        if (err.code === "QUOTA_EXCEEDED") {
+            return res.status(429).json({ error: err.message, code: "QUOTA_EXCEEDED" });
+        }
+        return res.status(500).json({ error: "Failed to extract action items." });
+    }
+});
+
+// 5. Submit User Feedback on AI Result
+app.post("/api/ai/feedback", authenticateToken, async (req, res) => {
+    try {
+        const { requestId, rating, comments } = req.body;
+        const userId = req.user.id || req.user.username;
+
+        if (!rating || !["positive", "negative"].includes(rating.toLowerCase())) {
+            return res.status(400).json({ error: "Rating must be either 'positive' or 'negative'." });
+        }
+
+        const saved = await db.saveAiFeedback({
+            userId,
+            requestId: requestId || null,
+            rating: rating.toLowerCase(),
+            comments: (comments || "").slice(0, 500)
+        });
+
+        return res.json({ success: true, feedbackId: saved.id });
+    } catch (err) {
+        console.error("AI feedback error:", err);
+        return res.status(500).json({ error: "Failed to record AI feedback." });
     }
 });
 

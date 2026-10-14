@@ -82,12 +82,53 @@ async function initDb() {
         try { await db.execute(`ALTER TABLE users ADD COLUMN bio TEXT;`); } catch (_) {}
         try { await db.execute(`ALTER TABLE users ADD COLUMN avatar_url TEXT;`); } catch (_) {}
 
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS ai_results (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                conversation_id TEXT NOT NULL,
+                type TEXT NOT NULL,
+                status TEXT NOT NULL,
+                request_id TEXT,
+                model TEXT,
+                input_message_count INTEGER DEFAULT 0,
+                result TEXT,
+                created_at INTEGER NOT NULL
+            );
+        `);
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS ai_usage (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                period_start INTEGER NOT NULL,
+                request_count INTEGER DEFAULT 0,
+                input_tokens INTEGER DEFAULT 0,
+                output_tokens INTEGER DEFAULT 0,
+                estimated_cost REAL DEFAULT 0.0,
+                updated_at INTEGER NOT NULL,
+                UNIQUE(user_id, period_start)
+            );
+        `);
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS ai_feedback (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                request_id TEXT,
+                rating TEXT NOT NULL,
+                comments TEXT,
+                created_at INTEGER NOT NULL
+            );
+        `);
+
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_username);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_call_logs_caller ON call_logs(caller_username);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_call_logs_receiver ON call_logs(receiver_username);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_otps_email ON otps(email);`);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_ai_results_user ON ai_results(user_id);`);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_ai_results_conv ON ai_results(conversation_id);`);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_ai_usage_user ON ai_usage(user_id, period_start);`);
     } catch (err) {
         console.error("[Database] Initialization error:", err);
     }
@@ -658,6 +699,183 @@ async function getCallLogs(username) {
     }
 }
 
+// --- AI Assistant Queries & Usage Tracking ---
+async function saveAiResult({ id, userId, conversationId, type, status, requestId, model, inputMessageCount = 0, result }) {
+    try {
+        const rowId = id || `air_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+        await db.execute({
+            sql: `
+                INSERT INTO ai_results (
+                    id, user_id, conversation_id, type, status, request_id, model, input_message_count, result, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            args: [
+                rowId,
+                userId || "",
+                conversationId || "",
+                type || "summary",
+                status || "success",
+                requestId || null,
+                model || "",
+                inputMessageCount || 0,
+                typeof result === "object" ? JSON.stringify(result) : (result || ""),
+                Date.now()
+            ]
+        });
+        return rowId;
+    } catch (err) {
+        console.error("Error saving AI result:", err);
+        return null;
+    }
+}
+
+async function getAiUsage(userId, periodStart) {
+    try {
+        const rs = await db.execute({
+            sql: `SELECT * FROM ai_usage WHERE user_id = ? AND period_start = ? LIMIT 1`,
+            args: [userId, periodStart]
+        });
+        if (rs.rows.length === 0) {
+            return {
+                userId,
+                periodStart,
+                requestCount: 0,
+                inputTokens: 0,
+                outputTokens: 0,
+                estimatedCost: 0
+            };
+        }
+        const row = rs.rows[0];
+        return {
+            userId: row.user_id,
+            periodStart: row.period_start,
+            requestCount: row.request_count || 0,
+            inputTokens: row.input_tokens || 0,
+            outputTokens: row.output_tokens || 0,
+            estimatedCost: row.estimated_cost || 0
+        };
+    } catch (err) {
+        console.error("Error fetching AI usage:", err);
+        return { userId, periodStart, requestCount: 0, inputTokens: 0, outputTokens: 0, estimatedCost: 0 };
+    }
+}
+
+async function incrementAiUsage({ userId, periodStart, inputTokens = 0, outputTokens = 0, estimatedCost = 0 }) {
+    try {
+        const id = `use_${userId}_${periodStart}`;
+        const now = Date.now();
+        await db.execute({
+            sql: `
+                INSERT INTO ai_usage (id, user_id, period_start, request_count, input_tokens, output_tokens, estimated_cost, updated_at)
+                VALUES (?, ?, ?, 1, ?, ?, ?, ?)
+                ON CONFLICT(user_id, period_start) DO UPDATE SET
+                    request_count = request_count + 1,
+                    input_tokens = input_tokens + excluded.input_tokens,
+                    output_tokens = output_tokens + excluded.output_tokens,
+                    estimated_cost = estimated_cost + excluded.estimated_cost,
+                    updated_at = excluded.updated_at
+            `,
+            args: [id, userId, periodStart, inputTokens, outputTokens, estimatedCost, now]
+        });
+        return await getAiUsage(userId, periodStart);
+    } catch (err) {
+        console.error("Error incrementing AI usage:", err);
+        return null;
+    }
+}
+
+async function saveAiFeedback({ id, userId, requestId, rating, comments }) {
+    try {
+        const rowId = id || `aif_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+        await db.execute({
+            sql: `
+                INSERT INTO ai_feedback (id, user_id, request_id, rating, comments, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `,
+            args: [rowId, userId || "", requestId || null, rating || "positive", comments || "", Date.now()]
+        });
+        return { success: true, id: rowId };
+    } catch (err) {
+        console.error("Error saving AI feedback:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+async function getRecentConversationMessages(conversationId, requestingUsername, limit = 50) {
+    try {
+        const cleanLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 5), 100);
+        const cleanConv = (conversationId || "").trim();
+
+        // 1. General room access
+        if (cleanConv.toLowerCase() === "general") {
+            const rs = await db.execute({
+                sql: `
+                    SELECT * FROM messages 
+                    WHERE recipient_username IS NULL AND is_deleted = 0
+                    ORDER BY created_at DESC 
+                    LIMIT ?
+                `,
+                args: [cleanLimit]
+            });
+            const messages = rs.rows.reverse().map(mapRowToMessage);
+            return {
+                authorized: true,
+                conversationType: "general",
+                partnerName: null,
+                messages
+            };
+        }
+
+        // 2. Direct Messages (DM) access
+        let partner = cleanConv;
+        if (partner.toLowerCase().startsWith("dm:")) {
+            partner = partner.slice(3).trim();
+        }
+
+        // If format is dm:userA:userB
+        if (partner.includes(":")) {
+            const parts = partner.split(":").map(p => p.trim());
+            const isParticipant = parts.some(p => p.toLowerCase() === requestingUsername.toLowerCase());
+            if (!isParticipant) {
+                return {
+                    authorized: false,
+                    error: "Unauthorized: You do not have permission to access this private conversation."
+                };
+            }
+            const other = parts.find(p => p.toLowerCase() !== requestingUsername.toLowerCase()) || requestingUsername;
+            partner = other;
+        }
+
+        if (!partner) {
+            return { authorized: false, error: "Invalid conversation identifier." };
+        }
+
+        // Fetch DM messages between requesting user and the partner
+        const rs = await db.execute({
+            sql: `
+                SELECT * FROM messages 
+                WHERE ((sender_username = ? COLLATE NOCASE AND recipient_username = ? COLLATE NOCASE)
+                    OR (sender_username = ? COLLATE NOCASE AND recipient_username = ? COLLATE NOCASE))
+                  AND is_deleted = 0
+                ORDER BY created_at DESC 
+                LIMIT ?
+            `,
+            args: [requestingUsername, partner, partner, requestingUsername, cleanLimit]
+        });
+
+        const messages = rs.rows.reverse().map(mapRowToMessage);
+        return {
+            authorized: true,
+            conversationType: "dm",
+            partnerName: partner,
+            messages
+        };
+    } catch (err) {
+        console.error("Error getting recent conversation messages:", err);
+        return { authorized: false, error: "Failed to retrieve conversation messages." };
+    }
+}
+
 module.exports = {
     saveMessage,
     deleteMessage,
@@ -681,5 +899,10 @@ module.exports = {
     incrementOtpAttempts,
     deleteOtp,
     getUserById,
-    updateUserProfile
+    updateUserProfile,
+    saveAiResult,
+    getAiUsage,
+    incrementAiUsage,
+    saveAiFeedback,
+    getRecentConversationMessages
 };
