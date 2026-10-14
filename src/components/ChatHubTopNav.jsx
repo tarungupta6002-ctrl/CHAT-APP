@@ -1,25 +1,140 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { useSocket } from '../context/SocketContext';
-import { useWebRTC } from '../context/WebRTCContext';
 
 export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, onOpenProfile }) {
-    const { currentUser, currentChat, onlineCount } = useSocket();
-    const { initiateCall } = useWebRTC();
+    const { currentUser, selectChat, onlineCount, conversations } = useSocket();
     const searchInputRef = useRef(null);
+    const notifWrapperRef = useRef(null);
 
-    // Ctrl+K / Cmd+K keyboard shortcut to focus search
+    // Notification dropdown state
+    const [isNotifOpen, setIsNotifOpen] = useState(false);
+    const [notifFilter, setNotifFilter] = useState('all'); // 'all' | 'unread'
+
+    // Initial default notifications from contacts & incoming messages
+    const [notifications, setNotifications] = useState([
+        {
+            id: 'notif-1',
+            sender: 'Priya Sharma',
+            avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
+            color: '#10b981',
+            message: 'Hey! Are you free for a call?',
+            time: '10:24 AM',
+            unread: true,
+            type: 'dm'
+        },
+        {
+            id: 'notif-2',
+            sender: 'Rahul Verma',
+            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
+            color: '#3b82f6',
+            message: "Okay, I'll join in 5 mins",
+            time: '09:18 AM',
+            unread: true,
+            type: 'dm'
+        },
+        {
+            id: 'notif-3',
+            sender: 'ChatHub Community',
+            color: '#2563eb',
+            message: 'Welcome new members! Say hello in the community group.',
+            time: 'Yesterday',
+            unread: false,
+            type: 'general'
+        },
+        {
+            id: 'notif-4',
+            sender: 'Sneha Kapoor',
+            avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80',
+            color: '#ec4899',
+            message: "Let's catch up later 😊",
+            time: 'Yesterday',
+            unread: false,
+            type: 'dm'
+        }
+    ]);
+
+    // Unread count
+    const unreadCount = useMemo(() => {
+        return notifications.filter((n) => n.unread).length;
+    }, [notifications]);
+
+    // Filtered notifications
+    const displayedNotifications = useMemo(() => {
+        if (notifFilter === 'unread') {
+            return notifications.filter((n) => n.unread);
+        }
+        return notifications;
+    }, [notifications, notifFilter]);
+
+    // Mark single notification as read and open that chat
+    const handleNotificationClick = (notif) => {
+        setNotifications((prev) =>
+            prev.map((n) => (n.id === notif.id ? { ...n, unread: false } : n))
+        );
+        setIsNotifOpen(false);
+
+        if (notif.type === 'general') {
+            selectChat({
+                type: 'general',
+                partnerName: 'ChatHub Community',
+                partnerColor: notif.color || '#2563eb'
+            });
+        } else {
+            selectChat({
+                type: 'dm',
+                partnerName: notif.sender,
+                partnerColor: notif.color || '#10b981'
+            });
+        }
+    };
+
+    // Mark all notifications as read
+    const handleMarkAllAsRead = (e) => {
+        e.stopPropagation();
+        setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    };
+
+    // Clear all notifications
+    const handleClearAll = (e) => {
+        e.stopPropagation();
+        setNotifications([]);
+    };
+
+    // Close notification panel on click outside or Escape
     useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (notifWrapperRef.current && !notifWrapperRef.current.contains(e.target)) {
+                setIsNotifOpen(false);
+            }
+        };
+
         const handleKeyDown = (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
                 searchInputRef.current?.focus();
             }
+            if (e.key === 'Escape' && isNotifOpen) {
+                setIsNotifOpen(false);
+            }
         };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
 
-    const isDm = currentChat?.type === 'dm';
+        document.addEventListener('mousedown', handleClickOutside);
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isNotifOpen]);
+
+    // Dynamic User Name & Initials
+    const displayName = currentUser?.fullName || currentUser?.username || 'User';
+    const initials = displayName
+        .split(' ')
+        .filter(Boolean)
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase() || 'U';
 
     return (
         <header className="chathub-dashboard-header">
@@ -63,47 +178,146 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
                 </div>
             </div>
 
-            {/* Right: Quick Call & Notification Controls */}
+            {/* Right: Notification Dropdown & Profile Chip (Calling icons removed) */}
             <div className="dash-header-controls">
-                <button
-                    type="button"
-                    className="dash-icon-btn"
-                    title={isDm ? `Video Call ${currentChat.partnerName}` : "Start Video Call"}
-                    onClick={() => {
-                        if (isDm) initiateCall(true);
-                        else onNewChat();
-                    }}
-                >
-                    <svg viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                    </svg>
-                </button>
+                {/* Notification Bell with Dropdown Panel */}
+                <div className="dash-notif-wrapper" ref={notifWrapperRef}>
+                    <button
+                        type="button"
+                        className={`dash-icon-btn notification-btn ${isNotifOpen ? 'active' : ''}`}
+                        title="Notifications"
+                        onClick={() => setIsNotifOpen((prev) => !prev)}
+                        aria-expanded={isNotifOpen}
+                    >
+                        <svg viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                        </svg>
+                        {unreadCount > 0 && (
+                            <span className="notif-count-badge">{unreadCount}</span>
+                        )}
+                    </button>
 
-                <button
-                    type="button"
-                    className="dash-icon-btn"
-                    title={isDm ? `Voice Call ${currentChat.partnerName}` : "Start Voice Call"}
-                    onClick={() => {
-                        if (isDm) initiateCall(false);
-                        else onNewChat();
-                    }}
-                >
-                    <svg viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 4V3z" />
-                    </svg>
-                </button>
+                    {/* Notification Dropdown Panel */}
+                    {isNotifOpen && (
+                        <div className="dash-notif-dropdown">
+                            {/* Panel Header */}
+                            <div className="notif-dropdown-header">
+                                <div className="notif-header-title-row">
+                                    <div className="notif-title-group">
+                                        <h3 className="notif-panel-title">Notifications</h3>
+                                        {unreadCount > 0 && (
+                                            <span className="notif-unread-pill">{unreadCount} unread</span>
+                                        )}
+                                    </div>
+                                    <div className="notif-header-actions">
+                                        {unreadCount > 0 && (
+                                            <button
+                                                type="button"
+                                                className="notif-action-text-btn"
+                                                onClick={handleMarkAllAsRead}
+                                            >
+                                                Mark all read
+                                            </button>
+                                        )}
+                                        {notifications.length > 0 && (
+                                            <button
+                                                type="button"
+                                                className="notif-action-text-btn danger"
+                                                onClick={handleClearAll}
+                                            >
+                                                Clear
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
 
-                <button
-                    type="button"
-                    className="dash-icon-btn notification-btn"
-                    title={`${onlineCount} members active in ChatHub`}
-                    onClick={onNewChat}
-                >
-                    <svg viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                    </svg>
-                    <span className="notif-red-badge"></span>
-                </button>
+                                {/* Filter Tabs */}
+                                <div className="notif-filter-tabs">
+                                    <button
+                                        type="button"
+                                        className={`notif-tab ${notifFilter === 'all' ? 'active' : ''}`}
+                                        onClick={() => setNotifFilter('all')}
+                                    >
+                                        All ({notifications.length})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`notif-tab ${notifFilter === 'unread' ? 'active' : ''}`}
+                                        onClick={() => setNotifFilter('unread')}
+                                    >
+                                        Unread ({unreadCount})
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Notifications List */}
+                            <div className="notif-dropdown-body">
+                                {displayedNotifications.length === 0 ? (
+                                    <div className="notif-empty-state">
+                                        <div className="notif-empty-icon">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                            </svg>
+                                        </div>
+                                        <p className="notif-empty-text">No notifications found</p>
+                                        <span className="notif-empty-sub">You're all caught up with your messages!</span>
+                                    </div>
+                                ) : (
+                                    displayedNotifications.map((notif) => (
+                                        <div
+                                            key={notif.id}
+                                            className={`notif-item-card ${notif.unread ? 'is-unread' : ''}`}
+                                            onClick={() => handleNotificationClick(notif)}
+                                            role="button"
+                                            tabIndex={0}
+                                        >
+                                            <div className="notif-item-avatar-wrap">
+                                                {notif.avatar ? (
+                                                    <img
+                                                        src={notif.avatar}
+                                                        alt={notif.sender}
+                                                        className="notif-item-avatar-img"
+                                                    />
+                                                ) : (
+                                                    <div
+                                                        className="notif-item-avatar-fallback"
+                                                        style={{ backgroundColor: notif.color || '#10b981' }}
+                                                    >
+                                                        {notif.sender.charAt(0).toUpperCase()}
+                                                    </div>
+                                                )}
+                                                {notif.unread && <span className="notif-unread-dot"></span>}
+                                            </div>
+
+                                            <div className="notif-item-content">
+                                                <div className="notif-item-top">
+                                                    <span className="notif-sender-name">{notif.sender}</span>
+                                                    <span className="notif-item-time">{notif.time}</span>
+                                                </div>
+                                                <p className="notif-item-message">{notif.message}</p>
+                                                <div className="notif-item-tag">
+                                                    {notif.type === 'general' ? 'Community' : 'Direct Message'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            {/* Dropdown Footer */}
+                            <div className="notif-dropdown-footer">
+                                <span className="notif-footer-hint">Click any message to open chat</span>
+                                <button
+                                    type="button"
+                                    className="notif-footer-close-btn"
+                                    onClick={() => setIsNotifOpen(false)}
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
 
                 {/* Logged in User Avatar Profile Chip */}
                 <div
@@ -111,13 +325,13 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
                     onClick={onOpenProfile}
                     role="button"
                     tabIndex={0}
-                    title="Tarun Gupta (Online)"
+                    title={`${displayName} (Online)`}
                 >
                     <div
                         className="dash-avatar-circle"
                         style={{ backgroundColor: currentUser?.color || '#2563eb' }}
                     >
-                        TA
+                        {initials}
                     </div>
                     <span className="avatar-online-dot"></span>
                 </div>
