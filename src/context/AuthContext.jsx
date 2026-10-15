@@ -31,6 +31,7 @@ export function AuthProvider({ children }) {
     const [pendingEmail, setPendingEmail] = useState('');
     const [pendingPurpose, setPendingPurpose] = useState('signup'); // 'signup' | 'forgot_password'
     const [resetToken, setResetToken] = useState('');
+    const [devOtp, setDevOtp] = useState('');
 
     // URL synchronizer
     const navigateTo = useCallback((view) => {
@@ -127,6 +128,11 @@ export function AuthProvider({ children }) {
 
         setPendingEmail(email);
         setPendingPurpose('signup');
+        if (data.devOtp) {
+            setDevOtp(data.devOtp);
+        } else {
+            setDevOtp('');
+        }
         navigateTo('verify-otp');
         return data;
     }, [navigateTo]);
@@ -148,6 +154,7 @@ export function AuthProvider({ children }) {
         localStorage.setItem("chathub_user", JSON.stringify(data.user));
         localStorage.setItem("chathub_token", data.token);
         setPendingEmail('');
+        setDevOtp('');
         navigateTo('chat');
         return data.user;
     }, [navigateTo]);
@@ -162,6 +169,9 @@ export function AuthProvider({ children }) {
         const data = await res.json();
         if (!res.ok) {
             throw new Error(data.error || 'Failed to resend code.');
+        }
+        if (data.devOtp) {
+            setDevOtp(data.devOtp);
         }
         return data;
     }, []);
@@ -302,6 +312,7 @@ export function AuthProvider({ children }) {
         setPendingEmail,
         pendingPurpose,
         setPendingPurpose,
+        devOtp,
         resetToken,
         login,
         sendSignupOtp,

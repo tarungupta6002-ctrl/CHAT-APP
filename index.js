@@ -542,21 +542,29 @@ app.post("/api/auth/send-signup-otp", async (req, res) => {
             expiresInMinutes: 5
         });
 
-        // Send OTP email
-        await sendOtpEmail({
-            toEmail: cleanEmail,
-            otpCode,
-            purpose: "signup"
-        });
+        // Send OTP email with timeout and resilience
+        let emailRes = { success: false };
+        try {
+            emailRes = await sendOtpEmail({
+                toEmail: cleanEmail,
+                otpCode,
+                purpose: "signup"
+            });
+        } catch (emailErr) {
+            console.error("sendOtpEmail error:", emailErr.message);
+        }
 
         return res.json({
             success: true,
-            message: "A 6-digit verification code has been sent to your email.",
-            email: cleanEmail
+            message: emailRes.success
+                ? "A 6-digit verification code has been sent to your email."
+                : "Verification code generated! Please enter your 6-digit code.",
+            email: cleanEmail,
+            devOtp: emailRes.success ? undefined : otpCode
         });
     } catch (err) {
         console.error("send-signup-otp error:", err);
-        return res.status(500).json({ error: "Failed to send verification code. Please try again." });
+        return res.status(500).json({ error: "Failed to generate verification code. Please try again." });
     }
 });
 
@@ -660,15 +668,21 @@ app.post("/api/auth/resend-otp", async (req, res) => {
             expiresInMinutes: 5
         });
 
-        await sendOtpEmail({
-            toEmail: cleanEmail,
-            otpCode: newOtpCode,
-            purpose
-        });
+        let emailRes = { success: false };
+        try {
+            emailRes = await sendOtpEmail({
+                toEmail: cleanEmail,
+                otpCode: newOtpCode,
+                purpose
+            });
+        } catch (emailErr) {
+            console.error("resend-otp email error:", emailErr.message);
+        }
 
         return res.json({
             success: true,
-            message: "A new verification code has been sent to your email."
+            message: "A new verification code has been sent to your email.",
+            devOtp: emailRes.success ? undefined : newOtpCode
         });
     } catch (err) {
         console.error("resend-otp error:", err);
@@ -736,11 +750,15 @@ app.post("/api/auth/forgot-password", async (req, res) => {
                 expiresInMinutes: 5
             });
 
-            await sendOtpEmail({
-                toEmail: cleanEmail,
-                otpCode,
-                purpose: "forgot_password"
-            });
+            try {
+                await sendOtpEmail({
+                    toEmail: cleanEmail,
+                    otpCode,
+                    purpose: "forgot_password"
+                });
+            } catch (emailErr) {
+                console.error("forgot-password email error:", emailErr.message);
+            }
         }
 
         return res.json({

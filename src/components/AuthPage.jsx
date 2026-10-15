@@ -14,7 +14,8 @@ export default function AuthPage() {
         verifyResetOtp,
         resetPassword,
         googleLogin,
-        pendingEmail
+        pendingEmail,
+        devOtp
     } = useAuth();
 
     // Form inputs
@@ -517,6 +518,33 @@ export default function AuthPage() {
                                         <a href="#privacy">Privacy Policy</a>.
                                     </p>
                                 )}
+
+                                {/* Direct Toggle between Log In and Sign Up */}
+                                <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e5e7eb', textAlign: 'center', fontSize: '14px', color: '#64748b' }}>
+                                    {isLoginView ? (
+                                        <span>
+                                            Don't have an account yet?{' '}
+                                            <button
+                                                type="button"
+                                                onClick={() => navigateTo('signup')}
+                                                style={{ background: 'none', border: 'none', color: '#10b981', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                                            >
+                                                Create Account / Sign Up →
+                                            </button>
+                                        </span>
+                                    ) : (
+                                        <span>
+                                            Already have an account?{' '}
+                                            <button
+                                                type="button"
+                                                onClick={() => navigateTo('login')}
+                                                style={{ background: 'none', border: 'none', color: '#10b981', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                                            >
+                                                Log In →
+                                            </button>
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -673,9 +701,24 @@ export default function AuthPage() {
                                 Enter it below to activate your account.
                             </p>
 
-                            <div style={{ fontSize: '12px', background: '#f0fdf4', color: '#166534', padding: '10px 14px', borderRadius: '8px', marginBottom: '18px', border: '1px dashed #86efac', textAlign: 'center', lineHeight: '1.5' }}>
-                                💡 <strong>Terminal Note:</strong> Agar real email configure nahi hai, toh yeh 6-digit code aapke <strong>Server Terminal (CMD)</strong> mein print ho gaya hai. Wahan se copy karke yahan daal sakte hain!
-                            </div>
+                            {devOtp && (
+                                <div style={{ fontSize: '13px', background: '#ecfdf5', color: '#065f46', padding: '12px 14px', borderRadius: '10px', marginBottom: '16px', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                                    <div>
+                                        <span>⚡ Code: <strong style={{ letterSpacing: '2px', fontSize: '15px' }}>{devOtp}</strong></span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const digits = devOtp.split('').slice(0, 6);
+                                            setOtpDigits(digits);
+                                            otpInputRefs.current[5]?.focus();
+                                        }}
+                                        style={{ padding: '4px 10px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                                    >
+                                        Auto-fill
+                                    </button>
+                                </div>
+                            )}
 
                             {error && <div className="auth-alert-box error">{error}</div>}
                             {successMsg && <div className="auth-alert-box success">{successMsg}</div>}

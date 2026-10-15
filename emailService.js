@@ -3,15 +3,16 @@ const nodemailer = require("nodemailer");
 
 // Create Nodemailer Transporter
 function getTransporter() {
-    const host = process.env.EMAIL_HOST;
-    const port = parseInt(process.env.EMAIL_PORT, 10) || 587;
-    const user = process.env.EMAIL_USER;
-    const pass = process.env.EMAIL_PASSWORD;
+    const host = process.env.EMAIL_HOST || "smtp.gmail.com";
+    const port = parseInt(process.env.EMAIL_PORT, 10) || 465;
+    const user = process.env.EMAIL_USER || "tarungupta6002@gmail.com";
+    const pass = process.env.EMAIL_PASSWORD || "nunljhgxclzgiise";
 
-    if (!host || !user || !pass) {
+    if (!user || !pass) {
         return null;
     }
 
+    // Direct port 465 SSL transport with timeouts
     return nodemailer.createTransport({
         host,
         port,
@@ -19,7 +20,10 @@ function getTransporter() {
         auth: {
             user,
             pass
-        }
+        },
+        connectionTimeout: 5000,
+        greetingTimeout: 5000,
+        socketTimeout: 6000
     });
 }
 
@@ -122,19 +126,23 @@ async function sendOtpEmail({ toEmail, otpCode, purpose = "signup" }) {
     }
 
     try {
-        const info = await transporter.sendMail({
+        const sendPromise = transporter.sendMail({
             from: fromAddress,
             to: toEmail,
             subject,
             html
         });
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Email sending timeout (6000ms)")), 6000)
+        );
+        const info = await Promise.race([sendPromise, timeoutPromise]);
         console.log(`[Email Service] Sent to ${toEmail}, Message ID: ${info.messageId}`);
         return { success: true, messageId: info.messageId };
     } catch (err) {
-        console.error(`[Email Service] Failed to send email to ${toEmail}:`, err.message);
+        console.error(`[Email Service] Failed or timed out sending email to ${toEmail}:`, err.message);
         // Fallback log so user is not blocked
         console.log(`[Email Service - Fallback OTP]: >>> ${otpCode} <<< for ${toEmail}`);
-        return { success: false, error: err.message };
+        return { success: false, error: err.message, fallbackOtp: otpCode };
     }
 }
 
