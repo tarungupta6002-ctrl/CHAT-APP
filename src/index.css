@@ -4004,16 +4004,16 @@ body.light-theme .call-ctrl-btn {
 
 /* New Chat Modal Card */
 .new-chat-card {
-  background: #111b21;
-  border: 1px solid var(--wa-border-dark);
-  border-radius: 18px;
+  background: #202c33;
+  border: 1px solid #2a3942;
+  border-radius: 8px;
   width: 90%;
-  max-width: 450px;
+  max-width: 440px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  padding: 1.25rem;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7);
+  padding: 1.15rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
 }
 
 .new-chat-header {
@@ -8600,17 +8600,17 @@ body.theme-light {
    9. PROFILE & ACCOUNT MODAL (VIEW & EDIT MODES)
    ========================================================================== */
 .profile-modal-card {
-  background-color: #0d1927;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
+  background-color: #202c33;
+  border: 1px solid #2a3942;
+  border-radius: 8px;
   width: 92%;
-  max-width: 520px;
-  max-height: 88vh;
+  max-width: 480px;
+  max-height: 86vh;
   overflow-y: auto;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
-  animation: modalScaleIn 0.2s ease-out;
+  animation: modalScaleIn 0.15s ease-out;
 }
 
 .profile-modal-card::-webkit-scrollbar {
@@ -8618,73 +8618,85 @@ body.theme-light {
 }
 
 .profile-modal-card::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 4px;
 }
 
 @keyframes modalScaleIn {
-  from { opacity: 0; transform: scale(0.96) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .profile-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--chathub-border-subtle);
+  padding: 0.75rem 1.25rem 0 1.25rem;
+  border-bottom: 1px solid #2a3942;
   position: sticky;
   top: 0;
-  background-color: #0d1927;
+  background-color: #202c33;
   z-index: 10;
 }
 
+/* Simple text tabs with green underline like WhatsApp */
 .profile-modal-tabs {
   display: flex;
-  gap: 0.5rem;
-  background-color: var(--chathub-bg-input);
-  padding: 0.25rem;
-  border-radius: 10px;
+  gap: 1.5rem;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  margin-bottom: -1px;
 }
 
 .profile-tab-btn {
   background: transparent;
   border: none;
-  color: var(--chathub-text-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
-  padding: 0.45rem 0.85rem;
-  border-radius: 8px;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: #8696a0;
+  font-size: 0.88rem;
+  font-weight: 500;
+  padding: 0.5rem 0.2rem;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
+.profile-tab-btn:hover:not(.active) {
+  color: #d1d7db;
+}
+
 .profile-tab-btn.active {
-  background-color: var(--chathub-emerald);
-  color: #ffffff;
-  box-shadow: 0 2px 8px var(--chathub-emerald-glow);
+  color: #e9edef;
+  font-weight: 600;
+  border-bottom: 2px solid #00a884;
+  background: transparent;
+  box-shadow: none;
 }
 
 .close-profile-btn {
   background: transparent;
   border: none;
-  color: var(--chathub-text-dim);
-  font-size: 1.15rem;
+  color: #8696a0;
+  font-size: 1.1rem;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.15s ease;
 }
 
 .close-profile-btn:hover {
   background-color: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  color: #e9edef;
 }
 
 .profile-modal-alert {
-  margin: 1rem 1.5rem 0 1.5rem;
-  padding: 0.65rem 1rem;
-  border-radius: 10px;
+  margin: 0.75rem 1.25rem 0 1.25rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 6px;
   font-size: 0.82rem;
   font-weight: 500;
 }
@@ -8696,53 +8708,42 @@ body.theme-light {
 }
 
 .profile-modal-alert.success {
-  background-color: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #6ee7b7;
+  background-color: rgba(0, 168, 132, 0.15);
+  border: 1px solid rgba(0, 168, 132, 0.3);
+  color: #00a884;
 }
 
-/* Tab 1: Profile View */
+/* Tab 1: Profile View (Clean Plain-Text Layout) */
 .profile-view-body {
-  padding: 1.5rem;
+  padding: 1.15rem 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.1rem;
 }
 
 .profile-hero-badge {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  background: linear-gradient(135deg, #122234 0%, #162a3f 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 1.25rem 1.5rem;
+  gap: 1rem;
+  background-color: #111b21;
+  border: 1px solid #2a3942;
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
 }
 
 .profile-view-avatar {
-  width: 70px;
-  height: 70px;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
   border-radius: 50%;
   color: #ffffff;
-  font-size: 1.6rem;
-  font-weight: 800;
+  font-size: 1.3rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
   flex-shrink: 0;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
-}
-
-.profile-avatar-online-dot {
-  position: absolute;
-  bottom: 1px;
-  right: 1px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background-color: var(--chathub-emerald);
-  border: 2.5px solid #122234;
+  overflow: hidden;
 }
 
 .profile-hero-meta {
@@ -8751,168 +8752,133 @@ body.theme-light {
 }
 
 .profile-view-name {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin: 0 0 0.15rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #e9edef;
+  margin: 0 0 2px 0;
 }
 
 .profile-view-handle {
-  font-size: 0.88rem;
-  color: var(--chathub-text-dim);
+  font-size: 0.82rem;
+  color: #8696a0;
   display: block;
-  margin-bottom: 0.45rem;
+  margin-bottom: 4px;
 }
 
-.profile-online-pill-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  background-color: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  border-radius: 9999px;
-  padding: 0.15rem 0.55rem;
-  color: var(--chathub-emerald);
-  font-size: 0.72rem;
-  font-weight: 600;
+.profile-view-status-text {
+  font-size: 0.82rem;
+  color: #aebac1;
+  font-style: italic;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.profile-online-pill-badge .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--chathub-emerald);
-}
-
-.profile-detail-section {
+/* Read-Only Plain Text Account Info (No Form Borders) */
+.profile-account-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-}
-
-.detail-section-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--chathub-text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.profile-quote-text {
-  font-size: 0.9rem;
-  color: var(--chathub-text-muted);
-  font-style: italic;
-  margin: 0;
-  background-color: rgba(255, 255, 255, 0.03);
-  padding: 0.65rem 0.85rem;
-  border-radius: 10px;
-  border: 1px solid var(--chathub-border-subtle);
-}
-
-/* Account Details Grid */
-.profile-account-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
+  gap: 0.85rem;
+  padding: 0.25rem 0;
 }
 
 .account-info-tile {
-  background-color: var(--chathub-bg-input);
-  border: 1px solid var(--chathub-border-subtle);
-  border-radius: 12px;
-  padding: 0.75rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 2px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
 }
 
 .account-info-tile .tile-title {
   font-size: 0.72rem;
-  color: var(--chathub-text-dim);
+  color: #8696a0;
+  text-transform: uppercase;
   font-weight: 500;
+  letter-spacing: 0.04em;
 }
 
 .account-info-tile .tile-value {
-  font-size: 0.88rem;
-  color: #ffffff;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.account-info-tile .tile-value.highlight {
-  color: var(--chathub-emerald);
-}
-
-.account-info-tile .tile-value.verified {
-  color: #34d399;
-  font-size: 0.82rem;
+  font-size: 0.94rem;
+  color: #e9edef;
+  font-weight: 400;
 }
 
 .profile-modal-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
 }
 
+/* Small, Flat, Solid Green Button (No Gradient or Glow) */
 .profile-primary-btn {
-  background-color: var(--chathub-emerald);
+  background-color: #00a884;
   color: #ffffff;
   border: none;
-  border-radius: 10px;
-  padding: 0.65rem 1.25rem;
-  font-size: 0.88rem;
-  font-weight: 600;
+  border-radius: 6px;
+  padding: 0.45rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease;
+  box-shadow: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .profile-primary-btn:hover {
-  background-color: var(--chathub-emerald-hover);
-  transform: translateY(-1px);
+  background-color: #06cf9c;
+  transform: none;
 }
 
 .profile-primary-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
   transform: none;
 }
 
-/* Tab 2: Edit Profile Form */
+/* Tab 2: Edit Profile Form (Solid Dark Grey bg-[#2a3942] Inputs, Flat Color Circles) */
 .profile-edit-form {
-  padding: 1.5rem;
+  padding: 1.15rem 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
+  gap: 0.95rem;
 }
 
 .profile-form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .profile-form-group label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--chathub-text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #8696a0;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .profile-form-group input {
-  background-color: var(--chathub-bg-input);
-  border: 1px solid var(--chathub-border-subtle);
-  border-radius: 10px;
-  padding: 0.65rem 0.85rem;
-  color: #ffffff;
-  font-size: 0.88rem;
+  background-color: #2a3942;
+  border: 1px solid #3b4a54;
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  color: #e9edef;
+  font-size: 0.86rem;
   outline: none;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease;
+  box-shadow: none;
 }
 
 .profile-form-group input:focus {
-  border-color: var(--chathub-emerald);
-  box-shadow: 0 0 0 3px var(--chathub-emerald-glow);
+  border-color: #00a884;
+  box-shadow: none;
 }
 
 .profile-form-group input[type="date"] {
@@ -8921,29 +8887,28 @@ body.theme-light {
 
 .field-hint {
   font-size: 0.72rem;
-  color: var(--chathub-text-dim);
+  color: #8696a0;
 }
 
 .username-input-wrap {
   display: flex;
   align-items: center;
-  background-color: var(--chathub-bg-input);
-  border: 1px solid var(--chathub-border-subtle);
-  border-radius: 10px;
+  background-color: #2a3942;
+  border: 1px solid #3b4a54;
+  border-radius: 6px;
   overflow: hidden;
-  transition: all 0.15s ease;
 }
 
 .username-input-wrap:focus-within {
-  border-color: var(--chathub-emerald);
-  box-shadow: 0 0 0 3px var(--chathub-emerald-glow);
+  border-color: #00a884;
+  box-shadow: none;
 }
 
 .username-input-wrap .at-prefix {
-  padding: 0 0.5rem 0 0.85rem;
-  color: var(--chathub-emerald);
-  font-weight: 700;
-  font-size: 0.95rem;
+  padding: 0 0.4rem 0 0.75rem;
+  color: #8696a0;
+  font-weight: 600;
+  font-size: 0.86rem;
 }
 
 .username-input-wrap input {
@@ -8951,57 +8916,62 @@ body.theme-light {
   box-shadow: none !important;
   padding-left: 0;
   width: 100%;
+  background: transparent !important;
+  color: #e9edef;
 }
 
+/* Avatar Background Color Picker (Completely Flat Circles) */
 .color-presets-row {
   display: flex;
-  gap: 0.65rem;
-  margin-top: 0.25rem;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
 }
 
 .color-preset-circle {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: all 0.15s ease;
+  box-shadow: none;
+  transition: transform 0.1s ease;
 }
 
 .color-preset-circle:hover {
-  transform: scale(1.15);
+  transform: scale(1.1);
 }
 
 .color-preset-circle.selected {
   border-color: #ffffff;
-  box-shadow: 0 0 0 2px var(--chathub-emerald);
-  transform: scale(1.15);
+  box-shadow: none;
+  transform: scale(1.1);
 }
 
 .profile-form-buttons {
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 0.75rem;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
 }
 
 .profile-cancel-btn {
   background: transparent;
-  color: var(--chathub-text-dim);
-  border: 1px solid var(--chathub-border-subtle);
-  border-radius: 10px;
-  padding: 0.65rem 1.15rem;
-  font-size: 0.88rem;
+  color: #8696a0;
+  border: 1px solid #3b4a54;
+  border-radius: 6px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .profile-cancel-btn:hover {
   background-color: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
+  color: #e9edef;
 }
 
-/* Profile Picture Upload & Avatars */
+/* Profile Picture Upload & Controls */
 .dash-avatar-img,
 .dash-hero-avatar-img,
 .dash-profile-avatar-img,
@@ -9014,24 +8984,24 @@ body.theme-light {
 }
 
 .avatar-upload-group {
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.25rem;
 }
 
 .avatar-upload-row {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  margin-top: 0.35rem;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--chathub-border-subtle);
-  border-radius: 14px;
-  padding: 0.85rem 1rem;
+  gap: 0.85rem;
+  margin-top: 0.25rem;
+  background-color: #111b21;
+  border: 1px solid #2a3942;
+  border-radius: 6px;
+  padding: 0.65rem 0.85rem;
 }
 
 .avatar-edit-preview-box {
-  width: 64px;
-  height: 64px;
-  min-width: 64px;
+  width: 50px;
+  height: 50px;
+  min-width: 50px;
   border-radius: 50%;
   position: relative;
   overflow: hidden;
@@ -9039,14 +9009,13 @@ body.theme-light {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-  border: 2px solid rgba(255, 255, 255, 0.15);
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  box-shadow: none;
+  border: 1px solid #3b4a54;
+  transition: border-color 0.15s ease;
 }
 
 .avatar-edit-preview-box:hover {
-  transform: scale(1.05);
-  border-color: var(--chathub-emerald);
+  border-color: #00a884;
 }
 
 .avatar-edit-img {
@@ -9056,7 +9025,7 @@ body.theme-light {
 }
 
 .avatar-edit-initials {
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: #ffffff;
 }
@@ -9070,7 +9039,7 @@ body.theme-light {
   justify-content: center;
   opacity: 0;
   transition: opacity 0.2s ease;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .avatar-edit-preview-box:hover .avatar-edit-overlay {
@@ -9080,46 +9049,49 @@ body.theme-light {
 .avatar-upload-controls {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
   flex: 1;
 }
 
+/* Smaller, flat green Upload Photo button */
 .avatar-choose-btn {
-  background-color: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: var(--chathub-emerald);
-  font-size: 0.82rem;
-  font-weight: 600;
-  padding: 0.45rem 0.9rem;
-  border-radius: 8px;
+  background-color: #00a884;
+  border: none;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   width: fit-content;
-  transition: all 0.15s ease;
+  box-shadow: none;
+  transition: background-color 0.15s ease;
 }
 
 .avatar-choose-btn:hover {
-  background-color: var(--chathub-emerald);
-  color: #ffffff;
+  background-color: #06cf9c;
 }
 
+/* Simple red text link for Remove Photo */
 .avatar-remove-btn {
   background: transparent;
   border: none;
   color: #ef4444;
   font-size: 0.76rem;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  padding: 0.2rem 0;
+  padding: 0.15rem 0;
   width: fit-content;
-  text-decoration: underline;
+  text-decoration: none;
   transition: opacity 0.15s ease;
 }
 
 .avatar-remove-btn:hover {
-  opacity: 0.8;
+  text-decoration: underline;
+  opacity: 0.9;
 }
 
 /* =========================================================================

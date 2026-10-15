@@ -170,7 +170,7 @@ export default function ProfileAccountModal({ isOpen, onClose, initialMode = 'vi
                 {/* TAB 1: VIEW PROFILE & ACCOUNT */}
                 {activeTab === 'view' && (
                     <div className="profile-view-body">
-                        {/* User Big Avatar Banner */}
+                        {/* User Profile Avatar & Header */}
                         <div className="profile-hero-badge">
                             <div
                                 className="profile-view-avatar"
@@ -185,24 +185,15 @@ export default function ProfileAccountModal({ isOpen, onClose, initialMode = 'vi
                                 ) : (
                                     initials
                                 )}
-                                <span className="profile-avatar-online-dot"></span>
                             </div>
                             <div className="profile-hero-meta">
                                 <h2 className="profile-view-name">{displayName}</h2>
                                 <span className="profile-view-handle">@{displayUsername}</span>
-                                <div className="profile-online-pill-badge">
-                                    <span className="dot"></span> Online
-                                </div>
+                                <span className="profile-view-status-text">"{displayBio}"</span>
                             </div>
                         </div>
 
-                        {/* Bio / Status */}
-                        <div className="profile-detail-section">
-                            <span className="detail-section-label">About / Status</span>
-                            <p className="profile-quote-text">"{displayBio}"</p>
-                        </div>
-
-                        {/* Detailed Account Grid */}
+                        {/* Plain Text Read-only Info (No Form Borders) */}
                         <div className="profile-account-grid">
                             <div className="account-info-tile">
                                 <span className="tile-title">Full Name</span>
@@ -210,12 +201,12 @@ export default function ProfileAccountModal({ isOpen, onClose, initialMode = 'vi
                             </div>
 
                             <div className="account-info-tile">
-                                <span className="tile-title">Username (Handle)</span>
-                                <span className="tile-value highlight">@{displayUsername}</span>
+                                <span className="tile-title">Username</span>
+                                <span className="tile-value">@{displayUsername}</span>
                             </div>
 
                             <div className="account-info-tile">
-                                <span className="tile-title">Email Address</span>
+                                <span className="tile-title">Email</span>
                                 <span className="tile-value">{displayEmail}</span>
                             </div>
 
@@ -223,27 +214,17 @@ export default function ProfileAccountModal({ isOpen, onClose, initialMode = 'vi
                                 <span className="tile-title">Date of Birth</span>
                                 <span className="tile-value">{displayDob}</span>
                             </div>
-
-                            <div className="account-info-tile">
-                                <span className="tile-title">Profile Picture</span>
-                                <span className="tile-value">{currentAvatarUrl ? 'Custom Photo Uploaded ✓' : 'Default Initials Avatar'}</span>
-                            </div>
-
-                            <div className="account-info-tile">
-                                <span className="tile-title">Account Security</span>
-                                <span className="tile-value verified">Verified Account ✓</span>
-                            </div>
                         </div>
 
-                        {/* Switch to Edit Button */}
+                        {/* Switch to Edit Button (Flat Green Button Aligned to Right) */}
                         <div className="profile-modal-actions">
                             <button
                                 type="button"
                                 className="profile-primary-btn"
                                 onClick={() => setActiveTab('edit')}
                             >
-                                <Pencil size={15} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
-                                Edit Profile & Change Photo
+                                <Pencil size={14} style={{ display: 'inline', marginRight: '5px', verticalAlign: 'middle' }} />
+                                Edit Profile
                             </button>
                         </div>
                     </div>
