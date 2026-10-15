@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useSocket } from '../context/SocketContext';
-import ChatHubTopNav from './ChatHubTopNav';
-import ChatHubLeftSidebar from './ChatHubLeftSidebar';
-import ChatHubDashboard from './ChatHubDashboard';
-import ChatHubRightSidebar from './ChatHubRightSidebar';
+import { MessageSquare } from 'lucide-react';
+import WhatsAppSidebar from './WhatsAppSidebar';
 import WhatsAppChatWindow from './WhatsAppChatWindow';
+import ChatHubAiPanel from './ChatHubAiPanel';
 import NewChatModal from './NewChatModal';
 import EditModal from './EditModal';
 import LightboxModal from './LightboxModal';
@@ -13,10 +12,9 @@ import ActiveCallOverlay from './ActiveCallOverlay';
 import ProfileAccountModal from './ProfileAccountModal';
 
 export default function WhatsAppLayout() {
-    const { currentChat, selectChat } = useSocket();
-    const [searchQuery, setSearchQuery] = useState('');
+    const { currentChat } = useSocket();
     const [isNewChatOpen, setIsNewChatOpen] = useState(false);
-    const [activeCategory, setActiveCategory] = useState('all');
+    const [isAiOpen, setIsAiOpen] = useState(false);
     const [profileModalState, setProfileModalState] = useState({ isOpen: false, mode: 'view' });
 
     const openProfileView = () => setProfileModalState({ isOpen: true, mode: 'view' });
@@ -24,56 +22,52 @@ export default function WhatsAppLayout() {
     const closeProfileModal = () => setProfileModalState((prev) => ({ ...prev, isOpen: false }));
 
     return (
-        <div className={`chathub-app-shell ${currentChat ? 'has-active-chat' : 'no-active-chat'}`}>
-            {/* Top Navigation Bar with ChatHub Logo, Search Ctrl+K, Call Controls, Profile */}
-            <ChatHubTopNav
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                onNewChat={() => setIsNewChatOpen(true)}
-                onOpenProfile={openProfileView}
-            />
-
-            {/* 3-Column Main Body */}
-            <main className="chathub-main-container">
-                {/* 1. Left Sidebar: Categories + Recent Chats */}
-                <ChatHubLeftSidebar
-                    searchQuery={searchQuery}
+        <div className={`wa-app-root ${currentChat ? 'has-active-chat' : 'no-active-chat'}`}>
+            {/* Standard 2-Column Main Shell */}
+            <div className="wa-app-container">
+                {/* 1. Left Sidebar (approx 320-350px) */}
+                <WhatsAppSidebar
                     onNewChat={() => setIsNewChatOpen(true)}
-                    activeCategory={activeCategory}
-                    setActiveCategory={setActiveCategory}
+                    onOpenProfile={openProfileView}
+                    onOpenSettings={openProfileEdit}
                 />
 
-                {/* 2. Central Stage: Welcome Hero & Feature/Contact Cards OR Active Chat Window */}
-                <section className="chathub-central-stage">
+                {/* 2. Main Chat Area & Contextual AI Slide-Over */}
+                <main className="wa-main-stage">
                     {currentChat ? (
-                        <WhatsAppChatWindow />
+                        <div className="wa-active-chat-wrapper">
+                            <WhatsAppChatWindow 
+                                isAiOpen={isAiOpen}
+                                setIsAiOpen={setIsAiOpen}
+                            />
+                            {/* Contextual Right-Side Slide-Over AI Panel (Slack Thread Style) */}
+                            {isAiOpen && (
+                                <ChatHubAiPanel
+                                    isOpen={isAiOpen}
+                                    onClose={() => setIsAiOpen(false)}
+                                    currentChat={currentChat}
+                                />
+                            )}
+                        </div>
                     ) : (
-                        <ChatHubDashboard
-                            onNewChat={() => setIsNewChatOpen(true)}
-                            onOpenGroup={() => selectChat({ type: 'general', partnerName: 'ChatHub Community', partnerColor: '#2563eb' })}
-                            onViewAllContacts={() => {
-                                setActiveCategory('contacts');
-                                setIsNewChatOpen(true);
-                            }}
-                            onViewAllGroups={() => {
-                                setActiveCategory('groups');
-                                selectChat({ type: 'general', partnerName: 'ChatHub Community', partnerColor: '#2563eb' });
-                            }}
-                        />
+                        /* Empty State Matching Screenshot */
+                        <div className="wa-empty-stage">
+                            <div className="wa-empty-wallpaper" />
+                            <div className="wa-empty-content">
+                                <div className="wa-empty-icon-wrap">
+                                    <MessageSquare size={80} strokeWidth={1} />
+                                </div>
+                                <h2 className="wa-empty-title">ChatHub for Web</h2>
+                                <p className="wa-empty-desc">
+                                    Select a chat to start messaging. Your messages are end-to-end encrypted.
+                                </p>
+                            </div>
+                        </div>
                     )}
-                </section>
+                </main>
+            </div>
 
-                {/* 3. Right Sidebar: User Profile, Quick Actions, Shared Media, Settings */}
-                <ChatHubRightSidebar
-                    onNewChat={() => setIsNewChatOpen(true)}
-                    onCreateGroup={() => selectChat({ type: 'general', partnerName: 'ChatHub Community', partnerColor: '#2563eb' })}
-                    onOpenSettings={openProfileView}
-                    onEditProfile={openProfileEdit}
-                    onViewProfileAccount={openProfileView}
-                />
-            </main>
-
-            {/* Modals & Overlays */}
+            {/* Overlays & Modals */}
             <NewChatModal
                 isOpen={isNewChatOpen}
                 onClose={() => setIsNewChatOpen(false)}
@@ -90,4 +84,3 @@ export default function WhatsAppLayout() {
         </div>
     );
 }
-

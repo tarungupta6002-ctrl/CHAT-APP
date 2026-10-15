@@ -1,42 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useWebRTC } from '../context/WebRTCContext';
-import { Sparkles, Phone, Video, ShieldCheck, ArrowLeft, MessageSquare } from 'lucide-react';
+import { Sparkles, Phone, Video, ArrowLeft, Users } from 'lucide-react';
 import MessagesContainer from './MessagesContainer';
 import TypingBar from './TypingBar';
 import ChatFooter from './ChatFooter';
-import ChatHubAiPanel from './ChatHubAiPanel';
 
-export default function WhatsAppChatWindow() {
+export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
     const { currentChat, selectChat, onlineUsers } = useSocket();
     const { initiateCall } = useWebRTC();
-    const [isAiOpen, setIsAiOpen] = useState(false);
 
-    if (!currentChat) {
-        return (
-            <div className="whatsapp-empty-placeholder">
-                <div className="empty-placeholder-content">
-                    <div className="placeholder-logo-circle">
-                        <MessageSquare size={36} />
-                    </div>
-                    <h2>ChatHub Web</h2>
-                    <p>
-                        Select a conversation from the sidebar or click <strong>+ New</strong> to start chatting.
-                        Experience high-definition audio & video calls and view-once media.
-                    </p>
-                    <div className="encryption-pill">
-                        <ShieldCheck size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle', color: '#10b981' }} />
-                        End-to-end style encrypted real-time connection
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    if (!currentChat) return null;
 
     const isDm = currentChat.type === 'dm';
-    const partnerName = isDm ? currentChat.partnerName : 'General Room';
+    const partnerName = isDm ? currentChat.partnerName : 'ChatHub Community';
     const isOnline = isDm && onlineUsers.some(
-        (u) => u.username.toLowerCase() === currentChat.partnerName?.toLowerCase()
+        (u) => u.username?.toLowerCase() === currentChat.partnerName?.toLowerCase()
     );
     const initials = isDm ? partnerName.slice(0, 2).toUpperCase() : '#';
     const avatarColor = currentChat.partnerColor || '#00a884';
@@ -46,71 +25,72 @@ export default function WhatsAppChatWindow() {
             {/* WhatsApp Chat Header */}
             <header className="whatsapp-chat-header">
                 <div className="chat-header-left">
-                    {/* Back to Dashboard button */}
+                    {/* Mobile Back Button (Returns to Sidebar on <= 768px) */}
                     <button
                         type="button"
-                        className="back-to-dash-btn"
-                        title="Back to Dashboard"
+                        className="wa-mobile-back-btn"
+                        title="Back to conversation list"
                         onClick={() => selectChat(null)}
+                        aria-label="Back to conversation list"
                     >
-                        <ArrowLeft size={16} className="dash-back-arrow" />
-                        <span className="dash-back-text">Dashboard</span>
+                        <ArrowLeft size={20} />
                     </button>
 
                     <div
                         className="chat-avatar-circle"
                         style={{ backgroundColor: avatarColor }}
                     >
-                        {initials}
+                        {isDm ? initials : <Users size={18} />}
                     </div>
 
                     <div className="chat-contact-info">
                         <h3>{partnerName}</h3>
                         <span className="contact-status">
-                            {isDm ? (isOnline ? 'Online' : 'Offline') : 'Public group chat'}
+                            {isDm ? (isOnline ? 'online' : 'offline') : 'public community'}
                         </span>
                     </div>
                 </div>
 
                 {/* Right Call & AI Action Buttons */}
                 <div className="chat-header-actions">
-                    {/* Ask AI Action Button */}
+                    {/* Minimalist Flat "Ask AI" Button (Outline Sparkles Icon) */}
                     <button
                         type="button"
-                        className="ai-header-action-btn"
-                        title="Ask ChatHub AI about this conversation"
-                        onClick={() => setIsAiOpen(true)}
+                        className={`wa-header-action-btn wa-ask-ai-btn ${isAiOpen ? 'active' : ''}`}
+                        title="Ask AI about this conversation"
+                        onClick={() => setIsAiOpen((prev) => !prev)}
+                        aria-label="Ask AI"
                     >
-                        <Sparkles size={16} className="ai-btn-sparkle" />
-                        <span>Ask AI</span>
+                        <Sparkles size={16} />
+                        <span className="wa-btn-text">Ask AI</span>
                     </button>
 
                     {isDm && (
                         <>
                             <button
                                 type="button"
-                                className="call-action-btn"
-                                title="Start Audio Call"
+                                className="wa-header-action-btn"
+                                title="Start Voice Call"
                                 onClick={() => initiateCall(false)}
+                                aria-label="Start Voice Call"
                             >
-                                <Phone size={15} />
-                                <span>Voice</span>
+                                <Phone size={17} />
                             </button>
                             <button
                                 type="button"
-                                className="call-action-btn video"
+                                className="wa-header-action-btn"
                                 title="Start Video Call"
                                 onClick={() => initiateCall(true)}
+                                aria-label="Start Video Call"
                             >
-                                <Video size={15} />
-                                <span>Video</span>
+                                <Video size={17} />
                             </button>
                         </>
                     )}
                 </div>
             </header>
 
-            {/* Messages Content */}
+            {/* Messages Content Viewport */}
             <div className="whatsapp-messages-viewport">
                 <MessagesContainer />
                 <TypingBar />
@@ -118,14 +98,6 @@ export default function WhatsAppChatWindow() {
 
             {/* Chat Input Footer */}
             <ChatFooter />
-
-            {/* ChatHub AI Assistant Slide-in Panel */}
-            <ChatHubAiPanel
-                isOpen={isAiOpen}
-                onClose={() => setIsAiOpen(false)}
-                currentChat={currentChat}
-            />
         </section>
     );
 }
-
