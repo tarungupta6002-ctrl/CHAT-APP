@@ -72,6 +72,18 @@ function getRandomColor() {
     return AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
 }
 
+// Helper to format clean 12-hour time with AM/PM (e.g. "2:30 PM", "9:05 AM")
+function format12HourTime(date = new Date()) {
+    const d = typeof date === 'number' || typeof date === 'string' ? new Date(date) : date;
+    let hours = d.getHours();
+    const minutes = d.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+    return `${hours}:${minutesStr} ${ampm}`;
+}
+
 // Broadcast full active users list
 function broadcastUsersList() {
     const list = Array.from(users.entries()).map(([id, u]) => ({
@@ -146,7 +158,7 @@ io.on("connection", (socket) => {
         socket.broadcast.emit("user-status", {
             username: cleanName,
             status: "joined",
-            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            time: format12HourTime(new Date())
         });
     });
 
@@ -196,8 +208,9 @@ io.on("connection", (socket) => {
 
         const isPrivateDm = Boolean(recipientUsername || targetSocketId);
 
+        const now = Date.now();
         const messagePayload = {
-            id: `${socket.id}-${Date.now()}`,
+            id: `${socket.id}-${now}`,
             senderId: socket.id,
             recipientId: targetSocketId,
             recipientUsername: recipientUsername,
@@ -210,7 +223,8 @@ io.on("connection", (socket) => {
             replyTo: data?.replyTo || null,
             isViewOnce: isViewOnce,
             openedBy: [],
-            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            time: format12HourTime(now),
+            createdAt: now
         };
 
         // Persist message to SQLite / Turso

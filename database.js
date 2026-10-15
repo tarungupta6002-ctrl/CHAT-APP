@@ -161,7 +161,7 @@ async function saveMessage(msg) {
                 msg.isViewOnce ? 1 : 0,
                 msg.isDeleted ? 1 : 0,
                 msg.time || "",
-                Date.now()
+                msg.createdAt || Date.now()
             ]
         });
     } catch (err) {
@@ -263,7 +263,8 @@ function mapRowToMessage(row) {
         replyTo: replyTo,
         isViewOnce: Boolean(row.is_view_once),
         isDeleted: Boolean(row.is_deleted),
-        time: row.time
+        time: row.time,
+        createdAt: row.created_at || (row.id ? parseInt(row.id.split('-').pop(), 10) : null)
     };
 }
 

@@ -14,6 +14,33 @@ import {
     UserMinus 
 } from 'lucide-react';
 
+export function format12HourTime(timeStr, createdAt) {
+    if (createdAt) {
+        const d = new Date(createdAt);
+        if (!isNaN(d.getTime())) {
+            let h = d.getHours();
+            const m = d.getMinutes();
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
+            return `${h}:${m < 10 ? '0' + m : m} ${ampm}`;
+        }
+    }
+    if (!timeStr) return '';
+    const upper = String(timeStr).toUpperCase();
+    if (upper.includes('AM') || upper.includes('PM')) {
+        return timeStr;
+    }
+    const match = String(timeStr).match(/^(\d{1,2}):(\d{2})/);
+    if (match) {
+        let h = parseInt(match[1], 10);
+        const m = match[2];
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return `${h}:${m} ${ampm}`;
+    }
+    return timeStr;
+}
+
 function VoiceNotePlayer({ audioSrc, durationText }) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState('0:00');
@@ -167,7 +194,7 @@ export default function MessageItem({ item }) {
                     <UserMinus size={14} style={{ display: 'inline', marginRight: '5px', verticalAlign: 'middle', color: '#94a3b8' }} />
                 )}
                 <strong>{s.username}</strong> {s.status === 'joined' ? 'joined the chat' : 'left the chat'}
-                <span style={{ opacity: 0.7 }}>• {s.time}</span>
+                <span style={{ opacity: 0.7 }}>• {format12HourTime(s.time)}</span>
             </div>
         );
     }
@@ -393,7 +420,7 @@ export default function MessageItem({ item }) {
                                             <Star size={11} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />
                                         </span>
                                     )}
-                                    <span>{msg.time}</span>
+                                    <span>{format12HourTime(msg.time, msg.createdAt)}</span>
                                     {isSelf && (
                                         <svg className="check-icon" viewBox="0 0 16 16">
                                             <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" />
