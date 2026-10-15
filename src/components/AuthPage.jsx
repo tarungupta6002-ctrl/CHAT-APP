@@ -14,8 +14,7 @@ export default function AuthPage() {
         verifyResetOtp,
         resetPassword,
         googleLogin,
-        pendingEmail,
-        devOtp
+        pendingEmail
     } = useAuth();
 
     // Form inputs
@@ -701,24 +700,7 @@ export default function AuthPage() {
                                 Enter it below to activate your account.
                             </p>
 
-                            {devOtp && (
-                                <div style={{ fontSize: '13px', background: '#ecfdf5', color: '#065f46', padding: '12px 14px', borderRadius: '10px', marginBottom: '16px', border: '1px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                                    <div>
-                                        <span>⚡ Code: <strong style={{ letterSpacing: '2px', fontSize: '15px' }}>{devOtp}</strong></span>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const digits = devOtp.split('').slice(0, 6);
-                                            setOtpDigits(digits);
-                                            otpInputRefs.current[5]?.focus();
-                                        }}
-                                        style={{ padding: '4px 10px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
-                                    >
-                                        Auto-fill
-                                    </button>
-                                </div>
-                            )}
+
 
                             {error && <div className="auth-alert-box error">{error}</div>}
                             {successMsg && <div className="auth-alert-box success">{successMsg}</div>}

@@ -554,13 +554,16 @@ app.post("/api/auth/send-signup-otp", async (req, res) => {
             console.error("sendOtpEmail error:", emailErr.message);
         }
 
+        if (!emailRes.success) {
+            return res.status(502).json({
+                error: emailRes.error || "Could not deliver verification email to your inbox. Please verify your email configuration."
+            });
+        }
+
         return res.json({
             success: true,
-            message: emailRes.success
-                ? "A 6-digit verification code has been sent to your email."
-                : "Verification code generated! Please enter your 6-digit code.",
-            email: cleanEmail,
-            devOtp: emailRes.success ? undefined : otpCode
+            message: "A 6-digit verification code has been sent to your email.",
+            email: cleanEmail
         });
     } catch (err) {
         console.error("send-signup-otp error:", err);
@@ -679,10 +682,15 @@ app.post("/api/auth/resend-otp", async (req, res) => {
             console.error("resend-otp email error:", emailErr.message);
         }
 
+        if (!emailRes.success) {
+            return res.status(502).json({
+                error: emailRes.error || "Failed to resend code to your email. Please try again later."
+            });
+        }
+
         return res.json({
             success: true,
-            message: "A new verification code has been sent to your email.",
-            devOtp: emailRes.success ? undefined : newOtpCode
+            message: "A new verification code has been sent to your email."
         });
     } catch (err) {
         console.error("resend-otp error:", err);

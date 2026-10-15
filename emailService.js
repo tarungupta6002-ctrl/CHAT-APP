@@ -112,17 +112,87 @@ async function sendOtpEmail({ toEmail, otpCode, purpose = "signup" }) {
             : "If you did not request a password reset, please secure your account immediately."
     });
 
+    // 1. Try HTTPS API Providers first (Bypasses Render's port 25/465/587 firewall blocks)
+    // A. Resend API (HTTPS Port 443)
+    if (process.env.RESEND_API_KEY) {
+        try {
+            const res = await fetch("https://api.resend.com/emails", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${process.env.RESEND_API_KEY.trim()}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    from: process.env.RESEND_FROM || "ChatHub <onboarding@resend.dev>",
+                    to: [toEmail],
+                    subject,
+                    html
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data?.id) {
+                console.log(`[Email Service - Resend HTTPS] Sent to ${toEmail}, ID: ${data.id}`);
+                return { success: true, messageId: data.id };
+            }
+            console.error(`[Email Service - Resend] API error:`, data);
+        } catch (apiErr) {
+            console.error(`[Email Service - Resend] Network error:`, apiErr.message);
+        }
+    }
+
+    // B. Brevo API (HTTPS Port 443 - 300 free emails/day to any recipient)
+    if (process.env.BREVO_API_KEY) {
+        try {
+            const senderEmail = process.env.EMAIL_USER || "tarungupta6002@gmail.com";
+            const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+                method: "POST",
+                headers: {
+                    "api-key": process.env.BREVO_API_KEY.trim(),
+                    "Content-Type": "application/json",
+                    "accept": "application/json"
+                },
+                body: JSON.stringify({
+                    sender: { name: "ChatHub Security", email: senderEmail },
+                    to: [{ email: toEmail }],
+                    subject,
+                    htmlContent: html
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data?.messageId) {
+                console.log(`[Email Service - Brevo HTTPS] Sent to ${toEmail}, ID: ${data.messageId}`);
+                return { success: true, messageId: data.messageId };
+            }
+            console.error(`[Email Service - Brevo] API error:`, data);
+        } catch (apiErr) {
+            console.error(`[Email Service - Brevo] Network error:`, apiErr.message);
+        }
+    }
+
+    // C. Google Apps Script Webhook (HTTPS Port 443 using personal Gmail)
+    if (process.env.GMAIL_WEBHOOK_URL) {
+        try {
+            const res = await fetch(process.env.GMAIL_WEBHOOK_URL.trim(), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ to: toEmail, subject, html })
+            });
+            if (res.ok) {
+                console.log(`[Email Service - Gmail Webhook] Sent to ${toEmail}`);
+                return { success: true };
+            }
+        } catch (whErr) {
+            console.error(`[Email Service - Gmail Webhook] Error:`, whErr.message);
+        }
+    }
+
+    // 2. Fallback to Direct Nodemailer SMTP (Works on local or paid cloud hosts)
     const transporter = getTransporter();
-    const fromAddress = process.env.EMAIL_FROM || `"ChatHub Security" <noreply@chathub.com>`;
+    const fromAddress = process.env.EMAIL_FROM || `"ChatHub Security" <${process.env.EMAIL_USER || "tarungupta6002@gmail.com"}>`;
 
     if (!transporter) {
-        console.log("---------------------------------------------------------");
-        console.log(`[Email Service - Dev Mode] To: ${toEmail}`);
-        console.log(`[Purpose]: ${purpose.toUpperCase()}`);
-        console.log(`[OTP CODE]: >>> ${otpCode} <<<`);
-        console.log(`(Configure EMAIL_HOST, EMAIL_USER, EMAIL_PASSWORD in .env for real SMTP delivery)`);
-        console.log("---------------------------------------------------------");
-        return { success: true, devMode: true };
+        console.error(`[Email Service] No transporter or email API configured.`);
+        return { success: false, error: "Email delivery service is not configured." };
     }
 
     try {
@@ -140,9 +210,7 @@ async function sendOtpEmail({ toEmail, otpCode, purpose = "signup" }) {
         return { success: true, messageId: info.messageId };
     } catch (err) {
         console.error(`[Email Service] Failed or timed out sending email to ${toEmail}:`, err.message);
-        // Fallback log so user is not blocked
-        console.log(`[Email Service - Fallback OTP]: >>> ${otpCode} <<< for ${toEmail}`);
-        return { success: false, error: err.message, fallbackOtp: otpCode };
+        return { success: false, error: err.message };
     }
 }
 
