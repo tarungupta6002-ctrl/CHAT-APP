@@ -172,15 +172,24 @@ async function sendOtpEmail({ toEmail, otpCode, purpose = "signup" }) {
     // C. Google Apps Script Webhook (HTTPS Port 443 using personal Gmail)
     if (process.env.GMAIL_WEBHOOK_URL) {
         try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 10000);
             const res = await fetch(process.env.GMAIL_WEBHOOK_URL.trim(), {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ to: toEmail, subject, html })
+                body: JSON.stringify({ to: toEmail, subject, html }),
+                redirect: "follow",
+                signal: controller.signal
             });
-            if (res.ok) {
-                console.log(`[Email Service - Gmail Webhook] Sent to ${toEmail}`);
+            clearTimeout(timer);
+            const text = await res.text();
+            let parsed = {};
+            try { parsed = JSON.parse(text); } catch (e) {}
+            if (res.ok && (parsed.success !== false)) {
+                console.log(`[Email Service - Gmail Webhook HTTPS] Sent to ${toEmail}`);
                 return { success: true };
             }
+            console.error(`[Email Service - Gmail Webhook] Response error:`, text);
         } catch (whErr) {
             console.error(`[Email Service - Gmail Webhook] Error:`, whErr.message);
         }
