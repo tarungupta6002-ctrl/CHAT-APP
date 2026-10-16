@@ -209,10 +209,16 @@ export function SocketProvider({ children }) {
                     : msg.username;
                 const partnerKey = partnerName ? partnerName.toLowerCase() : 'dm';
 
-                setConversations((prev) => ({
-                    ...prev,
-                    [partnerKey]: [...(prev[partnerKey] || []), { type: "message", data: msg }]
-                }));
+                setConversations((prev) => {
+                    const currentList = prev[partnerKey] || [];
+                    if (currentList.some((item) => item.type === "message" && item.data?.id === msg.id)) {
+                        return prev;
+                    }
+                    return {
+                        ...prev,
+                        [partnerKey]: [...currentList, { type: "message", data: msg }]
+                    };
+                });
 
                 // Update recent chats list
                 setRecentChats((prev) => {
@@ -246,10 +252,16 @@ export function SocketProvider({ children }) {
                 });
             } else {
                 // General Message
-                setConversations((prev) => ({
-                    ...prev,
-                    general: [...(prev.general || []), { type: "message", data: msg }]
-                }));
+                setConversations((prev) => {
+                    const currentList = prev.general || [];
+                    if (currentList.some((item) => item.type === "message" && item.data?.id === msg.id)) {
+                        return prev;
+                    }
+                    return {
+                        ...prev,
+                        general: [...currentList, { type: "message", data: msg }]
+                    };
+                });
 
                 setCurrentChat((curr) => {
                     if (!curr || curr.type !== "general") {
@@ -378,6 +390,42 @@ export function SocketProvider({ children }) {
             setTypingInfo({ isTyping: false, text: '' });
         });
 
+        socket.on("blocked-users-list", (list) => {
+            if (Array.isArray(list)) {
+                const lowerList = list.map((u) => (typeof u === "string" ? u.toLowerCase() : ""));
+                setBlockedUsers(lowerList);
+                try {
+                    localStorage.setItem("chathub_blocked_users", JSON.stringify(lowerList));
+                } catch (_) {}
+            }
+        });
+
+        socket.on("chat-error", ({ message }) => {
+            if (message) {
+                alert(message);
+            }
+        });
+
+        socket.on("dm-cleared", ({ partnerUsername }) => {
+            if (!partnerUsername) return;
+            const key = partnerUsername.toLowerCase();
+            setConversations((prev) => ({
+                ...prev,
+                [key]: []
+            }));
+        });
+
+        socket.on("dm-deleted", ({ partnerUsername }) => {
+            if (!partnerUsername) return;
+            const key = partnerUsername.toLowerCase();
+            setConversations((prev) => {
+                const next = { ...prev };
+                delete next[key];
+                return next;
+            });
+            setRecentChats((prev) => prev.filter((c) => (c.partnerUsername || "").toLowerCase() !== key));
+        });
+
         return () => {
             socket.disconnect();
         };
@@ -504,7 +552,7 @@ export function SocketProvider({ children }) {
         });
     }, [onlineUsers, selectChat]);
 
-    // Clear messages for a conversation
+    // Clear messages for a conversation (local state + database)
     const clearConversation = useCallback((chatKey) => {
         if (!chatKey) return;
         const key = chatKey.toLowerCase();
@@ -512,9 +560,12 @@ export function SocketProvider({ children }) {
             ...prev,
             [key]: []
         }));
+        if (socketRef.current && key !== "general") {
+            socketRef.current.emit("clear-dm-history", { partnerUsername: chatKey });
+        }
     }, []);
 
-    // Delete conversation and exit active chat
+    // Delete conversation and exit active chat (local state + database)
     const deleteConversation = useCallback((chatKey) => {
         if (!chatKey) return;
         const key = chatKey.toLowerCase();
@@ -530,9 +581,12 @@ export function SocketProvider({ children }) {
             }
             return curr;
         });
+        if (socketRef.current && key !== "general") {
+            socketRef.current.emit("delete-dm-chat", { partnerUsername: chatKey });
+        }
     }, []);
 
-    // Block/unblock users (persisted in localStorage)
+    // Block/unblock users (persisted in DB + localStorage)
     const [blockedUsers, setBlockedUsers] = useState(() => {
         try {
             return JSON.parse(localStorage.getItem('chathub_blocked_users') || '[]');
@@ -547,9 +601,14 @@ export function SocketProvider({ children }) {
         setBlockedUsers((prev) => {
             if (prev.includes(clean)) return prev;
             const updated = [...prev, clean];
-            localStorage.setItem('chathub_blocked_users', JSON.stringify(updated));
+            try {
+                localStorage.setItem('chathub_blocked_users', JSON.stringify(updated));
+            } catch (_) {}
             return updated;
         });
+        if (socketRef.current) {
+            socketRef.current.emit("block-user", { targetUsername: username });
+        }
     }, []);
 
     const unblockUser = useCallback((username) => {
@@ -557,9 +616,14 @@ export function SocketProvider({ children }) {
         const clean = username.toLowerCase();
         setBlockedUsers((prev) => {
             const updated = prev.filter((u) => u !== clean);
-            localStorage.setItem('chathub_blocked_users', JSON.stringify(updated));
+            try {
+                localStorage.setItem('chathub_blocked_users', JSON.stringify(updated));
+            } catch (_) {}
             return updated;
         });
+        if (socketRef.current) {
+            socketRef.current.emit("unblock-user", { targetUsername: username });
+        }
     }, []);
 
     const value = {

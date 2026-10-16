@@ -19,6 +19,9 @@ const db = createClient({
     authToken
 });
 
+// Fast in-memory cache for instant 0ms block checks
+const blockedCache = new Set();
+
 // Initialize schema
 async function initDb() {
     try {
@@ -85,6 +88,17 @@ async function initDb() {
         try { await db.execute(`ALTER TABLE messages ADD COLUMN sender_avatar_url TEXT;`); } catch (_) {}
 
         await db.execute(`
+            CREATE TABLE IF NOT EXISTS blocked_users (
+                id TEXT PRIMARY KEY,
+                blocker_username TEXT NOT NULL COLLATE NOCASE,
+                blocked_username TEXT NOT NULL COLLATE NOCASE,
+                created_at INTEGER NOT NULL,
+                UNIQUE(blocker_username, blocked_username)
+            );
+        `);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_blocked_blocker ON blocked_users(blocker_username);`);
+
+        await db.execute(`
             CREATE TABLE IF NOT EXISTS ai_results (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
@@ -131,6 +145,16 @@ async function initDb() {
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_ai_results_user ON ai_results(user_id);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_ai_results_conv ON ai_results(conversation_id);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_ai_usage_user ON ai_usage(user_id, period_start);`);
+        
+        // Pre-fill in-memory blocked cache
+        try {
+            const blkRows = await db.execute(`SELECT blocker_username, blocked_username FROM blocked_users`);
+            blkRows.rows.forEach((r) => {
+                if (r.blocker_username && r.blocked_username) {
+                    blockedCache.add(`${String(r.blocker_username).toLowerCase()}:${String(r.blocked_username).toLowerCase()}`);
+                }
+            });
+        } catch (_) {}
     } catch (err) {
         console.error("[Database] Initialization error:", err);
     }
@@ -282,6 +306,77 @@ async function markDmAsDelivered(recipientUsername) {
     } catch (err) {
         console.error("Error marking DM messages as delivered in DB:", err);
     }
+}
+
+// Clear/delete all DM messages between two users
+async function clearDmHistory(usernameA, usernameB) {
+    if (!usernameA || !usernameB) return false;
+    try {
+        await db.execute({
+            sql: `
+                DELETE FROM messages 
+                WHERE (sender_username = ? COLLATE NOCASE AND recipient_username = ? COLLATE NOCASE)
+                   OR (sender_username = ? COLLATE NOCASE AND recipient_username = ? COLLATE NOCASE)
+            `,
+            args: [usernameA, usernameB, usernameB, usernameA]
+        });
+        return true;
+    } catch (err) {
+        console.error("Error clearing DM history in DB:", err);
+        return false;
+    }
+}
+
+// Block/Unblock DB Operations (Instant In-Memory Cache + Persistent SQLite / Turso)
+async function blockUser(blocker, blocked) {
+    if (!blocker || !blocked) return false;
+    const cleanBlocker = blocker.trim().toLowerCase();
+    const cleanBlocked = blocked.trim().toLowerCase();
+    blockedCache.add(`${cleanBlocker}:${cleanBlocked}`);
+    try {
+        const id = `blk_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+        await db.execute({
+            sql: `INSERT OR IGNORE INTO blocked_users (id, blocker_username, blocked_username, created_at) VALUES (?, ?, ?, ?)`,
+            args: [id, cleanBlocker, cleanBlocked, Date.now()]
+        });
+        return true;
+    } catch (err) {
+        console.error("Error blocking user in DB:", err);
+        return false;
+    }
+}
+
+async function unblockUser(blocker, blocked) {
+    if (!blocker || !blocked) return false;
+    const cleanBlocker = blocker.trim().toLowerCase();
+    const cleanBlocked = blocked.trim().toLowerCase();
+    blockedCache.delete(`${cleanBlocker}:${cleanBlocked}`);
+    try {
+        await db.execute({
+            sql: `DELETE FROM blocked_users WHERE blocker_username = ? COLLATE NOCASE AND blocked_username = ? COLLATE NOCASE`,
+            args: [cleanBlocker, cleanBlocked]
+        });
+        return true;
+    } catch (err) {
+        console.error("Error unblocking user in DB:", err);
+        return false;
+    }
+}
+
+function isUserBlocked(blocker, blocked) {
+    if (!blocker || !blocked) return false;
+    return blockedCache.has(`${blocker.trim().toLowerCase()}:${blocked.trim().toLowerCase()}`);
+}
+
+function getBlockedUsersFor(blocker) {
+    if (!blocker) return [];
+    const b = blocker.trim().toLowerCase();
+    const result = [];
+    for (const entry of blockedCache) {
+        const [blker, blked] = entry.split(":");
+        if (blker === b) result.push(blked);
+    }
+    return result;
 }
 
 // Helper to convert DB row to client message object
@@ -935,8 +1030,13 @@ module.exports = {
     editMessage,
     getGeneralHistory,
     getDmHistory,
+    clearDmHistory,
     markDmAsRead,
     markDmAsDelivered,
+    blockUser,
+    unblockUser,
+    isUserBlocked,
+    getBlockedUsersFor,
     createUser,
     getUserByUsername,
     getUserByEmail,

@@ -160,6 +160,12 @@ io.on("connection", (socket) => {
         const history = await db.getGeneralHistory(100);
         socket.emit("chat-history", { type: "general", messages: history });
 
+        // Send user their blocked list from DB
+        try {
+            const blockedUsers = db.getBlockedUsersFor(cleanName);
+            socket.emit("blocked-users-list", blockedUsers);
+        } catch (_) {}
+
         // Broadcast active users list
         broadcastUsersList();
 
@@ -189,8 +195,8 @@ io.on("connection", (socket) => {
         broadcastUsersList();
     });
 
-    // Receive message from client (Text, Image, or Voice Note)
-    socket.on("user-message", async (data) => {
+    // Receive message from client (Text, Image, or Voice Note) - Instant 0ms broadcast + async DB save
+    socket.on("user-message", (data) => {
         const messageText = typeof data === "string" ? data : (data?.text || "");
         const image = data?.image || null;
         const audio = data?.audio || null;
@@ -216,6 +222,49 @@ io.on("connection", (socket) => {
         }
 
         const isPrivateDm = Boolean(recipientUsername || targetSocketId);
+
+        // Check blocking rules for DM
+        if (isPrivateDm && recipientUsername) {
+            // Check if sender has blocked recipient
+            if (db.isUserBlocked(user.username, recipientUsername)) {
+                socket.emit("chat-error", {
+                    message: `You have blocked ${recipientUsername}. Unblock to send messages.`
+                });
+                return;
+            }
+
+            // Check if recipient has blocked sender (WhatsApp behavior: single tick 'sent', recipient never receives it)
+            if (db.isUserBlocked(recipientUsername, user.username)) {
+                const now = Date.now();
+                const blockedPayload = {
+                    id: `${socket.id}-${now}`,
+                    senderId: socket.id,
+                    recipientId: targetSocketId,
+                    recipientUsername: recipientUsername,
+                    username: user.username,
+                    avatarColor: user.color,
+                    avatarUrl: user.avatarUrl || '',
+                    status: 'sent',
+                    text: hasText ? messageText.trim() : "",
+                    image: hasImage ? image : null,
+                    audio: hasAudio ? audio : null,
+                    audioDuration: hasAudio ? audioDuration : null,
+                    replyTo: data?.replyTo || null,
+                    isViewOnce: isViewOnce,
+                    openedBy: [],
+                    time: format12HourTime(now),
+                    createdAt: now
+                };
+
+                // Asynchronously save in background with status 'sent' so blocked sender's chat history persists
+                db.saveMessage(blockedPayload).catch((err) => console.error("Error saving message:", err));
+
+                // Send back ONLY to sender (single tick, recipient never sees it)
+                socket.emit("message", blockedPayload);
+                return;
+            }
+        }
+
         const isRecipientOnline = Boolean(targetSocketId && targetSocketId !== socket.id && users.has(targetSocketId));
         const initialStatus = isPrivateDm ? (isRecipientOnline ? 'delivered' : 'sent') : 'sent';
 
@@ -240,24 +289,66 @@ io.on("connection", (socket) => {
             createdAt: now
         };
 
-        // Persist message to SQLite / Turso
-        await db.saveMessage({
-            ...messagePayload,
-            recipientUsername: recipientUsername
-        });
-
+        // IMMEDIATE EMIT (0ms latency - eliminate delay!)
         if (isPrivateDm) {
-            // Send back to sender
             socket.emit("message", messagePayload);
-
-            // Send to recipient if they are connected on a socket
             if (targetSocketId && targetSocketId !== socket.id && users.has(targetSocketId)) {
                 socket.to(targetSocketId).emit("message", messagePayload);
             }
         } else {
-            // Public Room: Broadcast to everyone
             io.emit("message", messagePayload);
         }
+
+        // Persist message to SQLite / Turso asynchronously in the background
+        db.saveMessage(messagePayload).catch((err) => {
+            console.error("Async DB saveMessage error:", err);
+        });
+    });
+
+    // Clear DM History in Database & notify both clients
+    socket.on("clear-dm-history", async ({ partnerUsername }) => {
+        const user = users.get(socket.id);
+        if (!user || !partnerUsername) return;
+        await db.clearDmHistory(user.username, partnerUsername);
+        socket.emit("dm-cleared", { partnerUsername });
+        const partnerSocketId = findSocketIdByUsername(partnerUsername);
+        if (partnerSocketId) {
+            io.to(partnerSocketId).emit("dm-cleared", { partnerUsername: user.username });
+        }
+    });
+
+    // Delete DM Chat in Database
+    socket.on("delete-dm-chat", async ({ partnerUsername }) => {
+        const user = users.get(socket.id);
+        if (!user || !partnerUsername) return;
+        await db.clearDmHistory(user.username, partnerUsername);
+        socket.emit("dm-deleted", { partnerUsername });
+    });
+
+    // Block User in Database
+    socket.on("block-user", async ({ targetUsername }) => {
+        const user = users.get(socket.id);
+        if (!user || !targetUsername) return;
+        await db.blockUser(user.username, targetUsername);
+        const blockedList = db.getBlockedUsersFor(user.username);
+        socket.emit("blocked-users-list", blockedList);
+    });
+
+    // Unblock User in Database
+    socket.on("unblock-user", async ({ targetUsername }) => {
+        const user = users.get(socket.id);
+        if (!user || !targetUsername) return;
+        await db.unblockUser(user.username, targetUsername);
+        const blockedList = db.getBlockedUsersFor(user.username);
+        socket.emit("blocked-users-list", blockedList);
+    });
+
+    // Get Blocked Users
+    socket.on("get-blocked-users", () => {
+        const user = users.get(socket.id);
+        if (!user) return;
+        const blockedList = db.getBlockedUsersFor(user.username);
+        socket.emit("blocked-users-list", blockedList);
     });
 
     // Mark DM messages as read by recipient
