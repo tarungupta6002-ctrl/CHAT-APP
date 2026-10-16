@@ -385,8 +385,8 @@ export default function LandingPage() {
             <footer className="chathub-landing-footer">
                 <div className="landing-container footer-content-row">
                     <div className="footer-brand">
-                        <div className="footer-logo-title">
-                            <span className="brand-icon">💬</span>
+                        <div className="footer-logo-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <img src="/chathub-logo.png" alt="ChatHub" style={{ width: 26, height: 26, borderRadius: 6, objectFit: 'contain' }} />
                             <span className="brand-text">ChatHub</span>
                         </div>
                         <p>© {new Date().getFullYear()} ChatHub. Real-time messaging, voice & video calls.</p>

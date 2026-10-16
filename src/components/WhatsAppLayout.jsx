@@ -54,8 +54,12 @@ export default function WhatsAppLayout() {
                         <div className="wa-empty-stage">
                             <div className="wa-empty-wallpaper" />
                             <div className="wa-empty-content">
-                                <div className="wa-empty-icon-wrap">
-                                    <MessageSquare size={80} strokeWidth={1} />
+                                <div className="wa-empty-icon-wrap" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                                    <img 
+                                        src="/chathub-logo.png" 
+                                        alt="ChatHub" 
+                                        style={{ width: 96, height: 96, borderRadius: 24, objectFit: 'contain', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }} 
+                                    />
                                 </div>
                                 <h2 className="wa-empty-title">ChatHub for Web</h2>
                                 <p className="wa-empty-desc">

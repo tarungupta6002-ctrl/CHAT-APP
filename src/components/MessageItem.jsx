@@ -128,12 +128,44 @@ function VoiceNotePlayer({ audioSrc, durationText }) {
     );
 }
 
+function WhatsAppStatusTick({ status }) {
+    if (status === 'read') {
+        return (
+            <span className="wa-tick-wrap wa-tick-read" title="Read" style={{ display: 'inline-flex', alignItems: 'center', marginLeft: 4 }}>
+                <svg viewBox="0 0 16 11" width="16" height="11" fill="none">
+                    <path d="M1 5.5l3.5 3.5L11 1.5" stroke="#53bdeb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M5.5 5.5l3.5 3.5L15.5 1.5" stroke="#53bdeb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </span>
+        );
+    }
+    if (status === 'delivered') {
+        return (
+            <span className="wa-tick-wrap wa-tick-delivered" title="Delivered" style={{ display: 'inline-flex', alignItems: 'center', marginLeft: 4 }}>
+                <svg viewBox="0 0 16 11" width="16" height="11" fill="none">
+                    <path d="M1 5.5l3.5 3.5L11 1.5" stroke="rgba(255,255,255,0.65)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M5.5 5.5l3.5 3.5L15.5 1.5" stroke="rgba(255,255,255,0.65)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </span>
+        );
+    }
+    // Default: 'sent' -> Single gray check
+    return (
+        <span className="wa-tick-wrap wa-tick-sent" title="Sent" style={{ display: 'inline-flex', alignItems: 'center', marginLeft: 4 }}>
+            <svg viewBox="0 0 12 11" width="12" height="11" fill="none">
+                <path d="M1 5.5l3.5 3.5L11 1.5" stroke="rgba(255,255,255,0.65)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+        </span>
+    );
+}
+
 export default function MessageItem({ item }) {
     const {
         currentUser,
         currentChat,
         socket,
-        openDmWithUser,
+        allRegisteredUsers,
+        startChatWithUser,
         setReplyingTo,
         setEditingMessage,
         deleteMessage,
@@ -205,8 +237,23 @@ export default function MessageItem({ item }) {
         (msg.senderId && (msg.senderId === socket?.id || msg.senderId === currentUser?.id))
     );
     const isOpenedViewOnce = msg.isViewOnce && (openedViewOnceIds.has(msg.id) || msg.viewOnceOpened);
+    const userProfile = allRegisteredUsers?.find(
+        (u) => u.username?.toLowerCase() === msg.username?.toLowerCase()
+    );
+    const avatarUrl = msg.avatarUrl || userProfile?.avatarUrl || '';
     const initials = msg.username ? msg.username.slice(0, 2).toUpperCase() : '?';
-    const avatarColor = msg.avatarColor || '#6366f1';
+    const avatarColor = msg.avatarColor || userProfile?.color || '#6366f1';
+
+    const handleOpenDm = () => {
+        if (startChatWithUser) {
+            startChatWithUser(userProfile || {
+                id: msg.senderId,
+                username: msg.username,
+                color: avatarColor,
+                avatarUrl: avatarUrl
+            });
+        }
+    };
 
     // Handle View Once click
     const handleViewOnceClick = () => {
@@ -251,15 +298,18 @@ export default function MessageItem({ item }) {
             {!isSelf && (
                 <div
                     className="msg-avatar"
-                    style={{ backgroundColor: avatarColor, cursor: 'pointer' }}
-                    title="Click to chat privately"
-                    onClick={() => {
-                        if (msg.senderId) {
-                            openDmWithUser({ id: msg.senderId, username: msg.username, color: avatarColor });
-                        }
-                    }}
+                    style={{ backgroundColor: avatarColor, cursor: 'pointer', overflow: 'hidden' }}
+                    title={`Chat with ${msg.username}`}
+                    onClick={handleOpenDm}
                 >
-                    {initials}
+                    {avatarUrl ? (
+                        <img 
+                            src={avatarUrl} 
+                            alt={msg.username} 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                    ) : initials}
                 </div>
             )}
 
@@ -267,12 +317,8 @@ export default function MessageItem({ item }) {
                 {!isSelf && (
                     <div
                         className="msg-sender-name"
-                        title="Click to chat privately"
-                        onClick={() => {
-                            if (msg.senderId) {
-                                openDmWithUser({ id: msg.senderId, username: msg.username, color: avatarColor });
-                            }
-                        }}
+                        title={`Chat with ${msg.username}`}
+                        onClick={handleOpenDm}
                     >
                         {msg.username}
                     </div>
@@ -421,11 +467,7 @@ export default function MessageItem({ item }) {
                                         </span>
                                     )}
                                     <span>{format12HourTime(msg.time, msg.createdAt)}</span>
-                                    {isSelf && (
-                                        <svg className="check-icon" viewBox="0 0 16 16">
-                                            <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z" />
-                                        </svg>
-                                    )}
+                                    {isSelf && <WhatsAppStatusTick status={msg.status} />}
                                 </div>
                             </>
                         )}

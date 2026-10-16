@@ -204,6 +204,25 @@ async function runTests() {
     // Helper to query running server on localhost:3000
     const BASE_URL = "http://localhost:3000";
     const JWT_SECRET = process.env.JWT_SECRET || "chathub-secret-token-key-2026";
+    const path = require("path");
+    const { fork } = require("child_process");
+
+    let serverProcess = null;
+    try {
+        await fetch(`${BASE_URL}/api/users`);
+    } catch (_) {
+        serverProcess = fork(path.join(__dirname, "../index.js"), [], {
+            env: { ...process.env, PORT: "3000" },
+            stdio: "ignore"
+        });
+        for (let i = 0; i < 25; i++) {
+            await new Promise((r) => setTimeout(r, 200));
+            try {
+                const res = await fetch(`${BASE_URL}/api/users`);
+                if (res.status === 200) break;
+            } catch (_) {}
+        }
+    }
 
     function makeTestToken(username, id) {
         const payload = JSON.stringify({
@@ -423,6 +442,10 @@ async function runTests() {
     console.log("\n=======================================================");
     console.log(`Test Results: ${passedCount} Passed, ${failedCount} Failed`);
     console.log("=======================================================\n");
+
+    if (serverProcess) {
+        try { serverProcess.kill(); } catch (_) {}
+    }
 
     if (failedCount > 0) {
         process.exit(1);

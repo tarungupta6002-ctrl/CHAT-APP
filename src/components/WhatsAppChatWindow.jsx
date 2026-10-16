@@ -7,18 +7,22 @@ import TypingBar from './TypingBar';
 import ChatFooter from './ChatFooter';
 
 export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
-    const { currentChat, selectChat, onlineUsers } = useSocket();
+    const { currentChat, selectChat, onlineUsers, allRegisteredUsers } = useSocket();
     const { initiateCall } = useWebRTC();
 
     if (!currentChat) return null;
 
     const isDm = currentChat.type === 'dm';
     const partnerName = isDm ? currentChat.partnerName : 'ChatHub Community';
+    const registeredPartner = isDm 
+        ? allRegisteredUsers?.find((u) => u.username?.toLowerCase() === currentChat.partnerName?.toLowerCase())
+        : null;
+    const partnerAvatarUrl = currentChat.partnerAvatarUrl || registeredPartner?.avatarUrl || '';
     const isOnline = isDm && onlineUsers.some(
         (u) => u.username?.toLowerCase() === currentChat.partnerName?.toLowerCase()
     );
     const initials = isDm ? partnerName.slice(0, 2).toUpperCase() : '#';
-    const avatarColor = currentChat.partnerColor || '#00a884';
+    const avatarColor = currentChat.partnerColor || registeredPartner?.color || '#00a884';
 
     return (
         <section className="whatsapp-chat-stage">
@@ -38,9 +42,24 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
 
                     <div
                         className="chat-avatar-circle"
-                        style={{ backgroundColor: avatarColor }}
+                        style={{ backgroundColor: avatarColor, overflow: 'hidden' }}
                     >
-                        {isDm ? initials : <Users size={18} />}
+                        {isDm ? (
+                            partnerAvatarUrl ? (
+                                <img 
+                                    src={partnerAvatarUrl} 
+                                    alt={partnerName} 
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                            ) : initials
+                        ) : (
+                            <img 
+                                src="/chathub-logo.png" 
+                                alt="ChatHub Community" 
+                                style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                            />
+                        )}
                     </div>
 
                     <div className="chat-contact-info">

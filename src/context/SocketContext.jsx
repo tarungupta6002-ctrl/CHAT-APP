@@ -229,9 +229,13 @@ export function SocketProvider({ children }) {
                     ];
                 });
 
-                // Update unread if not actively open
+                // Update unread if not actively open; if open, mark read immediately
                 setCurrentChat((curr) => {
-                    if (!curr || curr.type !== "dm" || curr.partnerName?.toLowerCase() !== partnerKey) {
+                    if (curr?.type === "dm" && curr.partnerName?.toLowerCase() === partnerKey) {
+                        if (!isSelf) {
+                            socket.emit("mark-messages-read", { partnerUsername: partnerName });
+                        }
+                    } else {
                         setUnreadCounts((u) => ({
                             ...u,
                             [partnerKey]: (u[partnerKey] || 0) + 1
@@ -328,6 +332,35 @@ export function SocketProvider({ children }) {
 
         socket.on("view-once-status-update", ({ messageId }) => {
             setOpenedViewOnceIds((prev) => new Set(prev).add(messageId));
+        });
+
+        socket.on("messages-status-update", ({ partnerUsername, recipientUsername, status }) => {
+            const targetKey = (partnerUsername || recipientUsername || '').toLowerCase();
+            if (!targetKey) return;
+
+            setConversations((prev) => {
+                const msgs = prev[targetKey];
+                if (!msgs || !Array.isArray(msgs)) return prev;
+
+                const updatedMsgs = msgs.map((item) => {
+                    if (item.type === "message" && item.data) {
+                        const isSentByMe = item.data.username?.toLowerCase() === authUser?.username?.toLowerCase();
+                        if (isSentByMe) {
+                            if (status === 'read') {
+                                return { ...item, data: { ...item.data, status: 'read' } };
+                            } else if (status === 'delivered' && item.data.status === 'sent') {
+                                return { ...item, data: { ...item.data, status: 'delivered' } };
+                            }
+                        }
+                    }
+                    return item;
+                });
+
+                return {
+                    ...prev,
+                    [targetKey]: updatedMsgs
+                };
+            });
         });
 
         socket.on("user-typing", (data) => {
@@ -435,6 +468,11 @@ export function SocketProvider({ children }) {
 
     // Switch active chat in WhatsApp Web
     const selectChat = useCallback((chatSpec) => {
+        if (!chatSpec) {
+            setCurrentChat(null);
+            setTypingInfo({ isTyping: false, text: '' });
+            return;
+        }
         setCurrentChat(chatSpec);
         setTypingInfo({ isTyping: false, text: '' });
 
@@ -443,8 +481,9 @@ export function SocketProvider({ children }) {
         } else if (chatSpec.type === "dm" && chatSpec.partnerName) {
             const key = chatSpec.partnerName.toLowerCase();
             setUnreadCounts((u) => ({ ...u, [key]: 0 }));
-            // Request DM history from backend
+            // Request DM history from backend & mark read
             socketRef.current?.emit("get-dm-history", { partnerUsername: chatSpec.partnerName });
+            socketRef.current?.emit("mark-messages-read", { partnerUsername: chatSpec.partnerName });
         }
     }, []);
 
@@ -460,7 +499,8 @@ export function SocketProvider({ children }) {
             type: "dm",
             partnerId: onlineEntry ? onlineEntry.id : targetUser.id,
             partnerName: targetUser.username,
-            partnerColor: targetUser.color || '#00a884'
+            partnerColor: targetUser.color || '#00a884',
+            partnerAvatarUrl: targetUser.avatarUrl || onlineEntry?.avatarUrl || ''
         });
     }, [onlineUsers, selectChat]);
 

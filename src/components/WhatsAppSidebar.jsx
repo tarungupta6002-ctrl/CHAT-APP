@@ -86,11 +86,14 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
             const uname = c.partnerUsername || c.username;
             if (uname && uname.toLowerCase() !== myName) {
                 const unread = unreadCounts[uname.toLowerCase()] || 0;
+                const reg = (allRegisteredUsers || []).find((u) => u.username?.toLowerCase() === uname.toLowerCase());
+                const onl = (onlineUsers || []).find((u) => u.username?.toLowerCase() === uname.toLowerCase());
                 map.set(uname.toLowerCase(), {
                     id: `dm-${uname.toLowerCase()}`,
                     type: 'dm',
                     partnerName: uname,
-                    partnerColor: c.partnerColor || c.color || '#10b981',
+                    partnerColor: c.partnerColor || reg?.color || c.color || '#10b981',
+                    partnerAvatarUrl: c.partnerAvatarUrl || reg?.avatarUrl || onl?.avatarUrl || '',
                     lastMessage: c.lastMessage || 'Connected',
                     lastTime: c.lastTime || '',
                     unread: unread,
@@ -109,18 +112,24 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                 const text = lastMsg.data?.text || lastMsg.text || (lastMsg.data?.image ? 'Photo' : 'Voice note');
                 const time = lastMsg.data?.time || lastMsg.time || '';
                 const unread = unreadCounts[uname.toLowerCase()] || 0;
+                const reg = (allRegisteredUsers || []).find((u) => u.username?.toLowerCase() === uname.toLowerCase());
+                const onl = (onlineUsers || []).find((u) => u.username?.toLowerCase() === uname.toLowerCase());
 
                 const existing = map.get(uname.toLowerCase());
                 if (existing) {
                     existing.lastMessage = text;
                     existing.lastTime = time;
                     existing.unread = unread;
+                    if (!existing.partnerAvatarUrl) {
+                        existing.partnerAvatarUrl = reg?.avatarUrl || onl?.avatarUrl || '';
+                    }
                 } else {
                     map.set(uname.toLowerCase(), {
                         id: `dm-${uname.toLowerCase()}`,
                         type: 'dm',
                         partnerName: uname,
-                        partnerColor: '#10b981',
+                        partnerColor: reg?.color || '#10b981',
+                        partnerAvatarUrl: reg?.avatarUrl || onl?.avatarUrl || '',
                         lastMessage: text,
                         lastTime: time,
                         unread: unread,
@@ -158,7 +167,7 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
         }
 
         return list;
-    }, [recentChats, conversations, onlineUsers, currentUser, unreadCounts, searchQuery, activeFilter]);
+    }, [recentChats, conversations, onlineUsers, currentUser, unreadCounts, allRegisteredUsers, searchQuery, activeFilter]);
 
     // Handle selecting a chat
     const handleSelectChat = (chat) => {
@@ -172,7 +181,8 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
             selectChat({
                 type: 'dm',
                 partnerName: chat.partnerName,
-                partnerColor: chat.partnerColor
+                partnerColor: chat.partnerColor,
+                partnerAvatarUrl: chat.partnerAvatarUrl || ''
             });
         }
     };
@@ -344,9 +354,20 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                                 <div className="wa-item-avatar-wrapper">
                                     <div 
                                         className="wa-item-avatar"
-                                        style={{ backgroundColor: chat.partnerColor || '#00a884' }}
+                                        style={{ backgroundColor: chat.partnerColor || '#00a884', overflow: 'hidden' }}
                                     >
-                                        {chat.isGroup ? <Users size={18} /> : chat.partnerName.slice(0, 2).toUpperCase()}
+                                        {chat.isGroup ? (
+                                            <img src="/chathub-logo.png" alt="ChatHub" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                        ) : chat.partnerAvatarUrl ? (
+                                            <img 
+                                                src={chat.partnerAvatarUrl} 
+                                                alt={chat.partnerName} 
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                            />
+                                        ) : (
+                                            chat.partnerName.slice(0, 2).toUpperCase()
+                                        )}
                                     </div>
                                     {chat.isOnline && !chat.isGroup && (
                                         <span className="wa-online-indicator" title="Online" />

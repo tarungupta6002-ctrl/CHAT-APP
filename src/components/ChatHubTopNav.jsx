@@ -149,8 +149,12 @@ export default function ChatHubTopNav({ searchQuery, setSearchQuery, onNewChat, 
         <header className="chathub-dashboard-header">
             {/* Left: ChatHub Logo + Compose Box Icon */}
             <div className="dash-brand-area">
-                <div className="dash-brand-logo">
-                    <MessageSquare size={22} />
+                <div className="dash-brand-logo" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img 
+                        src="/chathub-logo.png" 
+                        alt="ChatHub" 
+                        style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'contain' }} 
+                    />
                 </div>
                 <span className="dash-brand-title">ChatHub</span>
 

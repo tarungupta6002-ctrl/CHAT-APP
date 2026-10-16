@@ -81,6 +81,8 @@ async function initDb() {
         try { await db.execute(`ALTER TABLE users ADD COLUMN dob TEXT;`); } catch (_) {}
         try { await db.execute(`ALTER TABLE users ADD COLUMN bio TEXT;`); } catch (_) {}
         try { await db.execute(`ALTER TABLE users ADD COLUMN avatar_url TEXT;`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE messages ADD COLUMN status TEXT DEFAULT 'sent';`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE messages ADD COLUMN sender_avatar_url TEXT;`); } catch (_) {}
 
         await db.execute(`
             CREATE TABLE IF NOT EXISTS ai_results (
@@ -143,8 +145,9 @@ async function saveMessage(msg) {
                 INSERT OR REPLACE INTO messages (
                     id, sender_id, sender_username, recipient_id, recipient_username,
                     avatar_color, text, image, audio, audio_duration,
-                    reply_to, is_view_once, is_deleted, time, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    reply_to, is_view_once, is_deleted, time, created_at,
+                    status, sender_avatar_url
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
             args: [
                 msg.id,
@@ -161,7 +164,9 @@ async function saveMessage(msg) {
                 msg.isViewOnce ? 1 : 0,
                 msg.isDeleted ? 1 : 0,
                 msg.time || "",
-                msg.createdAt || Date.now()
+                msg.createdAt || Date.now(),
+                msg.status || "sent",
+                msg.avatarUrl || null
             ]
         });
     } catch (err) {
@@ -201,14 +206,16 @@ async function editMessage(messageId, newText) {
     }
 }
 
-// Retrieve public General Room messages
+// Retrieve public General Room messages (with dynamic sender profile info)
 async function getGeneralHistory(limit = 100) {
     try {
         const rs = await db.execute({
             sql: `
-                SELECT * FROM messages 
-                WHERE recipient_username IS NULL 
-                ORDER BY created_at ASC 
+                SELECT m.*, u.avatar_url AS current_sender_avatar, u.avatar_color AS current_sender_color 
+                FROM messages m
+                LEFT JOIN users u ON LOWER(u.username) = LOWER(m.sender_username)
+                WHERE m.recipient_username IS NULL 
+                ORDER BY m.created_at ASC 
                 LIMIT ?
             `,
             args: [limit]
@@ -220,15 +227,17 @@ async function getGeneralHistory(limit = 100) {
     }
 }
 
-// Retrieve DM history between two usernames
+// Retrieve DM history between two usernames (with dynamic sender profile info)
 async function getDmHistory(usernameA, usernameB, limit = 100) {
     try {
         const rs = await db.execute({
             sql: `
-                SELECT * FROM messages 
-                WHERE (sender_username = ? AND recipient_username = ?)
-                   OR (sender_username = ? AND recipient_username = ?)
-                ORDER BY created_at ASC 
+                SELECT m.*, u.avatar_url AS current_sender_avatar, u.avatar_color AS current_sender_color 
+                FROM messages m
+                LEFT JOIN users u ON LOWER(u.username) = LOWER(m.sender_username)
+                WHERE (m.sender_username = ? AND m.recipient_username = ?)
+                   OR (m.sender_username = ? AND m.recipient_username = ?)
+                ORDER BY m.created_at ASC 
                 LIMIT ?
             `,
             args: [usernameA, usernameB, usernameB, usernameA, limit]
@@ -237,6 +246,41 @@ async function getDmHistory(usernameA, usernameB, limit = 100) {
     } catch (err) {
         console.error("Error getting DM history from SQLite/Turso:", err);
         return [];
+    }
+}
+
+// Mark pending messages in DM as read by the recipient
+async function markDmAsRead(recipientUsername, senderUsername) {
+    try {
+        await db.execute({
+            sql: `
+                UPDATE messages 
+                SET status = 'read' 
+                WHERE recipient_username = ? COLLATE NOCASE 
+                  AND sender_username = ? COLLATE NOCASE
+                  AND (status IS NULL OR status != 'read')
+            `,
+            args: [recipientUsername, senderUsername]
+        });
+    } catch (err) {
+        console.error("Error marking DM messages as read in DB:", err);
+    }
+}
+
+// Mark pending messages as delivered when recipient is online
+async function markDmAsDelivered(recipientUsername) {
+    try {
+        await db.execute({
+            sql: `
+                UPDATE messages 
+                SET status = 'delivered' 
+                WHERE recipient_username = ? COLLATE NOCASE 
+                  AND (status IS NULL OR status = 'sent')
+            `,
+            args: [recipientUsername]
+        });
+    } catch (err) {
+        console.error("Error marking DM messages as delivered in DB:", err);
     }
 }
 
@@ -255,7 +299,9 @@ function mapRowToMessage(row) {
         recipientId: row.recipient_id,
         recipientUsername: row.recipient_username,
         username: row.sender_username,
-        avatarColor: row.avatar_color,
+        avatarColor: row.current_sender_color || row.avatar_color || '#6366f1',
+        avatarUrl: row.current_sender_avatar || row.sender_avatar_url || '',
+        status: row.status || 'sent',
         text: row.text,
         image: row.image,
         audio: row.audio,
@@ -615,12 +661,17 @@ async function getRecentChatsForUser(username) {
     try {
         const rs = await db.execute({
             sql: `
-                SELECT * FROM messages
-                WHERE sender_username = ? OR recipient_username = ?
-                ORDER BY created_at DESC
+                SELECT m.*, u.avatar_url AS partner_avatar_url, u.avatar_color AS partner_avatar_color
+                FROM messages m
+                LEFT JOIN users u ON LOWER(u.username) = CASE 
+                    WHEN LOWER(m.sender_username) = LOWER(?) THEN LOWER(m.recipient_username)
+                    ELSE LOWER(m.sender_username)
+                END
+                WHERE m.sender_username = ? COLLATE NOCASE OR m.recipient_username = ? COLLATE NOCASE
+                ORDER BY m.created_at DESC
                 LIMIT 200
             `,
-            args: [username, username]
+            args: [username, username, username]
         });
 
         const chatsMap = new Map();
@@ -632,7 +683,8 @@ async function getRecentChatsForUser(username) {
             if (partner && !chatsMap.has(partner.toLowerCase())) {
                 chatsMap.set(partner.toLowerCase(), {
                     partnerUsername: partner,
-                    partnerColor: (r.sender_username.toLowerCase() === partner.toLowerCase()) ? r.avatar_color : null,
+                    partnerColor: r.partner_avatar_color || ((r.sender_username.toLowerCase() === partner.toLowerCase()) ? r.avatar_color : '#10b981'),
+                    partnerAvatarUrl: r.partner_avatar_url || '',
                     lastMessage: r.text || (r.image ? "📷 Photo" : (r.audio ? "🎙️ Voice note" : "")),
                     lastTime: r.time,
                     createdAt: r.created_at
@@ -883,6 +935,8 @@ module.exports = {
     editMessage,
     getGeneralHistory,
     getDmHistory,
+    markDmAsRead,
+    markDmAsDelivered,
     createUser,
     getUserByUsername,
     getUserByEmail,

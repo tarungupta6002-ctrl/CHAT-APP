@@ -147,6 +147,15 @@ io.on("connection", (socket) => {
             avatarUrl: userObj.avatarUrl
         });
 
+        // Mark any unread/pending messages as delivered for this user
+        try {
+            await db.markDmAsDelivered(cleanName);
+            socket.broadcast.emit("messages-status-update", {
+                recipientUsername: cleanName,
+                status: "delivered"
+            });
+        } catch (_) {}
+
         // Send persisted General Room history from SQLite / Turso
         const history = await db.getGeneralHistory(100);
         socket.emit("chat-history", { type: "general", messages: history });
@@ -196,7 +205,7 @@ io.on("connection", (socket) => {
 
         if (!hasText && !hasImage && !hasAudio) return;
 
-        const user = users.get(socket.id) || { username: "Guest", color: "#6366f1" };
+        const user = users.get(socket.id) || { username: "Guest", color: "#6366f1", avatarUrl: "" };
 
         let targetSocketId = recipientId;
         if (!targetSocketId && recipientUsername) {
@@ -207,6 +216,8 @@ io.on("connection", (socket) => {
         }
 
         const isPrivateDm = Boolean(recipientUsername || targetSocketId);
+        const isRecipientOnline = Boolean(targetSocketId && targetSocketId !== socket.id && users.has(targetSocketId));
+        const initialStatus = isPrivateDm ? (isRecipientOnline ? 'delivered' : 'sent') : 'sent';
 
         const now = Date.now();
         const messagePayload = {
@@ -216,6 +227,8 @@ io.on("connection", (socket) => {
             recipientUsername: recipientUsername,
             username: user.username,
             avatarColor: user.color,
+            avatarUrl: user.avatarUrl || '',
+            status: initialStatus,
             text: hasText ? messageText.trim() : "",
             image: hasImage ? image : null,
             audio: hasAudio ? audio : null,
@@ -247,10 +260,41 @@ io.on("connection", (socket) => {
         }
     });
 
+    // Mark DM messages as read by recipient
+    socket.on("mark-messages-read", async ({ partnerUsername }) => {
+        const user = users.get(socket.id);
+        if (!user || !partnerUsername) return;
+        try {
+            await db.markDmAsRead(user.username, partnerUsername);
+            const partnerSocketId = findSocketIdByUsername(partnerUsername);
+            if (partnerSocketId) {
+                io.to(partnerSocketId).emit("messages-status-update", {
+                    partnerUsername: user.username,
+                    status: "read"
+                });
+            }
+        } catch (e) {
+            console.error("Error in mark-messages-read:", e);
+        }
+    });
+
     // Retrieve DM history on demand
     socket.on("get-dm-history", async ({ partnerUsername }) => {
         const user = users.get(socket.id);
         if (!user || !partnerUsername) return;
+
+        // Auto mark messages from this partner as read upon opening chat
+        try {
+            await db.markDmAsRead(user.username, partnerUsername);
+            const partnerSocketId = findSocketIdByUsername(partnerUsername);
+            if (partnerSocketId) {
+                io.to(partnerSocketId).emit("messages-status-update", {
+                    partnerUsername: user.username,
+                    status: "read"
+                });
+            }
+        } catch (e) {}
+
         const dmHistory = await db.getDmHistory(user.username, partnerUsername, 100);
         socket.emit("chat-history", { type: "dm", partnerUsername, messages: dmHistory });
     });

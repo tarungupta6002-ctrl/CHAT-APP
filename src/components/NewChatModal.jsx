@@ -17,6 +17,7 @@ export default function NewChatModal({ isOpen, onClose }) {
                     id: u.id,
                     username: u.username,
                     color: u.color || '#00a884',
+                    avatarUrl: u.avatarUrl || '',
                     isOnline: false
                 });
             }
@@ -30,6 +31,7 @@ export default function NewChatModal({ isOpen, onClose }) {
                     id: u.id,
                     username: u.username,
                     color: u.color || existing.color || '#00a884',
+                    avatarUrl: u.avatarUrl || existing.avatarUrl || '',
                     isOnline: true
                 });
             }
@@ -80,9 +82,18 @@ export default function NewChatModal({ isOpen, onClose }) {
                                     <div className="user-avatar-wrap">
                                         <div
                                             className="user-avatar-sm"
-                                            style={{ backgroundColor: contact.color }}
+                                            style={{ backgroundColor: contact.color, overflow: 'hidden' }}
                                         >
-                                            {contact.username.slice(0, 2).toUpperCase()}
+                                            {contact.avatarUrl ? (
+                                                <img 
+                                                    src={contact.avatarUrl} 
+                                                    alt={contact.username} 
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                />
+                                            ) : (
+                                                contact.username.slice(0, 2).toUpperCase()
+                                            )}
                                         </div>
                                         {contact.isOnline && <span className="online-status-dot"></span>}
                                     </div>
