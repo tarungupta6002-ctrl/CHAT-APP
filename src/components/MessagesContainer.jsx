@@ -52,7 +52,7 @@ function getMessageDateLabel(item) {
     });
 }
 
-export default function MessagesContainer() {
+export default function MessagesContainer({ searchQuery = '' }) {
     const { currentChat, conversations } = useSocket();
     const containerRef = useRef(null);
 
@@ -62,12 +62,12 @@ export default function MessagesContainer() {
 
     const activeList = conversations[activeKey] || [];
 
-    // Auto scroll to bottom smoothly
+    // Auto scroll to bottom smoothly (only when not actively searching)
     useEffect(() => {
-        if (containerRef.current) {
+        if (containerRef.current && !searchQuery) {
             containerRef.current.scrollTop = containerRef.current.scrollHeight;
         }
-    }, [activeList.length]);
+    }, [activeList.length, searchQuery]);
 
     // Track date groups across list
     let lastDateGroup = null;
@@ -104,7 +104,7 @@ export default function MessagesContainer() {
                                     </span>
                                 </div>
                             )}
-                            <MessageItem item={item} />
+                            <MessageItem item={item} searchQuery={searchQuery} />
                         </React.Fragment>
                     );
                 })

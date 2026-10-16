@@ -159,7 +159,21 @@ function WhatsAppStatusTick({ status }) {
     );
 }
 
-export default function MessageItem({ item }) {
+function highlightSearchMatch(text, query) {
+    if (!query || !query.trim() || !text) return text;
+    const cleanQ = query.trim();
+    const escaped = cleanQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
+    const parts = text.split(regex);
+    if (parts.length <= 1) return text;
+    return parts.map((part, i) => 
+        regex.test(part) ? (
+            <mark key={i} className="wa-search-highlight">{part}</mark>
+        ) : part
+    );
+}
+
+export default function MessageItem({ item, searchQuery = '' }) {
     const {
         currentUser,
         currentChat,
@@ -454,7 +468,7 @@ export default function MessageItem({ item }) {
                                 {/* Text message */}
                                 {msg.text && (
                                     <div className="msg-text-content">
-                                        {msg.text}
+                                        {highlightSearchMatch(msg.text, searchQuery)}
                                         {msg.isEdited && <span className="edited-tag">(edited)</span>}
                                     </div>
                                 )}

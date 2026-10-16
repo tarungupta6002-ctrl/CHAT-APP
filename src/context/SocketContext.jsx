@@ -504,6 +504,64 @@ export function SocketProvider({ children }) {
         });
     }, [onlineUsers, selectChat]);
 
+    // Clear messages for a conversation
+    const clearConversation = useCallback((chatKey) => {
+        if (!chatKey) return;
+        const key = chatKey.toLowerCase();
+        setConversations((prev) => ({
+            ...prev,
+            [key]: []
+        }));
+    }, []);
+
+    // Delete conversation and exit active chat
+    const deleteConversation = useCallback((chatKey) => {
+        if (!chatKey) return;
+        const key = chatKey.toLowerCase();
+        setConversations((prev) => {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+        });
+        setRecentChats((prev) => prev.filter((c) => (c.partnerUsername || '').toLowerCase() !== key));
+        setCurrentChat((curr) => {
+            if (curr && (curr.partnerName || '').toLowerCase() === key) {
+                return null;
+            }
+            return curr;
+        });
+    }, []);
+
+    // Block/unblock users (persisted in localStorage)
+    const [blockedUsers, setBlockedUsers] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('chathub_blocked_users') || '[]');
+        } catch (_) {
+            return [];
+        }
+    });
+
+    const blockUser = useCallback((username) => {
+        if (!username) return;
+        const clean = username.toLowerCase();
+        setBlockedUsers((prev) => {
+            if (prev.includes(clean)) return prev;
+            const updated = [...prev, clean];
+            localStorage.setItem('chathub_blocked_users', JSON.stringify(updated));
+            return updated;
+        });
+    }, []);
+
+    const unblockUser = useCallback((username) => {
+        if (!username) return;
+        const clean = username.toLowerCase();
+        setBlockedUsers((prev) => {
+            const updated = prev.filter((u) => u !== clean);
+            localStorage.setItem('chathub_blocked_users', JSON.stringify(updated));
+            return updated;
+        });
+    }, []);
+
     const value = {
         socket: socketRef.current,
         currentUser,
@@ -535,7 +593,12 @@ export function SocketProvider({ children }) {
         editingMessage,
         setEditingMessage,
         lightboxData,
-        setLightboxData
+        setLightboxData,
+        clearConversation,
+        deleteConversation,
+        blockUser,
+        unblockUser,
+        blockedUsers
     };
 
     return (
