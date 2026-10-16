@@ -492,6 +492,56 @@ app.get("/api/auth/config", (req, res) => {
 });
 
 // 1. Send Registration OTP
+app.get("/api/debug/smtp", async (req, res) => {
+    const nodemailer = require("nodemailer");
+    const results = { timestamp: new Date().toISOString() };
+    const user = process.env.EMAIL_USER || "tarungupta6002@gmail.com";
+    const pass = process.env.EMAIL_PASSWORD || "nunljhgxclzgiise";
+
+    results.env = {
+        hasUser: Boolean(process.env.EMAIL_USER),
+        hasPass: Boolean(process.env.EMAIL_PASSWORD),
+        host: process.env.EMAIL_HOST || "smtp.gmail.com",
+        port: process.env.EMAIL_PORT || 465
+    };
+
+    // Test Port 465 (Direct SSL)
+    try {
+        const t465 = nodemailer.createTransport({
+            host: "smtp.gmail.com",
+            port: 465,
+            secure: true,
+            auth: { user, pass },
+            connectionTimeout: 8000,
+            greetingTimeout: 8000,
+            socketTimeout: 8000
+        });
+        await t465.verify();
+        results.port465 = "VERIFIED_OK";
+    } catch (err465) {
+        results.port465 = { error: err465.message, code: err465.code };
+    }
+
+    // Test Port 587 (STARTTLS)
+    try {
+        const t587 = nodemailer.createTransport({
+            host: "smtp.gmail.com",
+            port: 587,
+            secure: false,
+            auth: { user, pass },
+            connectionTimeout: 8000,
+            greetingTimeout: 8000,
+            socketTimeout: 8000
+        });
+        await t587.verify();
+        results.port587 = "VERIFIED_OK";
+    } catch (err587) {
+        results.port587 = { error: err587.message, code: err587.code };
+    }
+
+    return res.json(results);
+});
+
 app.post("/api/auth/send-signup-otp", async (req, res) => {
     try {
         const { fullName, email, username, password } = req.body;

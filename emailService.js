@@ -21,9 +21,9 @@ function getTransporter() {
             user,
             pass
         },
-        connectionTimeout: 5000,
-        greetingTimeout: 5000,
-        socketTimeout: 6000
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 20000
     });
 }
 
@@ -212,7 +212,7 @@ async function sendOtpEmail({ toEmail, otpCode, purpose = "signup" }) {
             html
         });
         const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Email sending timeout (6000ms)")), 6000)
+            setTimeout(() => reject(new Error("Email sending timeout (18000ms)")), 18000)
         );
         const info = await Promise.race([sendPromise, timeoutPromise]);
         console.log(`[Email Service] Sent to ${toEmail}, Message ID: ${info.messageId}`);
