@@ -8,6 +8,7 @@
 [![Database](https://img.shields.io/badge/Turso-Cloud_SQLite-44d7b6.svg?logo=sqlite)](https://turso.tech/)
 [![Security](https://img.shields.io/badge/Encryption-AES--256--GCM-green.svg)](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto)
 [![AI](https://img.shields.io/badge/AI-Google_Gemini-4285F4.svg?logo=google)](https://ai.google.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](docker-compose.yml)
 
 > 🚀 **Live Demo**: **[https://chat-app-pmab.onrender.com](https://chat-app-pmab.onrender.com)**  
 > *Experience real-time messaging, AI superpowers, and WebRTC HD calls live in your browser!*
@@ -116,23 +117,22 @@ CHAT-APP/
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **npm**: v9.0.0 or higher
-- A **Turso Database** account (or local SQLite)
+- **Git** installed on your system
+- **Docker & Docker Compose** *(Recommended for 1-command instant setup)*  
+  **OR**
+- **Node.js**: v18.0.0 or higher & **npm**: v9.0.0 or higher
+- A **Turso Database** cloud URL or local SQLite
 
-### 2. Clone the Repository
+---
+
+### 2. Clone the Repository & Configure `.env`
+
 ```bash
 git clone https://github.com/tarungupta6002-ctrl/CHAT-APP.git
 cd CHAT-APP
 ```
 
-### 3. Install Dependencies
-```bash
-npm install
-```
-
-### 4. Configure Environment Variables
-Create a `.env` file in the project root based on `.env.example`:
+Create a `.env` file in the root directory (based on `.env.example`):
 
 ```env
 # Server
@@ -163,26 +163,72 @@ GEMINI_MODEL=gemini-flash-lite-latest
 AI_DAILY_QUOTA=25
 ```
 
-### 5. Build & Run
+---
 
-#### Development Mode:
+### 🐳 Option A: Run with Docker (Instant 1-Command Setup)
+
+ChatHub includes a production-tuned, multi-stage `Dockerfile` and `docker-compose.yml`. You don't even need Node.js or npm installed locally!
+
+#### Using Docker Compose (Easiest):
 ```bash
-# Start frontend dev server
+# Build image & start container in detached mode
+docker compose up -d --build
+
+# View real-time logs
+docker compose logs -f
+
+# Stop the container
+docker compose down
+```
+
+#### Using Standalone Docker CLI:
+```bash
+# 1. Build the Docker image
+docker build -t chathub .
+
+# 2. Run the container on port 3000
+docker run -d -p 3000:3000 --env-file .env --name chathub-app chathub
+```
+
+Open **[http://localhost:3000](http://localhost:3000)** in your browser!
+
+---
+
+### 💻 Option B: Run with Node.js & npm (Local Machine)
+
+#### 1. Install dependencies:
+```bash
+npm install
+```
+
+#### 2. Run in Development Mode:
+```bash
+# Run frontend dev server (Vite)
 npm run client
 
-# Start backend server
+# Run backend server (Node + Socket.io)
 npm run server
 ```
 
-#### Production Mode:
+#### 3. Run in Production Mode:
 ```bash
-# Build production bundle
+# Build React frontend bundle into /dist
 npm run build
 
-# Start server
+# Start production server
 npm start
 ```
 Open **[http://localhost:3000](http://localhost:3000)** in your browser.
+
+---
+
+### ☸️ Option C: Deploy on Kubernetes
+ChatHub provides Kubernetes manifests in the [`k8s/`](k8s/) directory:
+```bash
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/hpa.yaml
+```
 
 ---
 
