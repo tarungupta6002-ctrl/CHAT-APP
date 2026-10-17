@@ -53,6 +53,7 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
         };
         const handleKeyDown = (e) => {
             if (e.key === 'Escape') {
+                setConfirmModal(null);
                 setIsMenuOpen(false);
                 setIsSearching(false);
                 setSearchQuery('');
@@ -165,6 +166,9 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
         });
     };
 
+    // Confirmation Modal state for Clear / Delete Chat
+    const [confirmModal, setConfirmModal] = useState(null);
+
     // Context Menu Handlers
     const isUserBlocked = isDm && blockedUsers?.includes(partnerName.toLowerCase());
 
@@ -175,30 +179,47 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
             return;
         }
         if (isUserBlocked) {
-            if (window.confirm(`Unblock ${partnerName}?`)) {
-                unblockUser(partnerName);
-                alert(`${partnerName} has been unblocked.`);
-            }
+            unblockUser(partnerName);
         } else {
-            if (window.confirm(`Are you sure you want to block ${partnerName}? You will not receive any calls or notifications from them.`)) {
-                blockUser(partnerName);
-                alert(`${partnerName} has been blocked.`);
-            }
+            setConfirmModal({
+                type: 'block',
+                title: `Block ${partnerName}?`,
+                message: `Blocked contacts will no longer be able to send you messages or call you.`,
+                confirmText: 'Block'
+            });
         }
     };
 
     const handleClearChat = () => {
         setIsMenuOpen(false);
-        if (window.confirm(`Clear all messages in this conversation with ${partnerName}?`)) {
-            clearConversation(activeKey);
-        }
+        setConfirmModal({
+            type: 'clear',
+            title: 'Clear this chat?',
+            message: 'Are you sure you want to clear this chat?',
+            confirmText: 'Clear'
+        });
     };
 
     const handleDeleteChat = () => {
         setIsMenuOpen(false);
-        if (window.confirm(`Delete conversation with ${partnerName}? This will remove it from your chat list.`)) {
+        setConfirmModal({
+            type: 'delete',
+            title: 'Delete this chat?',
+            message: `Are you sure you want to delete this chat with ${partnerName}?`,
+            confirmText: 'Delete'
+        });
+    };
+
+    const handleConfirmAction = () => {
+        if (!confirmModal) return;
+        if (confirmModal.type === 'clear') {
+            clearConversation(activeKey);
+        } else if (confirmModal.type === 'delete') {
             deleteConversation(activeKey);
+        } else if (confirmModal.type === 'block') {
+            blockUser(partnerName);
         }
+        setConfirmModal(null);
     };
 
     return (
@@ -402,6 +423,46 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
 
             {/* Chat Input Footer */}
             <ChatFooter />
+
+            {/* WhatsApp Confirmation Modal */}
+            {confirmModal && (
+                <div 
+                    className="wa-modal-backdrop" 
+                    onClick={() => setConfirmModal(null)}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="wa-modal-title"
+                >
+                    <div 
+                        className="wa-modal-box" 
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 id="wa-modal-title" className="wa-modal-title">
+                            {confirmModal.title}
+                        </h3>
+                        <p className="wa-modal-desc">
+                            {confirmModal.message}
+                        </p>
+                        <div className="wa-modal-actions">
+                            <button
+                                type="button"
+                                className="wa-modal-btn-cancel"
+                                onClick={() => setConfirmModal(null)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="wa-modal-btn-danger"
+                                onClick={handleConfirmAction}
+                                autoFocus
+                            >
+                                {confirmModal.confirmText}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </section>
     );
 }

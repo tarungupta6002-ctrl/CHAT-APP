@@ -12183,5 +12183,142 @@ body.theme-light .wa-blocked-text {
   color: #54656f;
 }
 
+/* WhatsApp Web Confirmation Modal */
+.wa-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 20, 26, 0.75);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: waModalFadeIn 0.15s ease-out;
+}
+
+@keyframes waModalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.wa-modal-box {
+  background: #222e35;
+  color: #e9edef;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 440px;
+  padding: 24px 28px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  animation: waModalScaleIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes waModalScaleIn {
+  from {
+    transform: scale(0.94);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.wa-modal-title {
+  margin: 0 0 12px 0;
+  font-size: 19px;
+  font-weight: 500;
+  color: #e9edef;
+  letter-spacing: -0.2px;
+}
+
+.wa-modal-desc {
+  margin: 0 0 24px 0;
+  font-size: 14.5px;
+  color: #8696a0;
+  line-height: 1.5;
+}
+
+.wa-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+.wa-modal-btn-cancel {
+  background: #374248;
+  color: #e9edef;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 22px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.wa-modal-btn-cancel:hover {
+  background: #46545c;
+}
+
+.wa-modal-btn-danger {
+  background: #ea4335;
+  color: #ffffff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.wa-modal-btn-danger:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.wa-modal-btn-danger:active {
+  background: #b91c1c;
+}
+
+/* Light Mode Overrides */
+[data-theme="light"] .wa-modal-backdrop,
+body.theme-light .wa-modal-backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="light"] .wa-modal-box,
+body.theme-light .wa-modal-box {
+  background: #ffffff;
+  color: #111b21;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+}
+
+[data-theme="light"] .wa-modal-title,
+body.theme-light .wa-modal-title {
+  color: #111b21;
+}
+
+[data-theme="light"] .wa-modal-desc,
+body.theme-light .wa-modal-desc {
+  color: #667781;
+}
+
+[data-theme="light"] .wa-modal-btn-cancel,
+body.theme-light .wa-modal-btn-cancel {
+  background: #e9edef;
+  color: #111b21;
+}
+
+[data-theme="light"] .wa-modal-btn-cancel:hover,
+body.theme-light .wa-modal-btn-cancel:hover {
+  background: #d1d7db;
+}
+
 
 
