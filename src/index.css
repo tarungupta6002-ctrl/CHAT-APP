@@ -12846,3 +12846,54 @@ body.theme-light .wa-lang-item:hover {
 body.theme-light .wa-lang-item .lang-name {
   color: #667781;
 }
+
+/* =========================================================
+   WHATSAPP END-TO-END ENCRYPTION (E2EE) SECURITY BANNER
+   ========================================================= */
+.wa-e2ee-banner-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 12px 0 16px 0;
+  padding: 0 16px;
+  pointer-events: none;
+}
+
+.wa-e2ee-banner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: rgba(24, 34, 41, 0.95);
+  border: 1px solid rgba(254, 222, 133, 0.18);
+  border-radius: 8px;
+  padding: 6px 14px;
+  max-width: 490px;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: #ffd279;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  user-select: none;
+}
+
+.wa-e2ee-lock-icon {
+  color: #ffd279;
+  flex-shrink: 0;
+}
+
+/* Light Mode Overrides for E2EE Banner */
+[data-theme="light"] .wa-e2ee-banner,
+body.theme-light .wa-e2ee-banner {
+  background: #fff9e6;
+  border-color: rgba(217, 163, 23, 0.3);
+  color: #7a5e0b;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .wa-e2ee-lock-icon,
+body.theme-light .wa-e2ee-lock-icon {
+  color: #996e00;
+}
+

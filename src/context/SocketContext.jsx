@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import {
+    encryptOutgoingMessage,
+    decryptIncomingMessage,
+    getConversationKey,
+    encryptText,
+    decryptText
+} from '../utils/e2ee';
 
 const SocketContext = createContext(null);
 
@@ -185,17 +192,24 @@ export function SocketProvider({ children }) {
             }));
         });
 
-        socket.on("chat-history", ({ type, partnerUsername, messages }) => {
+        socket.on("chat-history", async ({ type, partnerUsername, messages }) => {
             if (!messages || !Array.isArray(messages)) return;
-            const key = `chathub_deleted_for_me_${authUser?.username || 'guest'}`;
+            const myUsername = (authUser?.username || '').trim().toLowerCase();
+            const key = `chathub_deleted_for_me_${myUsername || 'guest'}`;
             let deletedForMeSet = new Set();
             try {
                 deletedForMeSet = new Set(JSON.parse(localStorage.getItem(key) || '[]'));
             } catch (_) {}
 
-            const mapped = messages
-                .filter((m) => !deletedForMeSet.has(m.id))
-                .map((m) => ({ type: "message", data: m }));
+            const filtered = messages.filter((m) => !deletedForMeSet.has(m.id));
+            const partner = type === 'dm' ? partnerUsername : 'general';
+
+            // Client-Side E2EE: Decrypt messages in history
+            const decryptedMessages = await Promise.all(
+                filtered.map((m) => decryptIncomingMessage(m, myUsername, partner, type))
+            );
+
+            const mapped = decryptedMessages.map((m) => ({ type: "message", data: m }));
 
             if (type === "general") {
                 setConversations((prev) => ({ ...prev, general: mapped }));
@@ -207,38 +221,43 @@ export function SocketProvider({ children }) {
             }
         });
 
-        socket.on("message", (msg) => {
+        socket.on("message", async (msg) => {
             const myUsername = (authUser?.username || '').trim().toLowerCase();
             const msgSender = (msg.username || msg.senderUsername || '').trim().toLowerCase();
             const isSelf = msgSender === myUsername || msg.senderId === socket.id;
 
-            if (msg.recipientUsername || msg.recipientId) {
-                // DM Message
-                const partnerName = isSelf
-                    ? (msg.recipientUsername || '').trim()
-                    : (msg.username || msg.senderUsername || '').trim();
+            const isDm = Boolean(msg.recipientUsername || msg.recipientId);
+            const partnerName = isDm
+                ? (isSelf ? (msg.recipientUsername || '').trim() : (msg.username || msg.senderUsername || '').trim())
+                : 'general';
+            const chatType = isDm ? 'dm' : 'general';
+
+            // Client-Side E2EE: Decrypt incoming message
+            const decryptedMsg = await decryptIncomingMessage(msg, myUsername, partnerName, chatType);
+
+            if (isDm) {
                 const partnerKey = partnerName ? partnerName.toLowerCase() : 'dm';
 
                 setConversations((prev) => {
                     const currentList = prev[partnerKey] || [];
-                    if (currentList.some((item) => item.type === "message" && item.data?.id === msg.id)) {
+                    if (currentList.some((item) => item.type === "message" && item.data?.id === decryptedMsg.id)) {
                         return prev;
                     }
                     return {
                         ...prev,
-                        [partnerKey]: [...currentList, { type: "message", data: msg }]
+                        [partnerKey]: [...currentList, { type: "message", data: decryptedMsg }]
                     };
                 });
 
-                // Update recent chats list
+                // Update recent chats list with decrypted text
                 setRecentChats((prev) => {
                     const filtered = prev.filter((c) => c.partnerUsername.toLowerCase() !== partnerKey);
                     return [
                         {
                             partnerUsername: partnerName,
-                            partnerColor: msg.avatarColor || '#00a884',
-                            lastMessage: msg.text || (msg.image ? '📷 Photo' : (msg.audio ? '🎙️ Voice note' : '')),
-                            lastTime: msg.time,
+                            partnerColor: decryptedMsg.avatarColor || '#00a884',
+                            lastMessage: decryptedMsg.text || (decryptedMsg.image ? '📷 Photo' : (decryptedMsg.audio ? '🎙️ Voice note' : '')),
+                            lastTime: decryptedMsg.time,
                             createdAt: Date.now()
                         },
                         ...filtered
@@ -264,12 +283,12 @@ export function SocketProvider({ children }) {
                 // General Message
                 setConversations((prev) => {
                     const currentList = prev.general || [];
-                    if (currentList.some((item) => item.type === "message" && item.data?.id === msg.id)) {
+                    if (currentList.some((item) => item.type === "message" && item.data?.id === decryptedMsg.id)) {
                         return prev;
                     }
                     return {
                         ...prev,
-                        general: [...currentList, { type: "message", data: msg }]
+                        general: [...currentList, { type: "message", data: decryptedMsg }]
                     };
                 });
 
@@ -286,15 +305,20 @@ export function SocketProvider({ children }) {
             }
         });
 
-        socket.on("message-edited", ({ messageId, newText }) => {
+        socket.on("message-edited", async ({ messageId, newText }) => {
+            const myUsername = (authUser?.username || '').trim().toLowerCase();
+            const partner = currentChat?.type === 'dm' ? currentChat.partnerName : 'general';
+            const key = await getConversationKey(myUsername, partner, currentChat?.type || 'general');
+            const decrypted = key ? await decryptText(newText, key) : newText;
+
             setConversations((prev) => {
                 const updated = { ...prev };
-                Object.keys(updated).forEach((key) => {
-                    updated[key] = updated[key].map((item) => {
+                Object.keys(updated).forEach((k) => {
+                    updated[k] = updated[k].map((item) => {
                         if (item.type === "message" && item.data.id === messageId) {
                             return {
                                 ...item,
-                                data: { ...item.data, text: newText, isEdited: true }
+                                data: { ...item.data, text: decrypted, isEdited: true }
                             };
                         }
                         return item;
@@ -441,8 +465,8 @@ export function SocketProvider({ children }) {
         };
     }, [isAuthenticated, authUser, playChime, fetchRegisteredData]);
 
-    // Send Message
-    const sendMessage = useCallback(({ text, image, audio, audioDuration, isViewOnce, replyTo }) => {
+    // Send Message (Client E2EE encrypted)
+    const sendMessage = useCallback(async ({ text, image, audio, audioDuration, isViewOnce, replyTo }) => {
         if (!socketRef.current || !currentChat) return;
 
         // Find recipient socket ID if user is online
@@ -454,7 +478,7 @@ export function SocketProvider({ children }) {
             if (foundOnline) recipientId = foundOnline.id;
         }
 
-        const payload = {
+        const rawPayload = {
             text: text ? text.trim() : "",
             image: image || null,
             audio: audio || null,
@@ -465,7 +489,12 @@ export function SocketProvider({ children }) {
             recipientUsername: currentChat.type === "dm" ? currentChat.partnerName : null
         };
 
-        socketRef.current.emit("user-message", payload);
+        // Client-Side E2EE: Encrypt payload before emitting to server
+        const myName = authUser?.username || currentUser?.username || 'User';
+        const partner = currentChat.type === 'dm' ? currentChat.partnerName : 'general';
+        const encryptedPayload = await encryptOutgoingMessage(rawPayload, myName, partner, currentChat.type);
+
+        socketRef.current.emit("user-message", encryptedPayload);
 
         if (recipientId) {
             socketRef.current.emit("stop-typing", { recipientId });
@@ -474,7 +503,7 @@ export function SocketProvider({ children }) {
         }
 
         setReplyingTo(null);
-    }, [currentChat, onlineUsers]);
+    }, [currentChat, onlineUsers, authUser, currentUser]);
 
     // Notify Typing
     const notifyTyping = useCallback(() => {
@@ -490,16 +519,21 @@ export function SocketProvider({ children }) {
         }, 1200);
     }, [currentChat]);
 
-    // Edit Message
-    const editMessage = useCallback((messageId, newText) => {
+    // Edit Message (Client E2EE encrypted)
+    const editMessage = useCallback(async (messageId, newText) => {
         if (!socketRef.current || !messageId || !newText || !newText.trim()) return;
         const recipientId = currentChat?.type === "dm" ? currentChat.partnerId : null;
+        const myName = authUser?.username || currentUser?.username || 'User';
+        const partner = currentChat?.type === 'dm' ? currentChat.partnerName : 'general';
+        const key = await getConversationKey(myName, partner, currentChat?.type || 'general');
+        const encryptedText = key ? await encryptText(newText.trim(), key) : newText.trim();
+
         socketRef.current.emit("message-edit", {
             messageId,
-            newText: newText.trim(),
+            newText: encryptedText,
             recipientId
         });
-    }, [currentChat]);
+    }, [currentChat, authUser, currentUser]);
 
     // Delete Message (For Everyone)
     const deleteMessage = useCallback((messageId) => {

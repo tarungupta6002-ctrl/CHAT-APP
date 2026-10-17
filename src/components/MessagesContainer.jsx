@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useSocket } from '../context/SocketContext';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Lock } from 'lucide-react';
 import MessageItem from './MessageItem';
 
 // Helper to determine the WhatsApp-style date label for a message
@@ -74,6 +74,14 @@ export default function MessagesContainer({ searchQuery = '' }) {
 
     return (
         <main className="messages-container" ref={containerRef}>
+            {/* WhatsApp End-to-End Encryption Security Capsule */}
+            <div className="wa-e2ee-banner-wrap">
+                <div className="wa-e2ee-banner">
+                    <Lock size={12} className="wa-e2ee-lock-icon" />
+                    <span>Messages and calls are end-to-end encrypted. No one outside of this chat, not even ChatHub, can read or listen to them.</span>
+                </div>
+            </div>
+
             {activeList.length === 0 ? (
                 <div className="messages-empty-view">
                     <div className="messages-empty-icon-circle">
