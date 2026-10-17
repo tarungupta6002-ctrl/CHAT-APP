@@ -12319,6 +12319,291 @@ body.theme-light .wa-modal-btn-cancel {
 body.theme-light .wa-modal-btn-cancel:hover {
   background: #d1d7db;
 }
+/* =========================================================
+   NATIVE AI FEATURES (SMART REPLIES, TRANSLATION, TONE ADJUSTER)
+   ========================================================= */
 
+/* Spin helper */
+@keyframes wa-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 
+.wa-spin {
+  animation: wa-spin 0.9s linear infinite;
+}
 
+/* 1. SMART REPLIES (SUGGESTED RESPONSES) */
+.wa-smart-replies-dock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 4px 16px;
+  background: transparent;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+  z-index: 5;
+  pointer-events: auto;
+}
+
+.wa-smart-replies-dock::-webkit-scrollbar {
+  display: none;
+}
+
+.wa-smart-reply-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #202c33;
+  color: #d1d7db;
+  border: 1px solid rgba(134, 150, 160, 0.2);
+  border-radius: 6px; /* Flat rounded-md - NOT pill shape */
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  user-select: none;
+  flex-shrink: 0;
+  box-shadow: none;
+}
+
+.wa-smart-reply-chip:hover {
+  background: #2a3942;
+  border-color: rgba(134, 150, 160, 0.35);
+  color: #e9edef;
+}
+
+.wa-smart-reply-chip:active {
+  background: #182229;
+}
+
+/* 2. TONE ADJUSTER */
+.wa-tone-anchor {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.wa-tone-trigger-btn {
+  background: transparent;
+  border: none;
+  color: #8696a0;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.wa-tone-trigger-btn:hover:not(:disabled) {
+  color: #d1d7db;
+  background: rgba(134, 150, 160, 0.1);
+}
+
+.wa-tone-trigger-btn.active {
+  color: #00a884;
+  background: rgba(0, 168, 132, 0.1);
+}
+
+.wa-tone-trigger-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.wa-tone-dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  background: #202c33;
+  border: 1px solid rgba(134, 150, 160, 0.2);
+  border-radius: 6px; /* Flat rounded-md */
+  min-width: 220px;
+  padding: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wa-tone-header {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #8696a0;
+  padding: 6px 10px 4px 10px;
+  border-bottom: 1px solid rgba(134, 150, 160, 0.12);
+  margin-bottom: 4px;
+}
+
+.wa-tone-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px; /* Flat rounded-md */
+  color: #d1d7db;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.wa-tone-dropdown-item svg {
+  color: #8696a0;
+  flex-shrink: 0;
+  transition: color 0.12s ease;
+}
+
+.wa-tone-dropdown-item:hover {
+  background: #2a3942;
+  color: #e9edef;
+}
+
+.wa-tone-dropdown-item:hover svg {
+  color: #00a884;
+}
+
+.wa-tone-dropdown-item .item-title {
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.wa-tone-dropdown-item .item-desc {
+  font-size: 11px;
+  color: #8696a0;
+  margin-top: 1px;
+}
+
+/* 3. MESSAGE TRANSLATION */
+.msg-action-btn.active-translate {
+  color: #53bdeb;
+}
+
+.msg-translation-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px dashed rgba(134, 150, 160, 0.2);
+  font-size: 12px;
+  color: #8696a0;
+  font-style: italic;
+}
+
+.msg-translation-block {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(134, 150, 160, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.msg-translation-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  color: #8696a0;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.msg-translation-meta svg {
+  color: #53bdeb;
+}
+
+.msg-translation-text {
+  font-size: 13.5px;
+  line-height: 1.4;
+  font-style: italic;
+  color: #e9edef;
+  word-break: break-word;
+}
+
+/* Light Mode Overrides for AI Features */
+[data-theme="light"] .wa-smart-reply-chip,
+body.theme-light .wa-smart-reply-chip {
+  background: #f0f2f5;
+  color: #111b21;
+  border-color: rgba(11, 20, 26, 0.12);
+}
+
+[data-theme="light"] .wa-smart-reply-chip:hover,
+body.theme-light .wa-smart-reply-chip:hover {
+  background: #e9edef;
+  border-color: rgba(11, 20, 26, 0.2);
+}
+
+[data-theme="light"] .wa-tone-trigger-btn,
+body.theme-light .wa-tone-trigger-btn {
+  color: #54656f;
+}
+
+[data-theme="light"] .wa-tone-dropdown-menu,
+body.theme-light .wa-tone-dropdown-menu {
+  background: #ffffff;
+  border-color: rgba(11, 20, 26, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .wa-tone-header,
+body.theme-light .wa-tone-header {
+  color: #667781;
+  border-color: rgba(11, 20, 26, 0.08);
+}
+
+[data-theme="light"] .wa-tone-dropdown-item,
+body.theme-light .wa-tone-dropdown-item {
+  color: #111b21;
+}
+
+[data-theme="light"] .wa-tone-dropdown-item:hover,
+body.theme-light .wa-tone-dropdown-item:hover {
+  background: #f5f6f6;
+  color: #111b21;
+}
+
+[data-theme="light"] .wa-tone-dropdown-item svg,
+body.theme-light .wa-tone-dropdown-item svg {
+  color: #54656f;
+}
+
+[data-theme="light"] .wa-tone-dropdown-item .item-desc,
+body.theme-light .wa-tone-dropdown-item .item-desc {
+  color: #667781;
+}
+
+[data-theme="light"] .msg-translation-loading,
+body.theme-light .msg-translation-loading {
+  color: #667781;
+  border-color: rgba(11, 20, 26, 0.12);
+}
+
+[data-theme="light"] .msg-translation-block,
+body.theme-light .msg-translation-block {
+  border-color: rgba(11, 20, 26, 0.1);
+}
+
+[data-theme="light"] .msg-translation-meta,
+body.theme-light .msg-translation-meta {
+  color: #667781;
+}
+
+[data-theme="light"] .msg-translation-text,
+body.theme-light .msg-translation-text {
+  color: #111b21;
+}

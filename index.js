@@ -1712,6 +1712,36 @@ app.post("/api/ai/feedback", authenticateToken, async (req, res) => {
     }
 });
 
+// 6. Native Tone Adjuster Endpoint
+app.post("/api/ai/tone", async (req, res) => {
+    try {
+        const { text, tone } = req.body;
+        if (!text || !text.trim()) {
+            return res.json({ adjustedText: "" });
+        }
+        const result = await aiService.adjustTone({ text, tone });
+        return res.json(result);
+    } catch (err) {
+        console.error("API tone error:", err);
+        return res.status(500).json({ error: "Failed to adjust tone", adjustedText: req.body?.text || "" });
+    }
+});
+
+// 7. Native Message Translation Endpoint
+app.post("/api/ai/translate", async (req, res) => {
+    try {
+        const { text, targetLang } = req.body;
+        if (!text || !text.trim()) {
+            return res.json({ translatedText: "" });
+        }
+        const result = await aiService.translateText({ text, targetLang: targetLang || "en" });
+        return res.json(result);
+    } catch (err) {
+        console.error("API translate error:", err);
+        return res.status(500).json({ error: "Failed to translate message", translatedText: `[Translated]: ${req.body?.text || ""}` });
+    }
+});
+
 // Serve React production build from 'dist' if it exists, otherwise fallback to 'public'
 const distPath = path.join(__dirname, "dist");
 if (fs.existsSync(path.join(distPath, "index.html"))) {

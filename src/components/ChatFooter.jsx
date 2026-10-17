@@ -1,6 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSocket } from '../context/SocketContext';
-import { Paperclip, Smile, Mic, X, Check, Eye, Send } from 'lucide-react';
+import { 
+    Paperclip, 
+    Smile, 
+    Mic, 
+    X, 
+    Check, 
+    Eye, 
+    Send, 
+    Sparkles, 
+    Briefcase, 
+    Scissors, 
+    Loader2 
+} from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
 
 export default function ChatFooter() {
@@ -10,6 +22,7 @@ export default function ChatFooter() {
         replyingTo,
         setReplyingTo,
         currentChat,
+        conversations,
         blockedUsers,
         unblockUser
     } = useSocket();
@@ -22,6 +35,18 @@ export default function ChatFooter() {
     // Voice recording state
     const [isRecording, setIsRecording] = useState(false);
     const [recordingSeconds, setRecordingSeconds] = useState(0);
+
+    // Task 1: Smart Replies State & Generator
+    const [suggestedReplies, setSuggestedReplies] = useState([
+        "Sounds good!",
+        "I'll check and let you know",
+        "Thanks!"
+    ]);
+
+    // Task 3: Tone Adjuster State & Handlers
+    const [isToneMenuOpen, setIsToneMenuOpen] = useState(false);
+    const [isAdjustingTone, setIsAdjustingTone] = useState(false);
+    const toneMenuRef = useRef(null);
 
     const mediaRecorderRef = useRef(null);
     const audioStreamRef = useRef(null);
@@ -204,6 +229,102 @@ export default function ChatFooter() {
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
+    // Task 1: Smart Replies Generator (API placeholder + intelligent heuristic)
+    const generateSmartReplies = useCallback((chatHistory) => {
+        if (!chatHistory || chatHistory.length === 0) {
+            setSuggestedReplies(["Sounds good!", "I'll check and let you know", "Thanks!"]);
+            return;
+        }
+        const lastMsg = [...chatHistory].reverse().find(
+            (m) => m.type === 'message' && m.data?.text && !m.data?.isDeleted
+        );
+        if (!lastMsg) {
+            setSuggestedReplies(["Sounds good!", "I'll check and let you know", "Thanks!"]);
+            return;
+        }
+        const lastText = (lastMsg.data.text || '').toLowerCase();
+        if (lastText.includes('?') || lastText.includes('how') || lastText.includes('what') || lastText.includes('when')) {
+            setSuggestedReplies(["Sure, let me check", "Yes, absolutely", "Not sure right now"]);
+        } else if (lastText.includes('thank') || lastText.includes('thx')) {
+            setSuggestedReplies(["You're welcome! 😊", "Anytime!", "Glad to help!"]);
+        } else if (lastText.includes('hello') || lastText.includes('hi') || lastText.includes('hey')) {
+            setSuggestedReplies(["Hey there! 👋", "Hi, how are you?", "Hello! What's up?"]);
+        } else if (lastText.includes('ok') || lastText.includes('okay') || lastText.includes('done')) {
+            setSuggestedReplies(["Sounds good!", "Perfect, thanks!", "Great!"]);
+        } else {
+            setSuggestedReplies(["Sounds good!", "I'll check and let you know", "Thanks!"]);
+        }
+    }, []);
+
+    const activeKey = !currentChat || currentChat.type === 'general'
+        ? 'general'
+        : (currentChat.partnerName ? currentChat.partnerName.toLowerCase() : (currentChat.partnerId || 'dm'));
+    const activeMessages = conversations ? (conversations[activeKey] || []) : [];
+
+    useEffect(() => {
+        generateSmartReplies(activeMessages);
+    }, [activeMessages, generateSmartReplies]);
+
+    const handleApplySmartReply = (reply) => {
+        setText(reply);
+        inputRef.current?.focus();
+    };
+
+    // Task 3: Tone Adjuster Handlers & Click-outside listener
+    useEffect(() => {
+        const handleOutside = (e) => {
+            if (toneMenuRef.current && !toneMenuRef.current.contains(e.target)) {
+                setIsToneMenuOpen(false);
+            }
+        };
+        if (isToneMenuOpen) {
+            document.addEventListener('mousedown', handleOutside);
+        }
+        return () => document.removeEventListener('mousedown', handleOutside);
+    }, [isToneMenuOpen]);
+
+    const handleAdjustTone = async (tone) => {
+        if (!text.trim() || isAdjustingTone) return;
+        setIsAdjustingTone(true);
+        setIsToneMenuOpen(false);
+
+        try {
+            const res = await fetch('/api/ai/tone', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, tone })
+            }).catch(() => null);
+
+            if (res && res.ok) {
+                const data = await res.json();
+                if (data.adjustedText) {
+                    setText(data.adjustedText);
+                    setIsAdjustingTone(false);
+                    inputRef.current?.focus();
+                    return;
+                }
+            }
+
+            // Clean fallback transformation
+            const trimmed = text.trim();
+            let adjusted = trimmed;
+            if (tone === 'professional') {
+                adjusted = `Dear ${currentChat?.partnerName || 'Colleague'}, I would like to kindly note that ${trimmed.charAt(0).toLowerCase() + trimmed.slice(1)}. Best regards.`;
+            } else if (tone === 'friendly') {
+                adjusted = `Hey ${currentChat?.partnerName || 'there'}! 😊 Just wanted to say: ${trimmed}! Hope you're doing well ✨`;
+            } else if (tone === 'shorten') {
+                const firstSentence = trimmed.split(/[.?!]\s/)[0];
+                adjusted = firstSentence.length > 70 ? firstSentence.slice(0, 70) + '...' : firstSentence;
+            }
+            setText(adjusted);
+        } catch (err) {
+            console.error("Tone adjustment error:", err);
+        } finally {
+            setIsAdjustingTone(false);
+            inputRef.current?.focus();
+        }
+    };
+
     const isDm = currentChat?.type === 'dm';
     const partnerName = currentChat?.partnerName || '';
     const isContactBlocked = isDm && partnerName && blockedUsers?.includes(partnerName.toLowerCase());
@@ -323,6 +444,24 @@ export default function ChatFooter() {
                 </div>
             )}
 
+            {/* Task 1: Smart Replies (Suggested Responses) */}
+            {!text.trim() && !isRecording && !selectedImageData && !replyingTo && suggestedReplies.length > 0 && (
+                <div className="wa-smart-replies-dock">
+                    <div className="wa-smart-replies-scroll">
+                        {suggestedReplies.map((reply, idx) => (
+                            <button
+                                key={idx}
+                                type="button"
+                                className="wa-smart-reply-chip"
+                                onClick={() => handleApplySmartReply(reply)}
+                            >
+                                {reply}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Chat Input Footer Form */}
             <footer className="chat-footer">
                 <form className="input-container" onSubmit={handleFormSubmit}>
@@ -368,6 +507,56 @@ export default function ChatFooter() {
                     >
                         <Mic size={18} />
                     </button>
+
+                    {/* Task 3: Tone Adjuster (Input Box Integration) */}
+                    <div className="wa-tone-anchor" ref={toneMenuRef}>
+                        <button
+                            type="button"
+                            className={`input-action-btn wa-tone-trigger ${isToneMenuOpen ? 'active' : ''} ${!text.trim() ? 'disabled' : ''}`}
+                            title={text.trim() ? "AI Tone Adjuster" : "Type a message to adjust tone"}
+                            onClick={() => {
+                                if (text.trim()) {
+                                    setIsToneMenuOpen((prev) => !prev);
+                                }
+                            }}
+                            disabled={!text.trim() || isAdjustingTone}
+                        >
+                            {isAdjustingTone ? (
+                                <Loader2 size={18} className="wa-spin-icon" />
+                            ) : (
+                                <Sparkles size={18} />
+                            )}
+                        </button>
+
+                        {isToneMenuOpen && (
+                            <div className="wa-tone-dropdown-menu">
+                                <button
+                                    type="button"
+                                    className="wa-tone-dropdown-item"
+                                    onClick={() => handleAdjustTone('professional')}
+                                >
+                                    <Briefcase size={15} />
+                                    <span>Make Professional</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="wa-tone-dropdown-item"
+                                    onClick={() => handleAdjustTone('friendly')}
+                                >
+                                    <Smile size={15} />
+                                    <span>Make Friendly</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="wa-tone-dropdown-item"
+                                    onClick={() => handleAdjustTone('shorten')}
+                                >
+                                    <Scissors size={15} />
+                                    <span>Shorten Text</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     <input
                         type="text"

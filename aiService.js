@@ -340,6 +340,44 @@ function callMock({ operation, messages, question }) {
         };
     }
 
+    if (operation === "tone") {
+        const text = messages[0]?.text || "Hello";
+        let adjusted = text;
+        if (question === "professional") {
+            adjusted = `I would like to note that ${text.charAt(0).toLowerCase() + text.slice(1)}. Best regards.`;
+        } else if (question === "friendly") {
+            adjusted = `Hey there! 😊 Just wanted to say: ${text}! Hope you're doing well ✨`;
+        } else if (question === "shorten") {
+            const first = text.split(/[.?!]\s/)[0];
+            adjusted = first.length > 60 ? first.slice(0, 60) + '...' : first;
+        }
+        return {
+            text: JSON.stringify({ adjustedText: adjusted }),
+            inputTokens: 15,
+            outputTokens: 20,
+            model: "mock-v1"
+        };
+    }
+
+    if (operation === "translate") {
+        const text = messages[0]?.text || "";
+        const lower = text.toLowerCase();
+        let translated = `[Translated]: ${text}`;
+        if (lower.includes("kaise ho") || lower.includes("kya haal hai")) {
+            translated = "How are you doing?";
+        } else if (lower.includes("thik hu") || lower.includes("sab badhiya")) {
+            translated = "I am doing well, everything is fine.";
+        } else if (lower.includes("dhanyawaad") || lower.includes("shukriya")) {
+            translated = "Thank you very much!";
+        }
+        return {
+            text: JSON.stringify({ translatedText: translated, detectedLanguage: "hi" }),
+            inputTokens: 15,
+            outputTokens: 20,
+            model: "mock-v1"
+        };
+    }
+
     // Default: summary
     return {
         text: JSON.stringify({
@@ -568,11 +606,120 @@ Output MUST be valid JSON with this exact schema:
     };
 }
 
+/**
+ * 4. Tone Adjuster
+ */
+async function adjustTone({ text, tone = "professional", providerOverride = null }) {
+    if (!text || !text.trim()) {
+        return { adjustedText: text || "" };
+    }
+    const cleanText = text.trim();
+    let instruction = "";
+    if (tone === "professional") {
+        instruction = "Rewrite the input message in a clear, polite, and professional workplace tone. Keep it natural and concise.";
+    } else if (tone === "friendly") {
+        instruction = "Rewrite the input message in a warm, enthusiastic, and friendly conversational tone.";
+    } else if (tone === "shorten") {
+        instruction = "Condense and shorten the input message to be direct and punchy while keeping its original meaning intact.";
+    } else {
+        instruction = "Polish the following chat message.";
+    }
+
+    const systemInstruction = `You are an expert messaging editor. ${instruction}
+Output MUST be valid JSON with this exact schema:
+{
+  "adjustedText": "The rewritten message string"
+}`;
+
+    const userPrompt = `Original message:\n"""${cleanText}"""\n\nTone mode: "${tone}". Output JSON only.`;
+
+    try {
+        const raw = await dispatchProviderCall({
+            systemInstruction,
+            userPrompt,
+            operation: "tone",
+            messages: [{ text: cleanText }],
+            question: tone,
+            providerOverride
+        });
+
+        const parsed = extractJsonFromText(raw.text);
+        if (parsed && parsed.adjustedText) {
+            return { adjustedText: parsed.adjustedText, model: raw.model };
+        }
+    } catch (e) {
+        // Fallback to heuristic
+    }
+
+    if (tone === "professional") {
+        return { adjustedText: `I would like to kindly note that ${cleanText.charAt(0).toLowerCase() + cleanText.slice(1)}. Best regards.` };
+    } else if (tone === "friendly") {
+        return { adjustedText: `Hey! 😊 Just wanted to say: ${cleanText}! Hope you're doing well ✨` };
+    } else if (tone === "shorten") {
+        const first = cleanText.split(/[.?!]\s/)[0];
+        return { adjustedText: first.length > 70 ? first.slice(0, 70) + '...' : first };
+    }
+    return { adjustedText: cleanText };
+}
+
+/**
+ * 5. Message Translation
+ */
+async function translateText({ text, targetLang = "en", providerOverride = null }) {
+    if (!text || !text.trim()) {
+        return { translatedText: text || "" };
+    }
+    const cleanText = text.trim();
+
+    const systemInstruction = `You are a native chat translator. Translate the given chat message into natural, fluent English (or Hindi if it is already English). Retain emojis and informal tone.
+Output MUST be valid JSON with this exact schema:
+{
+  "translatedText": "The translated message text string",
+  "detectedLanguage": "ISO language code or language name"
+}`;
+
+    const userPrompt = `Message to translate:\n"""${cleanText}"""\n\nTarget language: "${targetLang}". Output JSON only.`;
+
+    try {
+        const raw = await dispatchProviderCall({
+            systemInstruction,
+            userPrompt,
+            operation: "translate",
+            messages: [{ text: cleanText }],
+            question: targetLang,
+            providerOverride
+        });
+
+        const parsed = extractJsonFromText(raw.text);
+        if (parsed && parsed.translatedText) {
+            return {
+                translatedText: parsed.translatedText,
+                detectedLanguage: parsed.detectedLanguage,
+                model: raw.model
+            };
+        }
+    } catch (e) {
+        // Fallback to heuristic
+    }
+
+    const lower = cleanText.toLowerCase();
+    if (lower.includes("kaise ho") || lower.includes("kya haal hai")) {
+        return { translatedText: "How are you doing?", detectedLanguage: "hi" };
+    } else if (lower.includes("thik hu") || lower.includes("sab badhiya")) {
+        return { translatedText: "I am doing well, everything is fine.", detectedLanguage: "hi" };
+    } else if (lower.includes("dhanyawaad") || lower.includes("shukriya")) {
+        return { translatedText: "Thank you very much!", detectedLanguage: "hi" };
+    }
+    return { translatedText: `[Translated]: ${cleanText}`, detectedLanguage: "unknown" };
+}
+
 module.exports = {
     getProviderStatus,
     generateSummary,
     askConversation,
     extractActionItems,
+    adjustTone,
+    translateText,
     formatMessagesForContext,
     getActiveProvider,
     GEMINI_MODEL
