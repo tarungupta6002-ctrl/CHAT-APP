@@ -16,43 +16,6 @@
 
 ---
 
-## 📸 Screenshots & Visual Tour
-
-<div align="center">
-
-### 🌙 ChatHub Dark Mode Dashboard & Hub
-*Complete hub featuring instant messaging, active contacts, group cards, and quick actions.*
-<br/>
-<img src="./screenshots/dark-mode-dashboard.png" alt="ChatHub Dark Mode Dashboard" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"/>
-
-<br/><br/>
-
-### 📱 Responsive Landing Page & Experience
-*Landing page showcasing real-time messaging, zero app installation, and cross-platform compatibility.*
-<br/>
-<img src="./screenshots/landing-page.png" alt="ChatHub Landing Page" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"/>
-
-<br/><br/>
-
-### 🔐 Multi-Step Auth, Mobile View & Video Calling UI
-*User onboarding with OTP verification, mobile-optimized chat UI, and crystal-clear voice/video calling.*
-<br/>
-<img src="./screenshots/auth-and-video-call-ui.jpg" alt="ChatHub Auth and Video Calling UI" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"/>
-
-<br/><br/>
-
-### 📞 Live Peer-to-Peer Video Call
-*WebRTC-powered low-latency video and audio calling with interactive in-call controls.*
-<br/>
-<img src="./screenshots/live-video-call.png" alt="ChatHub Live Video Call" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"/>
-
-</div>
-
-> 💡 **Tip for Adding More GIFs or Screenshots:**  
-> You can also drag and drop recordings or animated `.gif` files into any GitHub issue or PR description to generate a permanent CDN link, and paste `![Demo](url)` right here!
-
----
-
 ## 🌟 Key Features
 
 ### 🔒 Military-Grade End-to-End Encryption (E2EE)
