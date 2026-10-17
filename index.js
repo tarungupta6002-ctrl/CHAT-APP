@@ -644,8 +644,8 @@ app.get("/api/auth/config", (req, res) => {
 app.get("/api/debug/smtp", async (req, res) => {
     const nodemailer = require("nodemailer");
     const results = { timestamp: new Date().toISOString() };
-    const user = process.env.EMAIL_USER || "tarungupta6002@gmail.com";
-    const pass = process.env.EMAIL_PASSWORD || "nunljhgxclzgiise";
+    const user = process.env.EMAIL_USER;
+    const pass = process.env.EMAIL_PASSWORD;
 
     results.env = {
         hasUser: Boolean(process.env.EMAIL_USER),

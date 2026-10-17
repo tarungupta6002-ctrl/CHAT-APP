@@ -5,8 +5,8 @@ const nodemailer = require("nodemailer");
 function getTransporter() {
     const host = process.env.EMAIL_HOST || "smtp.gmail.com";
     const port = parseInt(process.env.EMAIL_PORT, 10) || 465;
-    const user = process.env.EMAIL_USER || "tarungupta6002@gmail.com";
-    const pass = process.env.EMAIL_PASSWORD || "nunljhgxclzgiise";
+    const user = process.env.EMAIL_USER;
+    const pass = process.env.EMAIL_PASSWORD;
 
     if (!user || !pass) {
         return null;
@@ -143,7 +143,7 @@ async function sendOtpEmail({ toEmail, otpCode, purpose = "signup" }) {
     // B. Brevo API (HTTPS Port 443 - 300 free emails/day to any recipient)
     if (process.env.BREVO_API_KEY) {
         try {
-            const senderEmail = process.env.EMAIL_USER || "tarungupta6002@gmail.com";
+            const senderEmail = process.env.EMAIL_USER || "noreply@chathub.com";
             const res = await fetch("https://api.brevo.com/v3/smtp/email", {
                 method: "POST",
                 headers: {
@@ -197,7 +197,7 @@ async function sendOtpEmail({ toEmail, otpCode, purpose = "signup" }) {
 
     // 2. Fallback to Direct Nodemailer SMTP (Works on local or paid cloud hosts)
     const transporter = getTransporter();
-    const fromAddress = process.env.EMAIL_FROM || `"ChatHub Security" <${process.env.EMAIL_USER || "tarungupta6002@gmail.com"}>`;
+    const fromAddress = process.env.EMAIL_FROM || `"ChatHub Security" <${process.env.EMAIL_USER || "noreply@chathub.com"}>`;
 
     if (!transporter) {
         console.error(`[Email Service] No transporter or email API configured.`);
