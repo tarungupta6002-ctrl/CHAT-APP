@@ -276,6 +276,7 @@ export default function MessageItem({ item, searchQuery = '' }) {
         setReplyingTo,
         setEditingMessage,
         deleteMessage,
+        deleteMessageForMe,
         toggleReaction,
         openedViewOnceIds,
         markViewOnceOpened,
@@ -283,6 +284,7 @@ export default function MessageItem({ item, searchQuery = '' }) {
     } = useSocket();
 
     const [isStarred, setIsStarred] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [translatedText, setTranslatedText] = useState(null);
     const [isTranslating, setIsTranslating] = useState(false);
     const [showTranslation, setShowTranslation] = useState(false);
@@ -559,36 +561,30 @@ export default function MessageItem({ item, searchQuery = '' }) {
                                     )}
                                 </div>
                             )}
-                            {isSelf && (
-                                <>
-                                    {msg.text && (
-                                        <button
-                                            type="button"
-                                            className="msg-action-btn"
-                                            title="Edit"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setEditingMessage({ id: msg.id, text: msg.text });
-                                            }}
-                                        >
-                                            <Pencil size={15} />
-                                        </button>
-                                    )}
-                                    <button
-                                        type="button"
-                                        className="msg-action-btn"
-                                        title="Delete for everyone"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (window.confirm("Delete this message for everyone?")) {
-                                                deleteMessage(msg.id);
-                                            }
-                                        }}
-                                    >
-                                        <Trash2 size={15} />
-                                    </button>
-                                </>
+                            {isSelf && msg.text && (
+                                <button
+                                    type="button"
+                                    className="msg-action-btn"
+                                    title="Edit"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingMessage({ id: msg.id, text: msg.text });
+                                    }}
+                                >
+                                    <Pencil size={15} />
+                                </button>
                             )}
+                            <button
+                                type="button"
+                                className="msg-action-btn"
+                                title="Delete message"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsDeleteModalOpen(true);
+                                }}
+                            >
+                                <Trash2 size={15} />
+                            </button>
                         </div>
                     )}
 
@@ -737,6 +733,68 @@ export default function MessageItem({ item, searchQuery = '' }) {
                     </div>
                 )}
             </div>
+
+            {/* In-App WhatsApp Style Delete Confirmation Modal */}
+            {isDeleteModalOpen && (
+                <div 
+                    className="wa-modal-backdrop" 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setIsDeleteModalOpen(false);
+                    }}
+                    role="dialog"
+                    aria-modal="true"
+                >
+                    <div 
+                        className="wa-modal-box wa-delete-modal-box" 
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="wa-modal-title">Delete message?</h3>
+                        <p className="wa-modal-desc">
+                            {isSelf 
+                                ? "You can delete this message for everyone or delete it just for yourself."
+                                : "This message will be deleted for you only. Other participants will still be able to see it."
+                            }
+                        </p>
+                        <div className="wa-modal-actions wa-delete-actions">
+                            {isSelf && (
+                                <button
+                                    type="button"
+                                    className="wa-modal-btn-danger"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsDeleteModalOpen(false);
+                                        deleteMessage(msg.id);
+                                    }}
+                                >
+                                    Delete for everyone
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                className="wa-modal-btn-secondary"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsDeleteModalOpen(false);
+                                    deleteMessageForMe(msg.id);
+                                }}
+                            >
+                                Delete for me
+                            </button>
+                            <button
+                                type="button"
+                                className="wa-modal-btn-cancel"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsDeleteModalOpen(false);
+                                }}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

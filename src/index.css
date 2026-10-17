@@ -12297,6 +12297,34 @@ body.theme-light .wa-blocked-text {
   background: #b91c1c;
 }
 
+.wa-modal-btn-secondary {
+  background: #2a3942;
+  color: #00a884;
+  border: 1px solid rgba(0, 168, 132, 0.3);
+  border-radius: 20px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.wa-modal-btn-secondary:hover {
+  background: #32434d;
+  border-color: #00a884;
+  transform: translateY(-1px);
+}
+
+.wa-modal-btn-secondary:active {
+  background: #182229;
+}
+
+.wa-delete-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 /* Light Mode Overrides */
 [data-theme="light"] .wa-modal-backdrop,
 body.theme-light .wa-modal-backdrop {
@@ -12329,6 +12357,18 @@ body.theme-light .wa-modal-btn-cancel {
 [data-theme="light"] .wa-modal-btn-cancel:hover,
 body.theme-light .wa-modal-btn-cancel:hover {
   background: #d1d7db;
+}
+
+[data-theme="light"] .wa-modal-btn-secondary,
+body.theme-light .wa-modal-btn-secondary {
+  background: #f0f2f5;
+  color: #00a884;
+  border-color: rgba(0, 168, 132, 0.35);
+}
+
+[data-theme="light"] .wa-modal-btn-secondary:hover,
+body.theme-light .wa-modal-btn-secondary:hover {
+  background: #e9edef;
 }
 /* =========================================================
    NATIVE AI FEATURES (SMART REPLIES, TRANSLATION, TONE ADJUSTER)

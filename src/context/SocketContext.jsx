@@ -187,7 +187,15 @@ export function SocketProvider({ children }) {
 
         socket.on("chat-history", ({ type, partnerUsername, messages }) => {
             if (!messages || !Array.isArray(messages)) return;
-            const mapped = messages.map((m) => ({ type: "message", data: m }));
+            const key = `chathub_deleted_for_me_${authUser?.username || 'guest'}`;
+            let deletedForMeSet = new Set();
+            try {
+                deletedForMeSet = new Set(JSON.parse(localStorage.getItem(key) || '[]'));
+            } catch (_) {}
+
+            const mapped = messages
+                .filter((m) => !deletedForMeSet.has(m.id))
+                .map((m) => ({ type: "message", data: m }));
 
             if (type === "general") {
                 setConversations((prev) => ({ ...prev, general: mapped }));
@@ -493,7 +501,7 @@ export function SocketProvider({ children }) {
         });
     }, [currentChat]);
 
-    // Delete Message
+    // Delete Message (For Everyone)
     const deleteMessage = useCallback((messageId) => {
         if (!socketRef.current || !messageId) return;
         const recipientId = currentChat?.type === "dm" ? currentChat.partnerId : null;
@@ -502,6 +510,29 @@ export function SocketProvider({ children }) {
             recipientId
         });
     }, [currentChat]);
+
+    // Delete Message (For Me Only)
+    const deleteMessageForMe = useCallback((messageId) => {
+        if (!messageId) return;
+        const key = `chathub_deleted_for_me_${currentUser?.username || authUser?.username || 'guest'}`;
+        try {
+            const saved = JSON.parse(localStorage.getItem(key) || '[]');
+            if (!saved.includes(messageId)) {
+                saved.push(messageId);
+                localStorage.setItem(key, JSON.stringify(saved));
+            }
+        } catch (_) {}
+
+        setConversations((prev) => {
+            const updated = { ...prev };
+            Object.keys(updated).forEach((k) => {
+                updated[k] = (updated[k] || []).filter(
+                    (item) => !(item.type === "message" && item.data?.id === messageId)
+                );
+            });
+            return updated;
+        });
+    }, [currentUser, authUser]);
 
     // Send Reaction
     const toggleReaction = useCallback((messageId, emoji) => {
@@ -647,6 +678,7 @@ export function SocketProvider({ children }) {
         sendMessage,
         editMessage,
         deleteMessage,
+        deleteMessageForMe,
         toggleReaction,
         openedViewOnceIds,
         markViewOnceOpened,
