@@ -12140,5 +12140,48 @@ body.theme-light .messages-empty-title {
   }
 }
 
+/* WhatsApp Blocked Contact Banner in Footer */
+.wa-blocked-footer-wrap {
+  width: 100%;
+}
+.wa-blocked-footer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 16px !important;
+  background: #202c33 !important;
+  padding: 16px 24px !important;
+  border-top: 1px solid rgba(134, 150, 160, 0.15) !important;
+}
+.wa-blocked-text {
+  color: #8696a0;
+  font-size: 14px;
+  font-weight: 400;
+}
+.wa-blocked-unblock-btn {
+  background: #00a884;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.wa-blocked-unblock-btn:hover {
+  background: #02906f;
+  transform: translateY(-1px);
+}
+[data-theme="light"] .wa-blocked-footer,
+body.theme-light .wa-blocked-footer {
+  background: #f0f2f5 !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+[data-theme="light"] .wa-blocked-text,
+body.theme-light .wa-blocked-text {
+  color: #54656f;
+}
+
 
 

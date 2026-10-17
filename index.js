@@ -138,6 +138,7 @@ io.on("connection", (socket) => {
             avatarUrl: avatarUrl || ''
         };
         users.set(socket.id, userObj);
+        socket.join(`user:${cleanName.toLowerCase()}`);
 
         // Notify client with their own profile details
         socket.emit("join-success", {
@@ -182,7 +183,10 @@ io.on("connection", (socket) => {
         if (!data || !socket.id) return;
         const existing = users.get(socket.id);
         if (existing) {
-            if (data.username) existing.username = data.username;
+            if (data.username) {
+                existing.username = data.username;
+                socket.join(`user:${data.username.toLowerCase()}`);
+            }
             if (data.color) existing.color = data.color;
             if (data.avatarUrl !== undefined) existing.avatarUrl = data.avatarUrl;
             users.set(socket.id, existing);
@@ -212,6 +216,7 @@ io.on("connection", (socket) => {
         if (!hasText && !hasImage && !hasAudio) return;
 
         const user = users.get(socket.id) || { username: "Guest", color: "#6366f1", avatarUrl: "" };
+        const senderUsername = user.username || "Guest";
 
         let targetSocketId = recipientId;
         if (!targetSocketId && recipientUsername) {
@@ -226,25 +231,26 @@ io.on("connection", (socket) => {
         // Check blocking rules for DM
         if (isPrivateDm && recipientUsername) {
             // Check if sender has blocked recipient
-            if (db.isUserBlocked(user.username, recipientUsername)) {
+            if (db.isUserBlocked(senderUsername, recipientUsername)) {
                 socket.emit("chat-error", {
                     message: `You have blocked ${recipientUsername}. Unblock to send messages.`
                 });
                 return;
             }
 
-            // Check if recipient has blocked sender (WhatsApp behavior: single tick 'sent', recipient never receives it)
-            if (db.isUserBlocked(recipientUsername, user.username)) {
+            // Check if recipient has blocked sender (WhatsApp behavior: single tick 'sent', recipient NEVER sees it)
+            if (db.isUserBlocked(recipientUsername, senderUsername)) {
                 const now = Date.now();
                 const blockedPayload = {
                     id: `${socket.id}-${now}`,
                     senderId: socket.id,
                     recipientId: targetSocketId,
                     recipientUsername: recipientUsername,
-                    username: user.username,
+                    username: senderUsername,
                     avatarColor: user.color,
                     avatarUrl: user.avatarUrl || '',
                     status: 'sent',
+                    isBlockedSend: 1, // Excluded from recipient's DM history and recent chats!
                     text: hasText ? messageText.trim() : "",
                     image: hasImage ? image : null,
                     audio: hasAudio ? audio : null,
@@ -256,16 +262,17 @@ io.on("connection", (socket) => {
                     createdAt: now
                 };
 
-                // Asynchronously save in background with status 'sent' so blocked sender's chat history persists
-                db.saveMessage(blockedPayload).catch((err) => console.error("Error saving message:", err));
+                // Asynchronously save in background with isBlockedSend: 1 (only sender will ever see it)
+                db.saveMessage(blockedPayload).catch((err) => console.error("Error saving blocked message:", err));
 
-                // Send back ONLY to sender (single tick, recipient never sees it)
+                // Send back ONLY to sender
                 socket.emit("message", blockedPayload);
                 return;
             }
         }
 
-        const isRecipientOnline = Boolean(targetSocketId && targetSocketId !== socket.id && users.has(targetSocketId));
+        const recipientRoom = recipientUsername ? io.sockets.adapter.rooms.get(`user:${recipientUsername.toLowerCase()}`) : null;
+        const isRecipientOnline = Boolean((recipientRoom && recipientRoom.size > 0) || (targetSocketId && targetSocketId !== socket.id && users.has(targetSocketId)));
         const initialStatus = isPrivateDm ? (isRecipientOnline ? 'delivered' : 'sent') : 'sent';
 
         const now = Date.now();
@@ -274,10 +281,11 @@ io.on("connection", (socket) => {
             senderId: socket.id,
             recipientId: targetSocketId,
             recipientUsername: recipientUsername,
-            username: user.username,
+            username: senderUsername,
             avatarColor: user.color,
             avatarUrl: user.avatarUrl || '',
             status: initialStatus,
+            isBlockedSend: 0,
             text: hasText ? messageText.trim() : "",
             image: hasImage ? image : null,
             audio: hasAudio ? audio : null,
@@ -289,13 +297,21 @@ io.on("connection", (socket) => {
             createdAt: now
         };
 
-        // IMMEDIATE EMIT (0ms latency - eliminate delay!)
+        // IMMEDIATE EMIT (0ms latency - instant real-time message delivery!)
         if (isPrivateDm) {
+            // Echo back to sender
             socket.emit("message", messagePayload);
+
+            // Broadcast to recipient user room (delivers to ALL recipient tabs/devices immediately!)
+            if (recipientUsername) {
+                io.to(`user:${recipientUsername.toLowerCase()}`).emit("message", messagePayload);
+            }
+            // Fallback to socket ID if connected
             if (targetSocketId && targetSocketId !== socket.id && users.has(targetSocketId)) {
                 socket.to(targetSocketId).emit("message", messagePayload);
             }
         } else {
+            // General Room: Broadcast to everyone
             io.emit("message", messagePayload);
         }
 
@@ -311,10 +327,7 @@ io.on("connection", (socket) => {
         if (!user || !partnerUsername) return;
         await db.clearDmHistory(user.username, partnerUsername);
         socket.emit("dm-cleared", { partnerUsername });
-        const partnerSocketId = findSocketIdByUsername(partnerUsername);
-        if (partnerSocketId) {
-            io.to(partnerSocketId).emit("dm-cleared", { partnerUsername: user.username });
-        }
+        io.to(`user:${partnerUsername.toLowerCase()}`).emit("dm-cleared", { partnerUsername: user.username });
     });
 
     // Delete DM Chat in Database
@@ -326,21 +339,25 @@ io.on("connection", (socket) => {
     });
 
     // Block User in Database
-    socket.on("block-user", async ({ targetUsername }) => {
+    socket.on("block-user", async (data) => {
+        const targetUsername = typeof data === "string" ? data : data?.targetUsername;
         const user = users.get(socket.id);
-        if (!user || !targetUsername) return;
-        await db.blockUser(user.username, targetUsername);
-        const blockedList = db.getBlockedUsersFor(user.username);
-        socket.emit("blocked-users-list", blockedList);
+        const blockerUsername = user?.username || data?.blockerUsername;
+        if (!blockerUsername || !targetUsername) return;
+        await db.blockUser(blockerUsername, targetUsername);
+        const blockedList = db.getBlockedUsersFor(blockerUsername);
+        io.to(`user:${blockerUsername.toLowerCase()}`).emit("blocked-users-list", blockedList);
     });
 
     // Unblock User in Database
-    socket.on("unblock-user", async ({ targetUsername }) => {
+    socket.on("unblock-user", async (data) => {
+        const targetUsername = typeof data === "string" ? data : data?.targetUsername;
         const user = users.get(socket.id);
-        if (!user || !targetUsername) return;
-        await db.unblockUser(user.username, targetUsername);
-        const blockedList = db.getBlockedUsersFor(user.username);
-        socket.emit("blocked-users-list", blockedList);
+        const blockerUsername = user?.username || data?.blockerUsername;
+        if (!blockerUsername || !targetUsername) return;
+        await db.unblockUser(blockerUsername, targetUsername);
+        const blockedList = db.getBlockedUsersFor(blockerUsername);
+        io.to(`user:${blockerUsername.toLowerCase()}`).emit("blocked-users-list", blockedList);
     });
 
     // Get Blocked Users
@@ -357,13 +374,10 @@ io.on("connection", (socket) => {
         if (!user || !partnerUsername) return;
         try {
             await db.markDmAsRead(user.username, partnerUsername);
-            const partnerSocketId = findSocketIdByUsername(partnerUsername);
-            if (partnerSocketId) {
-                io.to(partnerSocketId).emit("messages-status-update", {
-                    partnerUsername: user.username,
-                    status: "read"
-                });
-            }
+            io.to(`user:${partnerUsername.toLowerCase()}`).emit("messages-status-update", {
+                partnerUsername: user.username,
+                status: "read"
+            });
         } catch (e) {
             console.error("Error in mark-messages-read:", e);
         }

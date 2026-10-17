@@ -8,7 +8,10 @@ export default function ChatFooter() {
         sendMessage,
         notifyTyping,
         replyingTo,
-        setReplyingTo
+        setReplyingTo,
+        currentChat,
+        blockedUsers,
+        unblockUser
     } = useSocket();
 
     const [text, setText] = useState('');
@@ -200,6 +203,27 @@ export default function ChatFooter() {
         const s = sec % 60;
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
+
+    const isDm = currentChat?.type === 'dm';
+    const partnerName = currentChat?.partnerName || '';
+    const isContactBlocked = isDm && partnerName && blockedUsers?.includes(partnerName.toLowerCase());
+
+    if (isContactBlocked) {
+        return (
+            <div className="wa-blocked-footer-wrap">
+                <footer className="chat-footer wa-blocked-footer">
+                    <span className="wa-blocked-text">You blocked this contact.</span>
+                    <button
+                        type="button"
+                        className="wa-blocked-unblock-btn"
+                        onClick={() => unblockUser(partnerName)}
+                    >
+                        Unblock
+                    </button>
+                </footer>
+            </div>
+        );
+    }
 
     return (
         <div style={{ position: 'relative', width: '100%' }}>

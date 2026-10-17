@@ -86,6 +86,7 @@ async function initDb() {
         try { await db.execute(`ALTER TABLE users ADD COLUMN avatar_url TEXT;`); } catch (_) {}
         try { await db.execute(`ALTER TABLE messages ADD COLUMN status TEXT DEFAULT 'sent';`); } catch (_) {}
         try { await db.execute(`ALTER TABLE messages ADD COLUMN sender_avatar_url TEXT;`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE messages ADD COLUMN is_blocked_send INTEGER DEFAULT 0;`); } catch (_) {}
 
         await db.execute(`
             CREATE TABLE IF NOT EXISTS blocked_users (
@@ -170,8 +171,8 @@ async function saveMessage(msg) {
                     id, sender_id, sender_username, recipient_id, recipient_username,
                     avatar_color, text, image, audio, audio_duration,
                     reply_to, is_view_once, is_deleted, time, created_at,
-                    status, sender_avatar_url
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    status, sender_avatar_url, is_blocked_send
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
             args: [
                 msg.id,
@@ -190,7 +191,8 @@ async function saveMessage(msg) {
                 msg.time || "",
                 msg.createdAt || Date.now(),
                 msg.status || "sent",
-                msg.avatarUrl || null
+                msg.avatarUrl || null,
+                msg.isBlockedSend ? 1 : 0
             ]
         });
     } catch (err) {
@@ -259,12 +261,13 @@ async function getDmHistory(usernameA, usernameB, limit = 100) {
                 SELECT m.*, u.avatar_url AS current_sender_avatar, u.avatar_color AS current_sender_color 
                 FROM messages m
                 LEFT JOIN users u ON LOWER(u.username) = LOWER(m.sender_username)
-                WHERE (m.sender_username = ? AND m.recipient_username = ?)
-                   OR (m.sender_username = ? AND m.recipient_username = ?)
+                WHERE ((m.sender_username = ? COLLATE NOCASE AND m.recipient_username = ? COLLATE NOCASE)
+                   OR (m.sender_username = ? COLLATE NOCASE AND m.recipient_username = ? COLLATE NOCASE))
+                  AND NOT (m.recipient_username = ? COLLATE NOCASE AND COALESCE(m.is_blocked_send, 0) = 1)
                 ORDER BY m.created_at ASC 
                 LIMIT ?
             `,
-            args: [usernameA, usernameB, usernameB, usernameA, limit]
+            args: [usernameA, usernameB, usernameB, usernameA, usernameA, limit]
         });
         return rs.rows.map(mapRowToMessage);
     } catch (err) {
@@ -762,11 +765,12 @@ async function getRecentChatsForUser(username) {
                     WHEN LOWER(m.sender_username) = LOWER(?) THEN LOWER(m.recipient_username)
                     ELSE LOWER(m.sender_username)
                 END
-                WHERE m.sender_username = ? COLLATE NOCASE OR m.recipient_username = ? COLLATE NOCASE
+                WHERE (m.sender_username = ? COLLATE NOCASE OR m.recipient_username = ? COLLATE NOCASE)
+                  AND NOT (m.recipient_username = ? COLLATE NOCASE AND COALESCE(m.is_blocked_send, 0) = 1)
                 ORDER BY m.created_at DESC
                 LIMIT 200
             `,
-            args: [username, username, username]
+            args: [username, username, username, username]
         });
 
         const chatsMap = new Map();

@@ -200,13 +200,15 @@ export function SocketProvider({ children }) {
         });
 
         socket.on("message", (msg) => {
-            const isSelf = msg.senderUsername === authUser.username || msg.username === authUser.username || msg.senderId === socket.id;
+            const myUsername = (authUser?.username || '').trim().toLowerCase();
+            const msgSender = (msg.username || msg.senderUsername || '').trim().toLowerCase();
+            const isSelf = msgSender === myUsername || msg.senderId === socket.id;
 
             if (msg.recipientUsername || msg.recipientId) {
                 // DM Message
-                const partnerName = (msg.username.toLowerCase() === authUser.username.toLowerCase())
-                    ? msg.recipientUsername
-                    : msg.username;
+                const partnerName = isSelf
+                    ? (msg.recipientUsername || '').trim()
+                    : (msg.username || msg.senderUsername || '').trim();
                 const partnerKey = partnerName ? partnerName.toLowerCase() : 'dm';
 
                 setConversations((prev) => {
