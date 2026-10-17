@@ -437,7 +437,8 @@ export default function MessageItem({ item, searchQuery = '' }) {
     return (
         <div
             id={`row-${msg.id}`}
-            className={`message-row ${isSelf ? 'self' : 'other'}`}
+            className={`message-row ${isSelf ? 'self' : 'other'} ${isLangMenuOpen ? 'row-menu-open' : ''}`}
+            style={isLangMenuOpen ? { zIndex: 100, position: 'relative' } : {}}
         >
             {!isSelf && (
                 <div
@@ -468,10 +469,10 @@ export default function MessageItem({ item, searchQuery = '' }) {
                     </div>
                 )}
 
-                <div className="msg-bubble-wrap">
+                <div className={`msg-bubble-wrap ${isLangMenuOpen ? 'has-open-menu' : ''}`}>
                     {/* Hover Reaction & Actions Toolbar */}
                     {!msg.isDeleted && (
-                        <div className="reaction-toolbar">
+                        <div className={`reaction-toolbar ${isLangMenuOpen ? 'menu-open' : ''}`}>
                             {QUICK_REACTIONS.map((emoji) => (
                                 <button
                                     key={emoji}

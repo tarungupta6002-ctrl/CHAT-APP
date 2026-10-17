@@ -668,8 +668,19 @@ body.light-theme .message-row.self .wa-tick-wrap.wa-tick-delivered svg path {
   left: 0;
 }
 
-.msg-bubble-wrap:hover .reaction-toolbar {
-  display: flex;
+.msg-bubble-wrap:hover .reaction-toolbar,
+.reaction-toolbar.menu-open,
+.msg-bubble-wrap.has-open-menu .reaction-toolbar {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 1000 !important;
+}
+
+.message-row.row-menu-open {
+  z-index: 1000 !important;
+  position: relative;
 }
 
 .react-btn {
@@ -12493,7 +12504,7 @@ body.theme-light .wa-modal-btn-cancel:hover {
 
 .wa-lang-dropdown-menu {
   position: absolute;
-  bottom: calc(100% + 8px);
+  top: calc(100% + 4px);
   right: 0;
   background: #202c33;
   border: 1px solid rgba(134, 150, 160, 0.2);
@@ -12501,11 +12512,31 @@ body.theme-light .wa-modal-btn-cancel:hover {
   width: 195px;
   max-height: 240px;
   overflow-y: auto;
-  z-index: 1000;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  z-index: 9999;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5);
   padding: 4px;
   display: flex;
   flex-direction: column;
+}
+
+.wa-lang-dropdown-menu::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: transparent;
+}
+
+.message-row.other .wa-lang-dropdown-menu {
+  left: 0;
+  right: auto;
+}
+
+.message-row.self .wa-lang-dropdown-menu {
+  right: 0;
+  left: auto;
 }
 
 .wa-lang-header {
