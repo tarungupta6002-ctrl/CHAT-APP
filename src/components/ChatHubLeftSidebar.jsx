@@ -529,10 +529,6 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                                 <div className="chat-item-body">
                                     <div className="chat-item-row-top">
                                         <h4 className="chat-item-name">{chat.fullName || chat.partnerUsername}</h4>
-                                        <span className="chat-item-time">{chat.lastTime || (chat.isOnline ? 'Online' : '')}</span>
-                                    </div>
-                                    <div className="chat-item-row-bottom">
-                                        <p className="chat-item-msg">{chat.lastMessage}</p>
                                         {chat.unread > 0 && (
                                             <span className="chat-unread-count-pill">{chat.unread}</span>
                                         )}

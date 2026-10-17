@@ -377,10 +377,6 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                                 <div className="wa-item-info">
                                     <div className="wa-item-top-row">
                                         <span className="wa-item-title">{chat.partnerName}</span>
-                                        <span className="wa-item-time">{chat.lastTime}</span>
-                                    </div>
-                                    <div className="wa-item-bottom-row">
-                                        <p className="wa-item-snippet">{chat.lastMessage}</p>
                                         {chat.unread > 0 && (
                                             <span className="wa-unread-badge">{chat.unread}</span>
                                         )}
