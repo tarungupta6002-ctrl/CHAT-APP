@@ -691,26 +691,57 @@ Output MUST be valid JSON with this exact schema:
         });
 
         const parsed = extractJsonFromText(raw.text);
-        if (parsed && parsed.translatedText) {
+        if (parsed && parsed.translatedText && parsed.translatedText.trim() && parsed.translatedText.trim().toLowerCase() !== cleanText.toLowerCase()) {
             return {
-                translatedText: parsed.translatedText,
-                detectedLanguage: parsed.detectedLanguage,
+                translatedText: parsed.translatedText.trim(),
+                detectedLanguage: parsed.detectedLanguage || "auto",
                 model: raw.model
             };
         }
     } catch (e) {
-        // Fallback to heuristic
+        // Fallback to high-speed online translator
     }
+
+    try {
+        const directUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(cleanText)}`;
+        const gRes = await fetch(directUrl);
+        if (gRes.ok) {
+            const gData = await gRes.json();
+            const translated = gData[0]?.map(s => s[0]).join('').trim();
+            if (translated && translated.toLowerCase() !== cleanText.toLowerCase()) {
+                return { translatedText: translated, detectedLanguage: gData[2] || "auto", model: "gtx-v1" };
+            }
+            // Pivot Hinglish through English if target is not 'en'
+            if (targetLang !== 'en') {
+                const enUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(cleanText)}`;
+                const enRes = await fetch(enUrl);
+                if (enRes.ok) {
+                    const enData = await enRes.json();
+                    const enText = enData[0]?.map(s => s[0]).join('').trim();
+                    if (enText && enText.toLowerCase() !== cleanText.toLowerCase()) {
+                        const pivotUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(enText)}`;
+                        const pRes = await fetch(pivotUrl);
+                        if (pRes.ok) {
+                            const pData = await pRes.json();
+                            const pTranslated = pData[0]?.map(s => s[0]).join('').trim();
+                            if (pTranslated) return { translatedText: pTranslated, detectedLanguage: "hi", model: "gtx-pivot" };
+                        }
+                        return { translatedText: enText, detectedLanguage: "hi", model: "gtx-en" };
+                    }
+                }
+            }
+        }
+    } catch (_) {}
 
     const lower = cleanText.toLowerCase();
     if (lower.includes("kaise ho") || lower.includes("kya haal hai")) {
-        return { translatedText: "How are you doing?", detectedLanguage: "hi" };
+        return { translatedText: targetLang === "hi" ? "आप कैसे हैं?" : "How are you doing?", detectedLanguage: "hi" };
     } else if (lower.includes("thik hu") || lower.includes("sab badhiya")) {
-        return { translatedText: "I am doing well, everything is fine.", detectedLanguage: "hi" };
+        return { translatedText: targetLang === "hi" ? "मैं ठीक हूँ, सब अच्छा है।" : "I am doing well, everything is fine.", detectedLanguage: "hi" };
     } else if (lower.includes("dhanyawaad") || lower.includes("shukriya")) {
-        return { translatedText: "Thank you very much!", detectedLanguage: "hi" };
+        return { translatedText: targetLang === "hi" ? "धन्यवाद!" : "Thank you very much!", detectedLanguage: "hi" };
     }
-    return { translatedText: `[Translated]: ${cleanText}`, detectedLanguage: "unknown" };
+    return { translatedText: cleanText, detectedLanguage: "unknown" };
 }
 
 module.exports = {

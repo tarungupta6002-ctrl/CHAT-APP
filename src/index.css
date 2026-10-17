@@ -12485,6 +12485,101 @@ body.theme-light .wa-modal-btn-cancel:hover {
 }
 
 /* 3. MESSAGE TRANSLATION */
+.wa-lang-anchor {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.wa-lang-dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: #202c33;
+  border: 1px solid rgba(134, 150, 160, 0.2);
+  border-radius: 6px;
+  width: 195px;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.wa-lang-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 8px 6px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #8696a0;
+  border-bottom: 1px solid rgba(134, 150, 160, 0.12);
+  margin-bottom: 3px;
+}
+
+.wa-lang-hide-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 3px;
+  text-transform: none;
+}
+
+.wa-lang-hide-btn:hover {
+  text-decoration: underline;
+}
+
+.wa-lang-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wa-lang-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #d1d7db;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.wa-lang-item:hover {
+  background: #2a3942;
+  color: #00a884;
+}
+
+.wa-lang-item.selected {
+  background: rgba(0, 168, 132, 0.15);
+  color: #00a884;
+  font-weight: 500;
+}
+
+.wa-lang-item .lang-native {
+  font-weight: 400;
+}
+
+.wa-lang-item .lang-name {
+  font-size: 11px;
+  color: #8696a0;
+}
+
 .msg-action-btn.active-translate {
   color: #53bdeb;
 }
@@ -12507,13 +12602,14 @@ body.theme-light .wa-modal-btn-cancel:hover {
   border-top: 1px solid rgba(134, 150, 160, 0.16);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .msg-translation-meta {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.3px;
@@ -12522,8 +12618,51 @@ body.theme-light .wa-modal-btn-cancel:hover {
   user-select: none;
 }
 
-.msg-translation-meta svg {
+.msg-trans-meta-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.msg-trans-meta-label svg {
   color: #53bdeb;
+}
+
+.msg-trans-meta-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.msg-trans-change-btn {
+  background: none;
+  border: none;
+  color: #53bdeb;
+  font-size: 10px;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.3px;
+}
+
+.msg-trans-change-btn:hover {
+  text-decoration: underline;
+}
+
+.msg-trans-close-btn {
+  background: none;
+  border: none;
+  color: #8696a0;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 3px;
+  border-radius: 3px;
+}
+
+.msg-trans-close-btn:hover {
+  color: #ef4444;
 }
 
 .msg-translation-text {
@@ -12606,4 +12745,33 @@ body.theme-light .msg-translation-meta {
 [data-theme="light"] .msg-translation-text,
 body.theme-light .msg-translation-text {
   color: #111b21;
+}
+
+[data-theme="light"] .wa-lang-dropdown-menu,
+body.theme-light .wa-lang-dropdown-menu {
+  background: #ffffff;
+  border-color: rgba(11, 20, 26, 0.12);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .wa-lang-header,
+body.theme-light .wa-lang-header {
+  color: #667781;
+  border-color: rgba(11, 20, 26, 0.08);
+}
+
+[data-theme="light"] .wa-lang-item,
+body.theme-light .wa-lang-item {
+  color: #111b21;
+}
+
+[data-theme="light"] .wa-lang-item:hover,
+body.theme-light .wa-lang-item:hover {
+  background: #f5f6f6;
+  color: #00a884;
+}
+
+[data-theme="light"] .wa-lang-item .lang-name,
+body.theme-light .wa-lang-item .lang-name {
+  color: #667781;
 }
