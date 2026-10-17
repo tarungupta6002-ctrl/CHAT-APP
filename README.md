@@ -1,5 +1,6 @@
 # 💬 ChatHub — Real-Time Chat, HD Calls & Native AI Assistant
 
+[![Live Demo](https://img.shields.io/badge/Demo-Live_Website-25D366?style=for-the-badge&logo=render&logoColor=white)](https://chat-app-pmab.onrender.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-19.3-61dafb.svg?logo=react)](https://reactjs.org/)
 [![Vite](https://img.shields.io/badge/Vite-8.3-646cff.svg?logo=vite)](https://vitejs.dev/)
@@ -8,7 +9,47 @@
 [![Security](https://img.shields.io/badge/Encryption-AES--256--GCM-green.svg)](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto)
 [![AI](https://img.shields.io/badge/AI-Google_Gemini-4285F4.svg?logo=google)](https://ai.google.dev/)
 
+> 🚀 **Live Demo**: **[https://chat-app-pmab.onrender.com](https://chat-app-pmab.onrender.com)**  
+> *Experience real-time messaging, AI superpowers, and WebRTC HD calls live in your browser!*
+
 > **ChatHub** is a production-ready, full-stack real-time messaging and HD calling application inspired by WhatsApp Web and Telegram. It combines **military-grade client-side End-to-End Encryption (E2EE)** with **native-feeling AI capabilities** (Tone Adjuster, Multi-Language Translation, Smart Replies, and Chat Summarization) without compromising user privacy.
+
+---
+
+## 📸 Screenshots & Visual Tour
+
+<div align="center">
+
+### 🌙 ChatHub Dark Mode Dashboard & Hub
+*Complete hub featuring instant messaging, active contacts, group cards, and quick actions.*
+<br/>
+<img src="./screenshots/dark-mode-dashboard.png" alt="ChatHub Dark Mode Dashboard" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"/>
+
+<br/><br/>
+
+### 📱 Responsive Landing Page & Experience
+*Landing page showcasing real-time messaging, zero app installation, and cross-platform compatibility.*
+<br/>
+<img src="./screenshots/landing-page.png" alt="ChatHub Landing Page" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"/>
+
+<br/><br/>
+
+### 🔐 Multi-Step Auth, Mobile View & Video Calling UI
+*User onboarding with OTP verification, mobile-optimized chat UI, and crystal-clear voice/video calling.*
+<br/>
+<img src="./screenshots/auth-and-video-call-ui.jpg" alt="ChatHub Auth and Video Calling UI" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"/>
+
+<br/><br/>
+
+### 📞 Live Peer-to-Peer Video Call
+*WebRTC-powered low-latency video and audio calling with interactive in-call controls.*
+<br/>
+<img src="./screenshots/live-video-call.png" alt="ChatHub Live Video Call" width="100%" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"/>
+
+</div>
+
+> 💡 **Tip for Adding More GIFs or Screenshots:**  
+> You can also drag and drop recordings or animated `.gif` files into any GitHub issue or PR description to generate a permanent CDN link, and paste `![Demo](url)` right here!
 
 ---
 
