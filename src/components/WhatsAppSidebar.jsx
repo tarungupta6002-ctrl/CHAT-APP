@@ -33,6 +33,7 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
 
     const [searchQuery, setSearchQuery] = useState('');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'unread' | 'groups'
     const menuRef = useRef(null);
 
@@ -264,9 +265,7 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                                 className="wa-dropdown-item danger"
                                 onClick={() => {
                                     setIsMenuOpen(false);
-                                    if (window.confirm("Are you sure you want to log out of ChatHub?")) {
-                                        logout();
-                                    }
+                                    setShowLogoutModal(true);
                                 }}
                             >
                                 <LogOut size={16} />
@@ -387,6 +386,49 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                     })
                 )}
             </div>
+
+            {/* In-App WhatsApp Logout Confirmation Modal */}
+            {showLogoutModal && (
+                <div 
+                    className="wa-modal-backdrop" 
+                    onClick={() => setShowLogoutModal(false)}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="wa-logout-modal-title"
+                >
+                    <div 
+                        className="wa-modal-box" 
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 id="wa-logout-modal-title" className="wa-modal-title">
+                            Log out?
+                        </h3>
+                        <p className="wa-modal-desc">
+                            Are you sure you want to log out of ChatHub?
+                        </p>
+                        <div className="wa-modal-actions">
+                            <button
+                                type="button"
+                                className="wa-modal-btn-cancel"
+                                onClick={() => setShowLogoutModal(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="wa-modal-btn-danger"
+                                onClick={() => {
+                                    setShowLogoutModal(false);
+                                    logout();
+                                }}
+                                autoFocus
+                            >
+                                Log out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </aside>
     );
 }
