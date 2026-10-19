@@ -205,6 +205,10 @@ io.on("connection", (socket) => {
         const image = data?.image || null;
         const audio = data?.audio || null;
         const audioDuration = data?.audioDuration || null;
+        const file = data?.file || null;
+        const fileName = data?.fileName || null;
+        const fileSize = data?.fileSize || null;
+        const fileType = data?.fileType || null;
         const isViewOnce = Boolean(data?.isViewOnce);
         const recipientId = data?.recipientId || null;
         let recipientUsername = (data?.recipientUsername || "").trim() || null;
@@ -212,8 +216,9 @@ io.on("connection", (socket) => {
         const hasText = messageText && messageText.trim().length > 0;
         const hasImage = Boolean(image);
         const hasAudio = Boolean(audio);
+        const hasFile = Boolean(file);
 
-        if (!hasText && !hasImage && !hasAudio) return;
+        if (!hasText && !hasImage && !hasAudio && !hasFile) return;
 
         const user = users.get(socket.id) || { username: "Guest", color: "#6366f1", avatarUrl: "" };
         const senderUsername = user.username || "Guest";
@@ -255,6 +260,10 @@ io.on("connection", (socket) => {
                     image: hasImage ? image : null,
                     audio: hasAudio ? audio : null,
                     audioDuration: hasAudio ? audioDuration : null,
+                    file: hasFile ? file : null,
+                    fileName: hasFile ? fileName : null,
+                    fileSize: hasFile ? fileSize : null,
+                    fileType: hasFile ? fileType : null,
                     replyTo: data?.replyTo || null,
                     isViewOnce: isViewOnce,
                     openedBy: [],
@@ -290,6 +299,10 @@ io.on("connection", (socket) => {
             image: hasImage ? image : null,
             audio: hasAudio ? audio : null,
             audioDuration: hasAudio ? audioDuration : null,
+            file: hasFile ? file : null,
+            fileName: hasFile ? fileName : null,
+            fileSize: hasFile ? fileSize : null,
+            fileType: hasFile ? fileType : null,
             replyTo: data?.replyTo || null,
             isViewOnce: isViewOnce,
             openedBy: [],

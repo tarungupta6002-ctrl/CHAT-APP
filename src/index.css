@@ -12931,3 +12931,406 @@ body.theme-light .wa-e2ee-lock-icon {
   color: #996e00;
 }
 
+/* ==========================================================================
+   FEATURE 3: DOCUMENT & PDF SHARING STYLES (WhatsApp Style)
+   ========================================================================== */
+
+/* Attachment Popover Menu */
+.wa-attach-anchor {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.wa-attach-dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 0;
+  min-width: 200px;
+  background: #202c33;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 1000;
+  animation: slideUpAttachMenu 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(12px);
+}
+
+@keyframes slideUpAttachMenu {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.wa-attach-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #e9edef;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  text-align: left;
+}
+
+.wa-attach-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(2px);
+}
+
+.wa-attach-icon-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.wa-attach-dropdown-item:hover .wa-attach-icon-circle {
+  transform: scale(1.08);
+}
+
+.wa-attach-icon-circle.doc-circle {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+}
+
+.wa-attach-icon-circle.photo-circle {
+  background: linear-gradient(135deg, #0284c7, #06b6d4);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+}
+
+/* Light Mode Overrides for Attachment Dropdown */
+[data-theme="light"] .wa-attach-dropdown-menu,
+body.theme-light .wa-attach-dropdown-menu {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .wa-attach-dropdown-item,
+body.theme-light .wa-attach-dropdown-item {
+  color: #111b21;
+}
+
+[data-theme="light"] .wa-attach-dropdown-item:hover,
+body.theme-light .wa-attach-dropdown-item:hover {
+  background: #f0f2f5;
+}
+
+/* Document Preview Dock (Before Sending) */
+.document-preview-dock {
+  background: rgba(18, 24, 38, 0.95);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 16px;
+  padding: 0.65rem 1rem;
+  margin-bottom: 0.75rem;
+  animation: slideUp 0.2s ease-out;
+  backdrop-filter: blur(8px);
+}
+
+.doc-preview-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  width: 100%;
+}
+
+.doc-preview-badge {
+  position: relative;
+  width: 44px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(124, 58, 237, 0.18);
+  color: #a78bfa;
+  border: 1px solid rgba(124, 58, 237, 0.35);
+}
+
+.doc-preview-badge.doc-type-pdf {
+  background: rgba(234, 67, 53, 0.18);
+  color: #ea4335;
+  border-color: rgba(234, 67, 53, 0.4);
+}
+
+.doc-preview-badge.doc-type-doc,
+.doc-preview-badge.doc-type-docx {
+  background: rgba(26, 115, 232, 0.18);
+  color: #1a73e8;
+  border-color: rgba(26, 115, 232, 0.4);
+}
+
+.doc-preview-badge.doc-type-xls,
+.doc-preview-badge.doc-type-xlsx,
+.doc-preview-badge.doc-type-csv {
+  background: rgba(30, 142, 62, 0.18);
+  color: #1e8e3e;
+  border-color: rgba(30, 142, 62, 0.4);
+}
+
+.doc-preview-badge.doc-type-zip,
+.doc-preview-badge.doc-type-rar,
+.doc-preview-badge.doc-type-7z {
+  background: rgba(234, 134, 0, 0.18);
+  color: #ea8600;
+  border-color: rgba(234, 134, 0, 0.4);
+}
+
+.doc-preview-ext {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+.doc-preview-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.doc-preview-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary, #ffffff);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-preview-size {
+  font-size: 0.74rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+[data-theme="light"] .document-preview-dock,
+body.theme-light .document-preview-dock {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .doc-preview-name,
+body.theme-light .doc-preview-name {
+  color: #111b21;
+}
+
+[data-theme="light"] .doc-preview-size,
+body.theme-light .doc-preview-size {
+  color: #667781;
+}
+
+/* In-Chat Message Document Attachment Card */
+.msg-document-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 4px 0 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 220px;
+  max-width: 340px;
+  user-select: none;
+}
+
+.msg-document-card:hover {
+  background: rgba(0, 0, 0, 0.28);
+  border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+
+.msg-document-icon-badge {
+  position: relative;
+  width: 44px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.msg-document-card:hover .msg-document-icon-badge {
+  transform: scale(1.06);
+}
+
+.doc-pdf .msg-document-icon-badge {
+  background: rgba(234, 67, 53, 0.2);
+  color: #ea4335;
+  border: 1px solid rgba(234, 67, 53, 0.4);
+}
+
+.doc-word .msg-document-icon-badge {
+  background: rgba(26, 115, 232, 0.2);
+  color: #1a73e8;
+  border: 1px solid rgba(26, 115, 232, 0.4);
+}
+
+.doc-excel .msg-document-icon-badge {
+  background: rgba(30, 142, 62, 0.2);
+  color: #1e8e3e;
+  border: 1px solid rgba(30, 142, 62, 0.4);
+}
+
+.doc-archive .msg-document-icon-badge {
+  background: rgba(234, 134, 0, 0.2);
+  color: #ea8600;
+  border: 1px solid rgba(234, 134, 0, 0.4);
+}
+
+.doc-code .msg-document-icon-badge {
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.4);
+}
+
+.doc-default .msg-document-icon-badge {
+  background: rgba(0, 168, 132, 0.2);
+  color: #00a884;
+  border: 1px solid rgba(0, 168, 132, 0.4);
+}
+
+.doc-icon-svg {
+  flex-shrink: 0;
+}
+
+.doc-icon-tag {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 1px;
+  line-height: 1;
+}
+
+.msg-document-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.msg-document-filename {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+
+.msg-document-meta {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.msg-document-download-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.msg-document-download-btn:hover {
+  background: #00a884;
+  color: #ffffff;
+  transform: scale(1.1);
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(0, 168, 132, 0.4);
+}
+
+/* Sent message bubble (green) document styling adjustments */
+.message-row.self .msg-document-card {
+  background: rgba(0, 0, 0, 0.14);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.message-row.self .msg-document-card:hover {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+/* Light Theme Overrides for Document Cards */
+[data-theme="light"] .msg-document-card,
+body.theme-light .msg-document-card {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .msg-document-card:hover,
+body.theme-light .msg-document-card:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.14);
+}
+
+[data-theme="light"] .msg-document-filename,
+body.theme-light .msg-document-filename {
+  color: #111b21;
+}
+
+[data-theme="light"] .msg-document-meta,
+body.theme-light .msg-document-meta {
+  color: #667781;
+}
+
+[data-theme="light"] .msg-document-download-btn,
+body.theme-light .msg-document-download-btn {
+  background: rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #111b21;
+}
+
+[data-theme="light"] .msg-document-download-btn:hover,
+body.theme-light .msg-document-download-btn:hover {
+  background: #00a884;
+  color: #ffffff;
+}
+
+

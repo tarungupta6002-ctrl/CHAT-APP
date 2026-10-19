@@ -74,7 +74,7 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
             partnerName: 'ChatHub Community',
             partnerColor: '#2563eb',
             lastMessage: lastGenMsg 
-                ? `${lastGenMsg.data?.username || lastGenMsg.username || 'User'}: ${lastGenMsg.data?.text || lastGenMsg.text || (lastGenMsg.data?.image ? 'Photo' : 'Voice note')}` 
+                ? `${lastGenMsg.data?.username || lastGenMsg.username || 'User'}: ${lastGenMsg.data?.text || lastGenMsg.text || (lastGenMsg.data?.file ? ('📄 ' + (lastGenMsg.data?.fileName || 'Document')) : (lastGenMsg.data?.image ? 'Photo' : 'Voice note'))}` 
                 : 'Welcome to ChatHub Community!',
             lastTime: lastGenMsg ? (lastGenMsg.data?.time || lastGenMsg.time) : '',
             unread: communityUnread,
@@ -110,7 +110,7 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
             const uname = chatKey;
             if (uname.toLowerCase() !== myName) {
                 const lastMsg = msgs[msgs.length - 1];
-                const text = lastMsg.data?.text || lastMsg.text || (lastMsg.data?.image ? 'Photo' : 'Voice note');
+                const text = lastMsg.data?.text || lastMsg.text || (lastMsg.data?.file ? ('📄 ' + (lastMsg.data?.fileName || 'Document')) : (lastMsg.data?.image ? 'Photo' : 'Voice note'));
                 const time = lastMsg.data?.time || lastMsg.time || '';
                 const unread = unreadCounts[uname.toLowerCase()] || 0;
                 const reg = (allRegisteredUsers || []).find((u) => u.username?.toLowerCase() === uname.toLowerCase());

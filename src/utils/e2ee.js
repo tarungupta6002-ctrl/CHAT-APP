@@ -193,6 +193,9 @@ export async function encryptOutgoingMessage(messageData, currentUser, partnerNa
     if (encrypted.audio) {
         encrypted.audio = await encryptText(encrypted.audio, key);
     }
+    if (encrypted.file) {
+        encrypted.file = await encryptText(encrypted.file, key);
+    }
     return encrypted;
 }
 
@@ -213,6 +216,9 @@ export async function decryptIncomingMessage(messageData, currentUser, partnerNa
     }
     if (decrypted.audio && isEncrypted(decrypted.audio)) {
         decrypted.audio = await decryptText(decrypted.audio, key);
+    }
+    if (decrypted.file && isEncrypted(decrypted.file)) {
+        decrypted.file = await decryptText(decrypted.file, key);
     }
     if (decrypted.replyTo && decrypted.replyTo.text && isEncrypted(decrypted.replyTo.text)) {
         decrypted.replyTo = {

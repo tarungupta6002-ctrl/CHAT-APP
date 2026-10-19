@@ -87,6 +87,10 @@ async function initDb() {
         try { await db.execute(`ALTER TABLE messages ADD COLUMN status TEXT DEFAULT 'sent';`); } catch (_) {}
         try { await db.execute(`ALTER TABLE messages ADD COLUMN sender_avatar_url TEXT;`); } catch (_) {}
         try { await db.execute(`ALTER TABLE messages ADD COLUMN is_blocked_send INTEGER DEFAULT 0;`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE messages ADD COLUMN file TEXT;`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE messages ADD COLUMN file_name TEXT;`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE messages ADD COLUMN file_size TEXT;`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE messages ADD COLUMN file_type TEXT;`); } catch (_) {}
 
         await db.execute(`
             CREATE TABLE IF NOT EXISTS blocked_users (
@@ -171,8 +175,9 @@ async function saveMessage(msg) {
                     id, sender_id, sender_username, recipient_id, recipient_username,
                     avatar_color, text, image, audio, audio_duration,
                     reply_to, is_view_once, is_deleted, time, created_at,
-                    status, sender_avatar_url, is_blocked_send
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    status, sender_avatar_url, is_blocked_send,
+                    file, file_name, file_size, file_type
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
             args: [
                 msg.id,
@@ -192,7 +197,11 @@ async function saveMessage(msg) {
                 msg.createdAt || Date.now(),
                 msg.status || "sent",
                 msg.avatarUrl || null,
-                msg.isBlockedSend ? 1 : 0
+                msg.isBlockedSend ? 1 : 0,
+                msg.file || null,
+                msg.fileName || null,
+                msg.fileSize || null,
+                msg.fileType || null
             ]
         });
     } catch (err) {
@@ -404,6 +413,10 @@ function mapRowToMessage(row) {
         image: row.image,
         audio: row.audio,
         audioDuration: row.audio_duration,
+        file: row.file || null,
+        fileName: row.file_name || null,
+        fileSize: row.file_size || null,
+        fileType: row.file_type || null,
         replyTo: replyTo,
         isViewOnce: Boolean(row.is_view_once),
         isDeleted: Boolean(row.is_deleted),
@@ -784,7 +797,7 @@ async function getRecentChatsForUser(username) {
                     partnerUsername: partner,
                     partnerColor: r.partner_avatar_color || ((r.sender_username.toLowerCase() === partner.toLowerCase()) ? r.avatar_color : '#10b981'),
                     partnerAvatarUrl: r.partner_avatar_url || '',
-                    lastMessage: r.text || (r.image ? "📷 Photo" : (r.audio ? "🎙️ Voice note" : "")),
+                    lastMessage: r.text || (r.image ? "📷 Photo" : (r.audio ? "🎙️ Voice note" : (r.file ? ("📄 " + (r.file_name || "Document")) : ""))),
                     lastTime: r.time,
                     createdAt: r.created_at
                 });

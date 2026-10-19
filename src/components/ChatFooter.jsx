@@ -11,9 +11,19 @@ import {
     Sparkles, 
     Briefcase, 
     Scissors, 
-    Loader2 
+    Loader2,
+    FileText,
+    Image as ImageIcon
 } from 'lucide-react';
 import EmojiPicker from './EmojiPicker';
+
+function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
 
 export default function ChatFooter() {
     const {
@@ -29,8 +39,10 @@ export default function ChatFooter() {
 
     const [text, setText] = useState('');
     const [selectedImageData, setSelectedImageData] = useState(null);
+    const [selectedDocument, setSelectedDocument] = useState(null);
     const [isViewOnceActive, setIsViewOnceActive] = useState(false);
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+    const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
 
     // Voice recording state
     const [isRecording, setIsRecording] = useState(false);
@@ -47,6 +59,7 @@ export default function ChatFooter() {
     const [isToneMenuOpen, setIsToneMenuOpen] = useState(false);
     const [isAdjustingTone, setIsAdjustingTone] = useState(false);
     const toneMenuRef = useRef(null);
+    const attachMenuRef = useRef(null);
 
     const mediaRecorderRef = useRef(null);
     const audioStreamRef = useRef(null);
@@ -54,6 +67,7 @@ export default function ChatFooter() {
     const recordingIntervalRef = useRef(null);
 
     const fileInputRef = useRef(null);
+    const docInputRef = useRef(null);
     const inputRef = useRef(null);
     const emojiBtnRef = useRef(null);
 
@@ -99,7 +113,43 @@ export default function ChatFooter() {
         reader.readAsDataURL(file);
     }, []);
 
-    // Clipboard Paste (Ctrl+V) for image attachments
+    // Process document file
+    const handleDocumentFile = useCallback((file) => {
+        if (!file) return;
+
+        // 15MB file size limit for WebSockets & client memory safety
+        const MAX_SIZE = 15 * 1024 * 1024;
+        if (file.size > MAX_SIZE) {
+            alert('File size exceeds the 15MB limit. Please select a smaller document.');
+            if (docInputRef.current) docInputRef.current.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const rawData = event.target.result;
+            const ext = (file.name.split('.').pop() || 'file').toLowerCase();
+            setSelectedDocument({
+                data: rawData,
+                fileName: file.name,
+                fileSize: formatFileSize(file.size),
+                fileType: ext
+            });
+            setSelectedImageData(null);
+            setIsViewOnceActive(false);
+            setIsAttachMenuOpen(false);
+            inputRef.current?.focus();
+        };
+        reader.readAsDataURL(file);
+    }, []);
+
+    const handleDocumentSelected = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            handleDocumentFile(e.target.files[0]);
+        }
+    };
+
+    // Clipboard Paste (Ctrl+V) for image or document attachments
     const handlePaste = (e) => {
         const items = e.clipboardData?.items;
         if (!items) return;
@@ -108,6 +158,11 @@ export default function ChatFooter() {
                 e.preventDefault();
                 const file = item.getAsFile();
                 processImageFile(file);
+                break;
+            } else if (item.kind === 'file') {
+                e.preventDefault();
+                const file = item.getAsFile();
+                handleDocumentFile(file);
                 break;
             }
         }
@@ -192,21 +247,27 @@ export default function ChatFooter() {
 
     const handleFormSubmit = (e) => {
         e.preventDefault();
-        if (!text.trim() && !selectedImageData) return;
+        if (!text.trim() && !selectedImageData && !selectedDocument) return;
 
         sendMessage({
             text: text.trim(),
             image: selectedImageData,
             audio: null,
             audioDuration: null,
+            file: selectedDocument?.data || null,
+            fileName: selectedDocument?.fileName || null,
+            fileSize: selectedDocument?.fileSize || null,
+            fileType: selectedDocument?.fileType || null,
             replyTo: replyingTo ? { ...replyingTo } : null,
             isViewOnce: Boolean(isViewOnceActive)
         });
 
         setText('');
         setSelectedImageData(null);
+        setSelectedDocument(null);
         setIsViewOnceActive(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
+        if (docInputRef.current) docInputRef.current.value = '';
         inputRef.current?.focus();
     };
 
@@ -276,12 +337,15 @@ export default function ChatFooter() {
             if (toneMenuRef.current && !toneMenuRef.current.contains(e.target)) {
                 setIsToneMenuOpen(false);
             }
+            if (attachMenuRef.current && !attachMenuRef.current.contains(e.target)) {
+                setIsAttachMenuOpen(false);
+            }
         };
-        if (isToneMenuOpen) {
+        if (isToneMenuOpen || isAttachMenuOpen) {
             document.addEventListener('mousedown', handleOutside);
         }
         return () => document.removeEventListener('mousedown', handleOutside);
-    }, [isToneMenuOpen]);
+    }, [isToneMenuOpen, isAttachMenuOpen]);
 
     const handleAdjustTone = async (tone) => {
         if (!text.trim() || isAdjustingTone) return;
@@ -392,6 +456,37 @@ export default function ChatFooter() {
                 </div>
             )}
 
+            {/* Document Preview Dock */}
+            {selectedDocument && (
+                <div className="document-preview-dock">
+                    <div className="doc-preview-card">
+                        <div className={`doc-preview-badge doc-type-${selectedDocument.fileType || 'file'}`}>
+                            <FileText size={22} />
+                            <span className="doc-preview-ext">
+                                {selectedDocument.fileType?.toUpperCase().slice(0, 4) || 'FILE'}
+                            </span>
+                        </div>
+                        <div className="doc-preview-meta">
+                            <span className="doc-preview-name" title={selectedDocument.fileName}>
+                                {selectedDocument.fileName}
+                            </span>
+                            <span className="doc-preview-size">{selectedDocument.fileSize}</span>
+                        </div>
+                        <button
+                            type="button"
+                            className="remove-preview-btn"
+                            title="Discard document"
+                            onClick={() => {
+                                setSelectedDocument(null);
+                                if (docInputRef.current) docInputRef.current.value = '';
+                            }}
+                        >
+                            <X size={15} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Voice Recording Dock */}
             {isRecording && (
                 <div className="voice-recording-dock">
@@ -476,14 +571,56 @@ export default function ChatFooter() {
                             }
                         }}
                     />
-                    <button
-                        type="button"
-                        className="input-action-btn"
-                        title="Attach Image"
-                        onClick={() => fileInputRef.current?.click()}
-                    >
-                        <Paperclip size={18} />
-                    </button>
+                    <input
+                        type="file"
+                        ref={docInputRef}
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.json"
+                        style={{ display: 'none' }}
+                        onChange={handleDocumentSelected}
+                    />
+
+                    {/* Attachment Popover Menu */}
+                    <div className="wa-attach-anchor" ref={attachMenuRef}>
+                        <button
+                            type="button"
+                            className={`input-action-btn ${isAttachMenuOpen ? 'active' : ''}`}
+                            title="Attach Document or Photo"
+                            onClick={() => setIsAttachMenuOpen((prev) => !prev)}
+                        >
+                            <Paperclip size={18} />
+                        </button>
+
+                        {isAttachMenuOpen && (
+                            <div className="wa-attach-dropdown-menu">
+                                <button
+                                    type="button"
+                                    className="wa-attach-dropdown-item doc-item"
+                                    onClick={() => {
+                                        setIsAttachMenuOpen(false);
+                                        docInputRef.current?.click();
+                                    }}
+                                >
+                                    <div className="wa-attach-icon-circle doc-circle">
+                                        <FileText size={18} />
+                                    </div>
+                                    <span>Document</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="wa-attach-dropdown-item photo-item"
+                                    onClick={() => {
+                                        setIsAttachMenuOpen(false);
+                                        fileInputRef.current?.click();
+                                    }}
+                                >
+                                    <div className="wa-attach-icon-circle photo-circle">
+                                        <ImageIcon size={18} />
+                                    </div>
+                                    <span>Photos & videos</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
                     <button
                         type="button"
                         ref={emojiBtnRef}

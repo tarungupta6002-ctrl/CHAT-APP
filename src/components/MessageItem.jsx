@@ -13,7 +13,9 @@ import {
     UserCheck, 
     UserMinus,
     Languages,
-    Loader2
+    Loader2,
+    FileText,
+    Download
 } from 'lucide-react';
 
 export function format12HourTime(timeStr, createdAt) {
@@ -221,6 +223,62 @@ function VoiceNotePlayer({ audioSrc, durationText }) {
     );
 }
 
+function getDocCategory(ext) {
+    const e = (ext || '').toLowerCase();
+    if (e === 'pdf') return { label: 'PDF', className: 'doc-pdf' };
+    if (['doc', 'docx'].includes(e)) return { label: 'DOC', className: 'doc-word' };
+    if (['xls', 'xlsx', 'csv'].includes(e)) return { label: 'XLS', className: 'doc-excel' };
+    if (['zip', 'rar', '7z', 'tar', 'gz'].includes(e)) return { label: 'ZIP', className: 'doc-archive' };
+    if (['txt', 'md', 'json', 'js', 'py', 'html', 'css'].includes(e)) return { label: e.toUpperCase().slice(0, 4), className: 'doc-code' };
+    return { label: (e || 'FILE').toUpperCase().slice(0, 4), className: 'doc-default' };
+}
+
+function DocumentAttachmentCard({ fileSrc, fileName, fileSize, fileType }) {
+    const ext = fileType || (fileName ? fileName.split('.').pop() : 'file');
+    const category = getDocCategory(ext);
+
+    const handleDownload = (e) => {
+        e.stopPropagation();
+        try {
+            const link = document.createElement('a');
+            link.href = fileSrc;
+            link.download = fileName || 'document';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (err) {
+            console.error('Download error:', err);
+        }
+    };
+
+    return (
+        <div className={`msg-document-card ${category.className}`} onClick={handleDownload} title="Click to download file">
+            <div className="msg-document-icon-badge">
+                <FileText size={22} className="doc-icon-svg" />
+                <span className="doc-icon-tag">{category.label}</span>
+            </div>
+            <div className="msg-document-details">
+                <div className="msg-document-filename" title={fileName || 'Document'}>
+                    {fileName || 'Document'}
+                </div>
+                <div className="msg-document-meta">
+                    {fileSize ? <span>{fileSize} • </span> : null}
+                    <span>{category.label}</span>
+                </div>
+            </div>
+            <button
+                type="button"
+                className="msg-document-download-btn"
+                title="Download file"
+                onClick={handleDownload}
+                aria-label="Download"
+            >
+                <Download size={18} />
+            </button>
+        </div>
+    );
+}
+
 function WhatsAppStatusTick({ status }) {
     if (status === 'read') {
         return (
@@ -347,7 +405,7 @@ export default function MessageItem({ item, searchQuery = '' }) {
                     ...saved,
                     {
                         id: item.data.id,
-                        text: item.data.text || (item.data.image ? '📷 Photo' : (item.data.audio ? '🎙️ Voice Note' : 'Message')),
+                        text: item.data.text || (item.data.image ? '📷 Photo' : (item.data.audio ? '🎙️ Voice Note' : (item.data.file ? ('📄 ' + (item.data.fileName || 'Document')) : 'Message'))),
                         username: item.data.username,
                         time: item.data.time || 'Recent',
                         chatType: currentChat?.type || 'general',
@@ -498,7 +556,7 @@ export default function MessageItem({ item, searchQuery = '' }) {
                                     setReplyingTo({
                                         id: msg.id,
                                         username: msg.username,
-                                        text: msg.text || (msg.image ? 'Photo' : (msg.audio ? 'Voice Note' : 'Message'))
+                                        text: msg.text || (msg.image ? 'Photo' : (msg.audio ? 'Voice Note' : (msg.file ? ('📄 ' + (msg.fileName || 'Document')) : 'Message')))
                                     });
                                 }}
                             >
@@ -638,6 +696,16 @@ export default function MessageItem({ item, searchQuery = '' }) {
                                     <VoiceNotePlayer
                                         audioSrc={msg.audio}
                                         durationText={msg.audioDuration}
+                                    />
+                                )}
+
+                                {/* Document / File Attachment */}
+                                {msg.file && (
+                                    <DocumentAttachmentCard
+                                        fileSrc={msg.file}
+                                        fileName={msg.fileName}
+                                        fileSize={msg.fileSize}
+                                        fileType={msg.fileType}
                                     />
                                 )}
 

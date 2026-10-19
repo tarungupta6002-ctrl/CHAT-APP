@@ -256,7 +256,7 @@ export function SocketProvider({ children }) {
                         {
                             partnerUsername: partnerName,
                             partnerColor: decryptedMsg.avatarColor || '#00a884',
-                            lastMessage: decryptedMsg.text || (decryptedMsg.image ? '📷 Photo' : (decryptedMsg.audio ? '🎙️ Voice note' : '')),
+                            lastMessage: decryptedMsg.text || (decryptedMsg.image ? '📷 Photo' : (decryptedMsg.audio ? '🎙️ Voice note' : (decryptedMsg.file ? `📄 ${decryptedMsg.fileName || 'Document'}` : ''))),
                             lastTime: decryptedMsg.time,
                             createdAt: Date.now()
                         },
@@ -466,7 +466,7 @@ export function SocketProvider({ children }) {
     }, [isAuthenticated, authUser, playChime, fetchRegisteredData]);
 
     // Send Message (Client E2EE encrypted)
-    const sendMessage = useCallback(async ({ text, image, audio, audioDuration, isViewOnce, replyTo }) => {
+    const sendMessage = useCallback(async ({ text, image, audio, audioDuration, file, fileName, fileSize, fileType, isViewOnce, replyTo }) => {
         if (!socketRef.current || !currentChat) return;
 
         // Find recipient socket ID if user is online
@@ -483,6 +483,10 @@ export function SocketProvider({ children }) {
             image: image || null,
             audio: audio || null,
             audioDuration: audioDuration || null,
+            file: file || null,
+            fileName: fileName || null,
+            fileSize: fileSize || null,
+            fileType: fileType || null,
             isViewOnce: Boolean(isViewOnce),
             replyTo: replyTo || null,
             recipientId: currentChat.type === "dm" ? recipientId : null,

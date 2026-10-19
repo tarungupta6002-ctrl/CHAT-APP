@@ -145,7 +145,7 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
             const uname = chatKey;
             if (uname.toLowerCase() !== myName && !map.has(uname.toLowerCase())) {
                 const lastMsg = msgs[msgs.length - 1];
-                const text = lastMsg.data?.text || lastMsg.text || (lastMsg.data?.image ? '📷 Photo' : 'Voice note');
+                const text = lastMsg.data?.text || lastMsg.text || (lastMsg.data?.file ? ('📄 ' + (lastMsg.data?.fileName || 'Document')) : (lastMsg.data?.image ? '📷 Photo' : 'Voice note'));
                 const time = lastMsg.data?.time || lastMsg.time || '';
                 const unread = unreadCounts[uname.toLowerCase()] || 0;
                 map.set(uname.toLowerCase(), {
