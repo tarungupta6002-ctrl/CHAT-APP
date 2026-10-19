@@ -17,12 +17,13 @@ function bufToStr(buf) {
     return new TextDecoder().decode(buf);
 }
 
-// Convert ArrayBuffer/Uint8Array to Base64
+// Convert ArrayBuffer/Uint8Array to Base64 (High-speed chunked for large documents/images)
 function bufToBase64(buf) {
     const bytes = new Uint8Array(buf);
     let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-        binary += String.fromCharCode(bytes[i]);
+    const CHUNK_SIZE = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK_SIZE));
     }
     return btoa(binary);
 }
