@@ -49,9 +49,16 @@ export default function StatusDrawerModal({ isOpen, onClose }) {
     const audioChunksRef = useRef([]);
     const recordingIntervalRef = useRef(null);
 
-    // Fullscreen Story Viewer state
+    // Fullscreen Story Viewer state (isolated to the clicked user only)
     const [viewerOpen, setViewerOpen] = useState(false);
+    const [viewerUsername, setViewerUsername] = useState(null);
     const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
+
+    // Strictly filter statuses to the selected user only
+    const viewerStatusList = useMemo(() => {
+        if (!viewerUsername) return [];
+        return (statuses || []).filter((s) => (s.username || '').toLowerCase() === viewerUsername.toLowerCase());
+    }, [statuses, viewerUsername]);
 
     // Close on Escape key
     useEffect(() => {
@@ -211,14 +218,15 @@ export default function StatusDrawerModal({ isOpen, onClose }) {
 
     const openMyStatusViewer = () => {
         if (myStatuses.length === 0) return;
+        setViewerUsername(currentUser?.username || '');
         setViewerInitialIndex(0);
         setViewerOpen(true);
     };
 
     const openContactStatusViewer = (contact) => {
-        // Find index of contact's first status in the flat statuses list
-        const idx = statuses.findIndex((s) => s.id === contact.statuses[0]?.id);
-        setViewerInitialIndex(idx !== -1 ? idx : 0);
+        if (!contact.statuses || contact.statuses.length === 0) return;
+        setViewerUsername(contact.username || '');
+        setViewerInitialIndex(0);
         setViewerOpen(true);
     };
 
@@ -461,11 +469,14 @@ export default function StatusDrawerModal({ isOpen, onClose }) {
                 </div>
             </div>
 
-            {/* Story Viewer Modal */}
+            {/* Story Viewer Modal (strictly isolated to that user's statuses) */}
             <StatusViewerModal
                 isOpen={viewerOpen}
-                onClose={() => setViewerOpen(false)}
-                statusList={statuses}
+                onClose={() => {
+                    setViewerOpen(false);
+                    setViewerUsername(null);
+                }}
+                statusList={viewerStatusList}
                 initialIndex={viewerInitialIndex}
                 currentUser={currentUser}
             />

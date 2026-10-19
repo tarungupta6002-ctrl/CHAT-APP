@@ -42,6 +42,7 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isStatusDrawerOpen, setIsStatusDrawerOpen] = useState(false);
     const [singleViewerOpen, setSingleViewerOpen] = useState(false);
+    const [singleViewerUsername, setSingleViewerUsername] = useState(null);
     const [singleViewerIndex, setSingleViewerIndex] = useState(0);
     const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'unread' | 'groups'
     const menuRef = useRef(null);
@@ -73,10 +74,18 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
         });
     }, [statuses, currentUser, viewedStatusIds]);
 
+    // Strictly filter single viewer to the chosen contact's statuses only
+    const singleViewerStatusList = useMemo(() => {
+        if (!singleViewerUsername) return [];
+        return (statuses || []).filter((s) => (s.username || '').toLowerCase() === singleViewerUsername.toLowerCase());
+    }, [statuses, singleViewerUsername]);
+
     const handleOpenStatus = (username) => {
-        const idx = (statuses || []).findIndex((s) => s.username?.toLowerCase() === username?.toLowerCase());
-        if (idx !== -1) {
-            setSingleViewerIndex(idx);
+        if (!username) return;
+        const userStatuses = (statuses || []).filter((s) => (s.username || '').toLowerCase() === username.toLowerCase());
+        if (userStatuses.length > 0) {
+            setSingleViewerUsername(username);
+            setSingleViewerIndex(0);
             setSingleViewerOpen(true);
         }
     };
@@ -498,11 +507,14 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                 onClose={() => setIsStatusDrawerOpen(false)} 
             />
 
-            {/* Direct Contact Story Viewer Modal */}
+            {/* Direct Contact Story Viewer Modal (strictly isolated to that user only) */}
             <StatusViewerModal
                 isOpen={singleViewerOpen}
-                onClose={() => setSingleViewerOpen(false)}
-                statusList={statuses}
+                onClose={() => {
+                    setSingleViewerOpen(false);
+                    setSingleViewerUsername(null);
+                }}
+                statusList={singleViewerStatusList}
                 initialIndex={singleViewerIndex}
                 currentUser={currentUser}
             />
