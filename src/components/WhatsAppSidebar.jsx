@@ -13,9 +13,12 @@ import {
     Users, 
     MessageSquare,
     Check,
-    CheckCheck
+    CheckCheck,
+    CircleDashed
 } from 'lucide-react';
 import VerifiedBadge from './VerifiedBadge';
+import StatusDrawerModal from './StatusDrawerModal';
+import StatusViewerModal from './StatusViewerModal';
 
 export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettings }) {
     const { 
@@ -26,7 +29,9 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
         onlineUsers, 
         allRegisteredUsers, 
         unreadCounts, 
-        conversations 
+        conversations,
+        statuses = [],
+        viewedStatusIds = new Set()
     } = useSocket();
     
     const { logout } = useAuth();
@@ -35,6 +40,9 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
     const [searchQuery, setSearchQuery] = useState('');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [isStatusDrawerOpen, setIsStatusDrawerOpen] = useState(false);
+    const [singleViewerOpen, setSingleViewerOpen] = useState(false);
+    const [singleViewerIndex, setSingleViewerIndex] = useState(0);
     const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'unread' | 'groups'
     const menuRef = useRef(null);
 
@@ -55,6 +63,23 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
             window.removeEventListener('keydown', handleKeyDown);
         };
     }, []);
+
+    // Check if any contact has unviewed statuses
+    const hasUnviewedStatuses = useMemo(() => {
+        const myName = (currentUser?.username || '').toLowerCase();
+        return (statuses || []).some((s) => {
+            const uname = (s.username || '').toLowerCase();
+            return uname !== myName && !viewedStatusIds.has(s.id);
+        });
+    }, [statuses, currentUser, viewedStatusIds]);
+
+    const handleOpenStatus = (username) => {
+        const idx = (statuses || []).findIndex((s) => s.username?.toLowerCase() === username?.toLowerCase());
+        if (idx !== -1) {
+            setSingleViewerIndex(idx);
+            setSingleViewerOpen(true);
+        }
+    };
 
     const displayName = currentUser?.fullName || currentUser?.username || 'User';
     const initials = displayName.slice(0, 2).toUpperCase();
@@ -276,8 +301,18 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                     )}
                 </div>
 
-                {/* Right Action: New Chat Flat Icon */}
+                {/* Right Action: Status & New Chat Flat Icons */}
                 <div className="wa-sidebar-actions">
+                    <button 
+                        type="button" 
+                        className="wa-icon-btn wa-status-trigger-btn"
+                        title="Status & Live Vibes"
+                        onClick={() => setIsStatusDrawerOpen(true)}
+                        aria-label="Status & Live Vibes"
+                    >
+                        <CircleDashed size={19} />
+                        {hasUnviewedStatuses && <span className="wa-status-unread-dot" />}
+                    </button>
                     <button 
                         type="button" 
                         className="wa-icon-btn"
@@ -343,6 +378,12 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                             (chat.type === 'dm' && currentChat.type === 'dm' && currentChat.partnerName?.toLowerCase() === chat.partnerName?.toLowerCase())
                         );
 
+                        const contactStatuses = chat.type !== 'general' 
+                            ? (statuses || []).filter((s) => s.username?.toLowerCase() === chat.partnerName?.toLowerCase())
+                            : [];
+                        const hasStory = contactStatuses.length > 0;
+                        const hasUnviewedStory = contactStatuses.some((s) => !viewedStatusIds.has(s.id));
+
                         return (
                             <div 
                                 key={chat.id}
@@ -351,7 +392,16 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                                 role="button"
                                 tabIndex={0}
                             >
-                                <div className="wa-item-avatar-wrapper">
+                                <div 
+                                    className={`wa-item-avatar-wrapper ${hasStory ? (hasUnviewedStory ? 'has-unviewed-story' : 'has-viewed-story') : ''}`}
+                                    onClick={(e) => {
+                                        if (hasStory) {
+                                            e.stopPropagation();
+                                            handleOpenStatus(chat.partnerName);
+                                        }
+                                    }}
+                                    title={hasStory ? `View ${chat.partnerName}'s status update` : ''}
+                                >
                                     <div 
                                         className="wa-item-avatar"
                                         style={{ backgroundColor: chat.partnerColor || '#00a884', overflow: 'hidden' }}
@@ -441,6 +491,21 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                     </div>
                 </div>
             )}
+
+            {/* Live Vibe / Status Drawer Modal */}
+            <StatusDrawerModal 
+                isOpen={isStatusDrawerOpen} 
+                onClose={() => setIsStatusDrawerOpen(false)} 
+            />
+
+            {/* Direct Contact Story Viewer Modal */}
+            <StatusViewerModal
+                isOpen={singleViewerOpen}
+                onClose={() => setSingleViewerOpen(false)}
+                statusList={statuses}
+                initialIndex={singleViewerIndex}
+                currentUser={currentUser}
+            />
         </aside>
     );
 }

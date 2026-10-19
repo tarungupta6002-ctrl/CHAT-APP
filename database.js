@@ -141,8 +141,28 @@ async function initDb() {
             );
         `);
 
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS statuses (
+                id TEXT PRIMARY KEY,
+                user_id TEXT,
+                username TEXT NOT NULL COLLATE NOCASE,
+                avatar_color TEXT,
+                avatar_url TEXT,
+                type TEXT DEFAULT 'text',
+                text TEXT,
+                bg_gradient TEXT,
+                audio TEXT,
+                audio_duration TEXT,
+                image TEXT,
+                created_at INTEGER NOT NULL,
+                expires_at INTEGER NOT NULL
+            );
+        `);
+
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_recipient ON messages(recipient_username);`);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_statuses_username ON statuses(username);`);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_statuses_expires_at ON statuses(expires_at);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_call_logs_caller ON call_logs(caller_username);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_call_logs_receiver ON call_logs(receiver_username);`);
@@ -1041,6 +1061,79 @@ async function getRecentConversationMessages(conversationId, requestingUsername,
     }
 }
 
+// Live Vibe / Status Management
+async function saveStatus({ id, userId = null, username, avatarColor = '#10b981', avatarUrl = '', type = 'text', text = '', bgGradient = '', audio = null, audioDuration = null, image = null, createdAt = Date.now(), expiresAt = null }) {
+    try {
+        const exp = expiresAt || (createdAt + 24 * 60 * 60 * 1000);
+        await db.execute({
+            sql: `
+                INSERT INTO statuses (
+                    id, user_id, username, avatar_color, avatar_url,
+                    type, text, bg_gradient, audio, audio_duration, image,
+                    created_at, expires_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `,
+            args: [
+                id, userId, username, avatarColor, avatarUrl,
+                type, text, bgGradient, audio, audioDuration, image,
+                createdAt, exp
+            ]
+        });
+        return { success: true };
+    } catch (err) {
+        console.error("Error saving status to DB:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+async function getActiveStatuses() {
+    try {
+        const now = Date.now();
+        const rs = await db.execute({
+            sql: `
+                SELECT s.*, u.avatar_url AS current_user_avatar, u.avatar_color AS current_user_color
+                FROM statuses s
+                LEFT JOIN users u ON LOWER(u.username) = LOWER(s.username)
+                WHERE s.expires_at > ?
+                ORDER BY s.created_at ASC
+            `,
+            args: [now]
+        });
+
+        return rs.rows.map((r) => ({
+            id: r.id,
+            userId: r.user_id,
+            username: r.username,
+            avatarColor: r.current_user_color || r.avatar_color || '#10b981',
+            avatarUrl: r.current_user_avatar || r.avatar_url || '',
+            type: r.type || 'text',
+            text: r.text || '',
+            bgGradient: r.bg_gradient || 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+            audio: r.audio || null,
+            audioDuration: r.audio_duration || null,
+            image: r.image || null,
+            createdAt: r.created_at,
+            expiresAt: r.expires_at
+        }));
+    } catch (err) {
+        console.error("Error getting active statuses:", err);
+        return [];
+    }
+}
+
+async function deleteStatus(statusId, username) {
+    try {
+        await db.execute({
+            sql: `DELETE FROM statuses WHERE id = ? AND username = ? COLLATE NOCASE`,
+            args: [statusId, username]
+        });
+        return { success: true };
+    } catch (err) {
+        console.error("Error deleting status:", err);
+        return { success: false, error: err.message };
+    }
+}
+
 module.exports = {
     saveMessage,
     deleteMessage,
@@ -1076,5 +1169,8 @@ module.exports = {
     getAiUsage,
     incrementAiUsage,
     saveAiFeedback,
-    getRecentConversationMessages
+    getRecentConversationMessages,
+    saveStatus,
+    getActiveStatuses,
+    deleteStatus
 };

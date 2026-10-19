@@ -167,6 +167,12 @@ io.on("connection", (socket) => {
             socket.emit("blocked-users-list", blockedUsers);
         } catch (_) {}
 
+        // Send active statuses
+        try {
+            const activeStatuses = await db.getActiveStatuses();
+            socket.emit("statuses-list", activeStatuses);
+        } catch (_) {}
+
         // Broadcast active users list
         broadcastUsersList();
 
@@ -332,6 +338,53 @@ io.on("connection", (socket) => {
         db.saveMessage(messagePayload).catch((err) => {
             console.error("Async DB saveMessage error:", err);
         });
+    });
+
+    // Live Vibe / Status Handlers
+    socket.on("get-statuses", async () => {
+        try {
+            const activeStatuses = await db.getActiveStatuses();
+            socket.emit("statuses-list", activeStatuses);
+        } catch (err) {
+            console.error("Error sending active statuses:", err);
+        }
+    });
+
+    socket.on("post-status", async (statusData) => {
+        try {
+            const user = users.get(socket.id) || { username: "Guest", color: "#6366f1", avatarUrl: "" };
+            const statusPayload = {
+                id: `status_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+                userId: user.id || null,
+                username: user.username || statusData?.username || "User",
+                avatarColor: user.color || '#10b981',
+                avatarUrl: user.avatarUrl || '',
+                type: statusData?.type || 'text',
+                text: statusData?.text || '',
+                bgGradient: statusData?.bgGradient || 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                audio: statusData?.audio || null,
+                audioDuration: statusData?.audioDuration || null,
+                image: statusData?.image || null,
+                createdAt: Date.now(),
+                expiresAt: Date.now() + 24 * 60 * 60 * 1000
+            };
+
+            await db.saveStatus(statusPayload);
+            io.emit("status-new", statusPayload);
+        } catch (err) {
+            console.error("Error posting status:", err);
+        }
+    });
+
+    socket.on("delete-status", async ({ statusId }) => {
+        try {
+            const user = users.get(socket.id);
+            if (!user || !statusId) return;
+            await db.deleteStatus(statusId, user.username);
+            io.emit("status-deleted", { statusId });
+        } catch (err) {
+            console.error("Error deleting status:", err);
+        }
     });
 
     // Clear DM History in Database & notify both clients

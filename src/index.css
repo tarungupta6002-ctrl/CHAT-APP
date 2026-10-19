@@ -13349,5 +13349,1134 @@ body.theme-light .msg-document-download-btn:hover {
   transform: scale(1.15) rotate(5deg);
 }
 
+/* ==========================================================
+   ChatHub Live Vibe & Stories (WhatsApp Status Inspired)
+   ========================================================== */
+
+/* Header Status Trigger Button */
+.wa-status-trigger-btn {
+  position: relative;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #aebac1;
+  padding: 8px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wa-status-trigger-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #00a884;
+  transform: scale(1.08);
+}
+
+.wa-status-unread-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #00a884;
+  box-shadow: 0 0 10px #00a884, 0 0 4px #25d366;
+  border: 2px solid #111b21;
+  animation: statusDotPulse 2s infinite ease-in-out;
+}
+
+@keyframes statusDotPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 6px #00a884;
+  }
+  50% {
+    transform: scale(1.25);
+    box-shadow: 0 0 14px #25d366;
+  }
+}
+
+/* Story Rings in WhatsApp Sidebar Chat List */
+.wa-item-avatar-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+
+.wa-item-avatar-wrapper.has-unviewed-story {
+  padding: 2.5px;
+  background: linear-gradient(135deg, #00a884 0%, #25d366 50%, #34b7f1 100%);
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(0, 168, 132, 0.4);
+  animation: storyRingGlow 3s infinite alternate ease-in-out;
+}
+
+.wa-item-avatar-wrapper.has-unviewed-story:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 16px rgba(0, 168, 132, 0.65);
+}
+
+.wa-item-avatar-wrapper.has-viewed-story {
+  padding: 2.5px;
+  background: rgba(134, 150, 160, 0.45);
+  cursor: pointer;
+}
+
+.wa-item-avatar-wrapper.has-viewed-story:hover {
+  transform: scale(1.04);
+  background: rgba(134, 150, 160, 0.7);
+}
+
+@keyframes storyRingGlow {
+  0% {
+    box-shadow: 0 0 6px rgba(0, 168, 132, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 16px rgba(37, 211, 102, 0.6);
+  }
+}
+
+/* Slide-in Status Drawer Backdrop */
+.wa-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 20, 26, 0.65);
+  backdrop-filter: blur(8px);
+  z-index: 1200;
+  display: flex;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wa-drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Slide-in Status Drawer */
+.wa-status-drawer {
+  position: relative;
+  width: 440px;
+  max-width: 100%;
+  height: 100%;
+  background: #111b21;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(-100%);
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 12px 0 35px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+
+.wa-drawer-backdrop.open .wa-status-drawer {
+  transform: translateX(0);
+}
+
+/* Drawer Header */
+.wa-drawer-header {
+  height: 64px;
+  background: #202c33;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.wa-drawer-back-btn {
+  background: transparent;
+  border: none;
+  color: #aebac1;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.wa-drawer-back-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e9edef;
+}
+
+.wa-drawer-title-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.wa-drawer-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #e9edef;
+  letter-spacing: -0.2px;
+}
+
+.wa-drawer-subtitle {
+  font-size: 0.76rem;
+  color: #8696a0;
+}
+
+/* Drawer Scrollable Body */
+.wa-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.wa-drawer-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.wa-drawer-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+}
+
+/* Section Container */
+.wa-drawer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.wa-section-heading {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #00a884;
+}
+
+/* My Status Card */
+.wa-my-status-card {
+  background: #202c33;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.2s ease;
+}
+
+.wa-my-status-card:hover {
+  background: #233138;
+}
+
+.wa-status-avatar-ring {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.wa-status-avatar-ring.has-unviewed {
+  padding: 3px;
+  background: linear-gradient(135deg, #00a884 0%, #25d366 50%, #34b7f1 100%);
+}
+
+.wa-status-avatar-ring.has-viewed {
+  padding: 3px;
+  background: rgba(134, 150, 160, 0.45);
+}
+
+.wa-avatar-plus-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #00a884;
+  color: #111b21;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1rem;
+  border: 2px solid #202c33;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+.wa-my-status-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.wa-my-status-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #e9edef;
+}
+
+.wa-my-status-subtitle {
+  font-size: 0.8rem;
+  color: #8696a0;
+}
+
+.wa-my-status-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.wa-my-status-view-btn {
+  background: rgba(0, 168, 132, 0.15);
+  border: 1px solid rgba(0, 168, 132, 0.35);
+  color: #00a884;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wa-my-status-view-btn:hover {
+  background: #00a884;
+  color: #111b21;
+}
+
+.wa-my-status-add-btn {
+  background: #00a884;
+  border: none;
+  color: #111b21;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.wa-my-status-add-btn:hover {
+  transform: scale(1.1);
+  background: #25d366;
+}
+
+/* Status Composer Box */
+.wa-status-composer-box {
+  background: #202c33;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.wa-composer-tabs {
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.wa-composer-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 0.45rem 0.5rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #8696a0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  transition: all 0.2s ease;
+}
+
+.wa-composer-tab.active {
+  background: #111b21;
+  color: #00a884;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.wa-composer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+/* Vibe Preview Card with Gradient */
+.wa-vibe-preview-card {
+  border-radius: 14px;
+  padding: 1.25rem;
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.35);
+  transition: background 0.3s ease;
+}
+
+.wa-vibe-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 600;
+  text-align: center;
+  outline: none;
+  resize: none;
+  font-family: inherit;
+}
+
+.wa-vibe-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+/* Gradient Picker Swatches */
+.wa-gradient-picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.wa-swatch-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.wa-swatch-circle:hover {
+  transform: scale(1.15);
+}
+
+.wa-swatch-circle.active {
+  border-color: #ffffff;
+  transform: scale(1.22);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+/* Quick Vibe Emojis */
+.wa-vibe-emojis-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.wa-vibe-emoji-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 1.25rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.wa-vibe-emoji-btn:hover {
+  transform: scale(1.25);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Voice Drop Micro-Podcast Recorder */
+.wa-voice-record-box {
+  background: #111b21;
+  border-radius: 14px;
+  padding: 1.4rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.wa-voice-record-btn-wrap {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wa-voice-record-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #00a884;
+  border: none;
+  color: #111b21;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 15px rgba(0, 168, 132, 0.4);
+}
+
+.wa-voice-record-btn.recording {
+  background: #ef4444;
+  color: #ffffff;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.6);
+  animation: pulseRecordingBtn 1.5s infinite;
+}
+
+@keyframes pulseRecordingBtn {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+.wa-rec-pulse-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid #ef4444;
+  animation: pulseRecordingRing 1.5s infinite;
+}
+
+@keyframes pulseRecordingRing {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.wa-voice-recording-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ef4444;
+}
+
+.wa-rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+.wa-voice-ready-preview {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.wa-voice-ready-preview audio {
+  flex: 1;
+  height: 38px;
+}
+
+.wa-voice-trash-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.wa-voice-trash-btn:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* Composer Actions Row */
+.wa-composer-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.wa-composer-cancel-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #8696a0;
+  padding: 0.45rem 1rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wa-composer-cancel-btn:hover {
+  border-color: #e9edef;
+  color: #e9edef;
+}
+
+.wa-composer-post-btn {
+  background: #00a884;
+  border: none;
+  color: #111b21;
+  padding: 0.5rem 1.25rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  box-shadow: 0 2px 10px rgba(0, 168, 132, 0.4);
+  transition: all 0.2s ease;
+}
+
+.wa-composer-post-btn:hover:not(:disabled) {
+  background: #25d366;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.5);
+}
+
+.wa-composer-post-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Updates List (Contacts Statuses) */
+.wa-updates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.wa-update-item {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.wa-update-item:hover {
+  background: #202c33;
+}
+
+.wa-update-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.wa-update-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #e9edef;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wa-update-time {
+  font-size: 0.76rem;
+  color: #8696a0;
+}
+
+.wa-status-type-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 12px;
+  background: rgba(0, 168, 132, 0.15);
+  color: #00a884;
+  border: 1px solid rgba(0, 168, 132, 0.3);
+}
+
+.wa-empty-stories-box {
+  background: #202c33;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  color: #8696a0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================================
+   Full-Screen WhatsApp Story Viewer Modal
+   ========================================================== */
+
+.wa-story-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.94);
+  backdrop-filter: blur(20px);
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.wa-story-container {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  height: 94vh;
+  max-height: 860px;
+  border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+  transition: background 0.4s ease;
+  user-select: none;
+}
+
+@media (max-width: 600px) {
+  .wa-story-container {
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+}
+
+/* Segmented Auto-Advancing Progress Bar */
+.wa-story-progress-row {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 30;
+}
+
+.wa-story-bar-track {
+  flex: 1;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.wa-story-bar-fill {
+  height: 100%;
+  background: #ffffff;
+  border-radius: 3px;
+  transition: width 0.05s linear;
+}
+
+/* Story Header Overlay */
+.wa-story-header {
+  position: absolute;
+  top: 28px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 30;
+}
+
+.wa-story-author-info {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.wa-story-author-avatar {
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+}
+
+.wa-story-author-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.wa-story-author-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+.wa-story-author-time {
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.75);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.wa-story-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.wa-story-top-btn {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wa-story-top-btn:hover {
+  background: rgba(0, 0, 0, 0.6);
+  transform: scale(1.1);
+}
+
+/* Touch Tap Left/Right Navigation Areas */
+.wa-story-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 25;
+  transition: all 0.2s ease;
+}
+
+.wa-story-nav-btn.left {
+  left: 10px;
+}
+
+.wa-story-nav-btn.right {
+  right: 10px;
+}
+
+.wa-story-nav-btn:hover {
+  background: rgba(0, 0, 0, 0.6);
+  transform: translateY(-50%) scale(1.15);
+}
+
+.wa-story-touch-area {
+  position: absolute;
+  top: 70px;
+  bottom: 120px;
+  width: 35%;
+  z-index: 20;
+}
+
+.wa-story-touch-area.left {
+  left: 0;
+}
+
+.wa-story-touch-area.right {
+  right: 0;
+}
+
+/* Story Content Stage */
+.wa-story-content-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4.5rem 2rem 7rem;
+  z-index: 10;
+  text-align: center;
+}
+
+.wa-story-text-body {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #ffffff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  word-break: break-word;
+  white-space: pre-wrap;
+  animation: scaleUp 0.22s ease-out;
+}
+
+/* Voice Drop Micro-Podcast Player Card */
+.wa-story-voice-player {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 22px;
+  padding: 2.2rem 1.8rem;
+  width: 100%;
+  max-width: 330px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.wa-voice-disc {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #25d366 0%, #128c7e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 0 25px rgba(37, 211, 102, 0.45);
+  border: 3px solid rgba(255, 255, 255, 0.3);
+}
+
+.wa-voice-disc.spinning {
+  animation: spinDisc 4s linear infinite;
+}
+
+@keyframes spinDisc {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.wa-voice-play-pause-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #111b21;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.wa-voice-play-pause-btn:hover {
+  transform: scale(1.12);
+}
+
+/* Bottom Bar (Reactions & DM Reply) */
+.wa-story-bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem 1.25rem 1.4rem;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0) 100%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.wa-story-reactions-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+}
+
+.wa-story-reaction-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  font-size: 1.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wa-story-reaction-btn:hover {
+  transform: scale(1.3) translateY(-4px);
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.35);
+}
+
+.wa-story-reply-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(12px);
+  border-radius: 25px;
+  padding: 0.35rem 0.5rem 0.35rem 1rem;
+}
+
+.wa-story-reply-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.wa-story-reply-input::placeholder {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.wa-story-reply-send-btn {
+  background: #00a884;
+  border: none;
+  color: #111b21;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.wa-story-reply-send-btn:hover:not(:disabled) {
+  background: #25d366;
+  transform: scale(1.1);
+}
+
+.wa-story-reply-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wa-my-story-footer-note {
+  text-align: center;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 0.5rem 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Light Theme Overrides for Status Drawer */
+[data-theme="light"] .wa-status-drawer,
+body.theme-light .wa-status-drawer {
+  background: #f0f2f5;
+  border-right-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .wa-drawer-header,
+body.theme-light .wa-drawer-header {
+  background: #008069;
+}
+
+[data-theme="light"] .wa-drawer-title,
+body.theme-light .wa-drawer-title {
+  color: #ffffff;
+}
+
+[data-theme="light"] .wa-drawer-subtitle,
+body.theme-light .wa-drawer-subtitle {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="light"] .wa-drawer-back-btn,
+body.theme-light .wa-drawer-back-btn {
+  color: #ffffff;
+}
+
+[data-theme="light"] .wa-my-status-card,
+body.theme-light .wa-my-status-card {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .wa-my-status-card:hover,
+body.theme-light .wa-my-status-card:hover {
+  background: #f7f9fa;
+}
+
+[data-theme="light"] .wa-my-status-title,
+body.theme-light .wa-my-status-title {
+  color: #111b21;
+}
+
+[data-theme="light"] .wa-status-composer-box,
+body.theme-light .wa-status-composer-box {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .wa-composer-tabs,
+body.theme-light .wa-composer-tabs {
+  background: #e9edef;
+}
+
+[data-theme="light"] .wa-composer-tab.active,
+body.theme-light .wa-composer-tab.active {
+  background: #ffffff;
+  color: #008069;
+}
+
+[data-theme="light"] .wa-voice-record-box,
+body.theme-light .wa-voice-record-box {
+  background: #f7f9fa;
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .wa-update-item:hover,
+body.theme-light .wa-update-item:hover {
+  background: #e9edef;
+}
+
+[data-theme="light"] .wa-update-name,
+body.theme-light .wa-update-name {
+  color: #111b21;
+}
+
+[data-theme="light"] .wa-empty-stories-box,
+body.theme-light .wa-empty-stories-box {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+
 
 

@@ -63,6 +63,17 @@ export function SocketProvider({ children }) {
     // View-Once opened set
     const [openedViewOnceIds, setOpenedViewOnceIds] = useState(new Set());
 
+    // Live Vibe / Status State
+    const [statuses, setStatuses] = useState([]);
+    const [viewedStatusIds, setViewedStatusIds] = useState(() => {
+        try {
+            const saved = localStorage.getItem("chathub_viewed_status_ids");
+            return saved ? new Set(JSON.parse(saved)) : new Set();
+        } catch (_) {
+            return new Set();
+        }
+    });
+
     // Audio chime player using Web Audio API
     const playChime = useCallback(() => {
         if (isSoundMuted) return;
@@ -460,6 +471,23 @@ export function SocketProvider({ children }) {
             setRecentChats((prev) => prev.filter((c) => (c.partnerUsername || "").toLowerCase() !== key));
         });
 
+        // Live Vibe / Status Listeners
+        socket.on("statuses-list", (list) => {
+            if (Array.isArray(list)) {
+                setStatuses(list);
+            }
+        });
+
+        socket.on("status-new", (newStatus) => {
+            if (!newStatus) return;
+            setStatuses((prev) => [newStatus, ...prev.filter((s) => s.id !== newStatus.id)]);
+        });
+
+        socket.on("status-deleted", ({ statusId }) => {
+            if (!statusId) return;
+            setStatuses((prev) => prev.filter((s) => s.id !== statusId));
+        });
+
         return () => {
             socket.disconnect();
         };
@@ -697,6 +725,35 @@ export function SocketProvider({ children }) {
         }
     }, []);
 
+    // Live Vibe / Status Actions
+    const postStatus = useCallback(({ type = 'text', text = '', bgGradient = '', audio = null, audioDuration = null, image = null }) => {
+        if (!socketRef.current) return;
+        socketRef.current.emit("post-status", {
+            type,
+            text,
+            bgGradient,
+            audio,
+            audioDuration,
+            image
+        });
+    }, []);
+
+    const deleteStatus = useCallback((statusId) => {
+        if (!socketRef.current || !statusId) return;
+        socketRef.current.emit("delete-status", { statusId });
+    }, []);
+
+    const markStatusViewed = useCallback((statusId) => {
+        if (!statusId) return;
+        setViewedStatusIds((prev) => {
+            const next = new Set(prev).add(statusId);
+            try {
+                localStorage.setItem("chathub_viewed_status_ids", JSON.stringify(Array.from(next)));
+            } catch (_) {}
+            return next;
+        });
+    }, []);
+
     const value = {
         socket: socketRef.current,
         currentUser,
@@ -734,7 +791,12 @@ export function SocketProvider({ children }) {
         deleteConversation,
         blockUser,
         unblockUser,
-        blockedUsers
+        blockedUsers,
+        statuses,
+        viewedStatusIds,
+        postStatus,
+        deleteStatus,
+        markStatusViewed
     };
 
     return (
