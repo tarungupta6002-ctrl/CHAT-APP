@@ -170,6 +170,19 @@ export function WebRTCProvider({ children }) {
         startRingtone();
 
         try {
+            // Pre-request media device permissions synchronously under user gesture context for mobile browsers
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                try {
+                    const preStream = await navigator.mediaDevices.getUserMedia({
+                        audio: true,
+                        video: Boolean(isVideo)
+                    });
+                    preStream.getTracks().forEach((t) => t.stop());
+                } catch (permErr) {
+                    console.warn("[WebRTC] Media permission pre-check:", permErr?.message);
+                }
+            }
+
             // Request room creation from backend
             const res = await fetch("/api/calls/create-room", {
                 method: "POST",
@@ -192,7 +205,7 @@ export function WebRTCProvider({ children }) {
             setMeetingId(roomId);
             setVideoSDKToken(token);
 
-            // Signal recipient via Socket.IO
+            // Signal recipient via Socket.IO with target username and socket id
             socket?.emit("call-offer", {
                 to: partnerSocketId,
                 toUsername: partnerName,
@@ -221,6 +234,19 @@ export function WebRTCProvider({ children }) {
         setCallStatus("Connecting to VideoSDK...");
 
         try {
+            // Pre-request media device permissions synchronously under user accept gesture
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                try {
+                    const preStream = await navigator.mediaDevices.getUserMedia({
+                        audio: true,
+                        video: Boolean(data.isVideo)
+                    });
+                    preStream.getTracks().forEach((t) => t.stop());
+                } catch (permErr) {
+                    console.warn("[WebRTC] Accept media pre-check:", permErr?.message);
+                }
+            }
+
             // Fetch participant token for this room
             const res = await fetch(`/api/calls/token?roomId=${data.roomId}`, {
                 headers: { Authorization: `Bearer ${authToken}` }
@@ -238,6 +264,7 @@ export function WebRTCProvider({ children }) {
             // Notify caller that call was answered
             socket?.emit("call-answer", {
                 to: data.from,
+                toUsername: data.fromName,
                 roomId: data.roomId
             });
         } catch (err) {

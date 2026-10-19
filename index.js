@@ -488,9 +488,12 @@ io.on("connection", (socket) => {
     // --- VideoSDK & WebRTC 1-on-1 Audio / Video Calling Signaling ---
     socket.on("call-offer", ({ to, toUsername, roomId, offer, isVideo }) => {
         const caller = users.get(socket.id);
-        let targetSocketId = to;
-        if ((!targetSocketId || !users.has(targetSocketId)) && toUsername) {
+        let targetSocketId = null;
+        if (toUsername) {
             targetSocketId = findSocketIdByUsername(toUsername);
+        }
+        if (!targetSocketId && to && users.has(to)) {
+            targetSocketId = to;
         }
         if (!targetSocketId || !users.has(targetSocketId)) {
             socket.emit("call-failed", { reason: `${toUsername || "User"} is currently offline or unavailable` });
@@ -506,9 +509,16 @@ io.on("connection", (socket) => {
         });
     });
 
-    socket.on("call-answer", ({ to, roomId, answer }) => {
-        if (to && users.has(to)) {
-            socket.to(to).emit("call-answered", {
+    socket.on("call-answer", ({ to, toUsername, roomId, answer }) => {
+        let targetSocketId = null;
+        if (toUsername) {
+            targetSocketId = findSocketIdByUsername(toUsername);
+        }
+        if (!targetSocketId && to && users.has(to)) {
+            targetSocketId = to;
+        }
+        if (targetSocketId) {
+            socket.to(targetSocketId).emit("call-answered", {
                 from: socket.id,
                 roomId: roomId || null,
                 answer: answer || null
