@@ -15,6 +15,7 @@ import {
     Check,
     CheckCheck
 } from 'lucide-react';
+import VerifiedBadge from './VerifiedBadge';
 
 export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettings }) {
     const { 
@@ -375,7 +376,18 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
 
                                 <div className="wa-item-info">
                                     <div className="wa-item-top-row">
-                                        <span className="wa-item-title">{chat.partnerName}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, overflow: 'hidden' }}>
+                                            <span className="wa-item-title">{chat.partnerName}</span>
+                                            {chat.type === 'general' && (
+                                                <VerifiedBadge size={15} />
+                                            )}
+                                        </div>
+                                        {chat.lastTime && (
+                                            <span className="wa-item-time">{chat.lastTime}</span>
+                                        )}
+                                    </div>
+                                    <div className="wa-item-bottom-row">
+                                        <p className="wa-item-snippet">{chat.lastMessage}</p>
                                         {chat.unread > 0 && (
                                             <span className="wa-unread-badge">{chat.unread}</span>
                                         )}

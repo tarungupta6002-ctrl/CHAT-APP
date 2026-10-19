@@ -18,6 +18,7 @@ import {
 import MessagesContainer from './MessagesContainer';
 import TypingBar from './TypingBar';
 import ChatFooter from './ChatFooter';
+import VerifiedBadge from './VerifiedBadge';
 
 export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
     const { 
@@ -311,9 +312,14 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
                         </div>
 
                         <div className="chat-contact-info">
-                            <h3>{partnerName}</h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <h3>{partnerName}</h3>
+                                {!isDm && (
+                                    <VerifiedBadge size={17} />
+                                )}
+                            </div>
                             <span className="contact-status">
-                                {isDm ? (isOnline ? 'online' : 'offline') : 'public community'}
+                                {isDm ? (isOnline ? 'online' : 'offline') : 'Official Community Channel'}
                             </span>
                         </div>
                     </div>

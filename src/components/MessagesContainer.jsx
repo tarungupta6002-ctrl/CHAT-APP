@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { MessageSquare, Lock } from 'lucide-react';
 import MessageItem from './MessageItem';
+import VerifiedBadge from './VerifiedBadge';
 
 // Helper to determine the WhatsApp-style date label for a message
 function getMessageDateLabel(item) {
@@ -87,8 +88,15 @@ export default function MessagesContainer({ searchQuery = '' }) {
                     <div className="messages-empty-icon-circle">
                         <MessageSquare size={36} />
                     </div>
-                    <div className="messages-empty-title">
-                        {currentChat?.type === 'general' ? 'Welcome to ChatHub Community!' : `Private chat with ${currentChat?.partnerName || 'User'}`}
+                    <div className="messages-empty-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        {currentChat?.type === 'general' ? (
+                            <>
+                                <span>Welcome to ChatHub Community!</span>
+                                <VerifiedBadge size={18} />
+                            </>
+                        ) : (
+                            `Private chat with ${currentChat?.partnerName || 'User'}`
+                        )}
                     </div>
                     <div className="messages-empty-sub">
                         Say hello, send a voice note, or share a photo to get the conversation started.

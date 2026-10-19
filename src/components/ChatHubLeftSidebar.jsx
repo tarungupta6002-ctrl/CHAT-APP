@@ -12,6 +12,7 @@ import {
     Filter,
     Search
 } from 'lucide-react';
+import VerifiedBadge from './VerifiedBadge';
 
 export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCategory, setActiveCategory }) {
     const {
@@ -528,7 +529,12 @@ export default function ChatHubLeftSidebar({ searchQuery, onNewChat, activeCateg
                                 {/* Info */}
                                 <div className="chat-item-body">
                                     <div className="chat-item-row-top">
-                                        <h4 className="chat-item-name">{chat.fullName || chat.partnerUsername}</h4>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0, overflow: 'hidden' }}>
+                                            <h4 className="chat-item-name">{chat.fullName || chat.partnerUsername}</h4>
+                                            {chat.isGroup && (
+                                                <VerifiedBadge size={14} />
+                                            )}
+                                        </div>
                                         {chat.unread > 0 && (
                                             <span className="chat-unread-count-pill">{chat.unread}</span>
                                         )}
