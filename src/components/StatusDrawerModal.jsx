@@ -53,6 +53,16 @@ export default function StatusDrawerModal({ isOpen, onClose }) {
     const [viewerOpen, setViewerOpen] = useState(false);
     const [viewerInitialIndex, setViewerInitialIndex] = useState(0);
 
+    // Close on Escape key
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose]);
+
     const myUsername = (currentUser?.username || '').toLowerCase();
 
     // Partition statuses into My Statuses and Contacts' Statuses
@@ -212,8 +222,10 @@ export default function StatusDrawerModal({ isOpen, onClose }) {
         setViewerOpen(true);
     };
 
+    if (!isOpen) return null;
+
     return (
-        <div className="wa-drawer-backdrop" onClick={onClose}>
+        <div className="wa-drawer-backdrop open" onClick={onClose}>
             <div className="wa-status-drawer" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
                 <div className="wa-drawer-header">
