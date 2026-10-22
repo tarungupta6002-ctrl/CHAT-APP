@@ -5383,23 +5383,11 @@ body.light-theme .call-ctrl-btn {
 .badge-top-left {
   top: -24px;
   left: -28px;
-  animation: counter-float-1 4s ease-in-out infinite alternate;
 }
 
 .badge-bottom-right {
   bottom: -20px;
   right: -20px;
-  animation: counter-float-2 4.5s ease-in-out infinite alternate;
-}
-
-@keyframes counter-float-1 {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-8px); }
-}
-
-@keyframes counter-float-2 {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(8px); }
 }
 
 .badge-icon {

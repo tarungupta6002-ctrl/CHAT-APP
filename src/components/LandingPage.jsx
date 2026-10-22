@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useAuth } from '../context/AuthContext';
 import ChatHubNavbar from './ChatHubNavbar';
 
+gsap.registerPlugin(ScrollTrigger);
+
 export default function LandingPage() {
     const { isAuthenticated, navigateTo } = useAuth();
-    const [activeTab, setActiveTab] = useState('messaging');
     const containerRef = useRef(null);
 
     useEffect(() => {
         const ctx = gsap.context(() => {
-            // 1. Hero text & CTA entrance timeline
+            // 1. HERO SECTION (Animated immediately on page load)
             const heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
             heroTl
@@ -20,30 +22,30 @@ export default function LandingPage() {
                 .from('.landing-cta-row', { y: 20, opacity: 0, duration: 0.6 }, '-=0.4')
                 .from('.hero-trust-metrics .trust-item', { y: 15, opacity: 0, stagger: 0.12, duration: 0.5 }, '-=0.3');
 
-            // 2. 3D entrance for app mockup preview
+            // 3D Entrance for app mockup preview
             gsap.from('.app-mockup-wrapper', {
                 opacity: 0,
-                y: 50,
-                rotationX: 10,
-                scale: 0.95,
+                y: 45,
+                rotationX: 8,
+                scale: 0.96,
                 duration: 1.1,
                 ease: 'power2.out',
                 delay: 0.2
             });
 
-            // 3. Smooth continuous floating animation for app mockup
+            // Smooth continuous floating animation for app mockup
             gsap.to('.app-mockup-wrapper', {
-                y: -12,
+                y: -10,
                 duration: 3.5,
                 repeat: -1,
                 yoyo: true,
                 ease: 'sine.inOut'
             });
 
-            // 4. Subtle independent floating for the preview badges
+            // Subtle independent floating for the preview badges
             gsap.to('.badge-top-left', {
-                y: -9,
-                x: -4,
+                y: -8,
+                x: -3,
                 duration: 2.8,
                 repeat: -1,
                 yoyo: true,
@@ -51,8 +53,8 @@ export default function LandingPage() {
                 delay: 0.2
             });
             gsap.to('.badge-bottom-right', {
-                y: 9,
-                x: 5,
+                y: 8,
+                x: 4,
                 duration: 3.2,
                 repeat: -1,
                 yoyo: true,
@@ -60,7 +62,7 @@ export default function LandingPage() {
                 delay: 0.5
             });
 
-            // 5. Mockup live chat message bubbles popping in
+            // Mockup live chat message bubbles popping in
             gsap.from('.mockup-messages-feed .mock-msg', {
                 opacity: 0,
                 y: 16,
@@ -71,38 +73,125 @@ export default function LandingPage() {
                 delay: 0.7
             });
 
-            // 6. Stats section staggered reveal
-            gsap.from('.stat-card', {
-                opacity: 0,
-                y: 30,
-                stagger: 0.12,
-                duration: 0.7,
-                ease: 'power2.out',
-                delay: 0.9
-            });
+            // ========================================================
+            // SCROLL-TRIGGERED ANIMATIONS (Animate on User Scroll)
+            // ========================================================
 
-            // 7. Core feature cards staggered entrance
-            gsap.from('.features-cards-grid .feature-card', {
+            // 2. STATS SECTION (Triggers when user scrolls to stats row)
+            gsap.from('.stat-card', {
+                scrollTrigger: {
+                    trigger: '.chathub-stats-section',
+                    start: 'top 85%',
+                    toggleActions: 'play none none none'
+                },
                 opacity: 0,
                 y: 35,
                 stagger: 0.12,
-                duration: 0.8,
-                ease: 'power2.out',
-                delay: 1.1
+                duration: 0.75,
+                ease: 'power2.out'
             });
 
-            // 8. How it works 3-step cards
-            gsap.from('.steps-cards-row .step-card', {
+            // 3. CORE FEATURES SECTION (Header + cards stagger on scroll)
+            gsap.from('.chathub-features-section .section-header-center', {
+                scrollTrigger: {
+                    trigger: '.chathub-features-section',
+                    start: 'top 85%',
+                    toggleActions: 'play none none none'
+                },
                 opacity: 0,
                 y: 30,
-                stagger: 0.15,
                 duration: 0.7,
-                ease: 'power2.out',
-                delay: 1.3
+                ease: 'power2.out'
+            });
+
+            gsap.from('.features-cards-grid .feature-card', {
+                scrollTrigger: {
+                    trigger: '.features-cards-grid',
+                    start: 'top 85%',
+                    toggleActions: 'play none none none'
+                },
+                opacity: 0,
+                y: 40,
+                stagger: 0.14,
+                duration: 0.8,
+                ease: 'power2.out'
+            });
+
+            // 4. SHOWCASE SECTION (Info block from left, visual block from right)
+            gsap.from('.showcase-info-block', {
+                scrollTrigger: {
+                    trigger: '.chathub-showcase-section',
+                    start: 'top 80%',
+                    toggleActions: 'play none none none'
+                },
+                opacity: 0,
+                x: -45,
+                duration: 0.85,
+                ease: 'power2.out'
+            });
+
+            gsap.from('.showcase-card-visual', {
+                scrollTrigger: {
+                    trigger: '.chathub-showcase-section',
+                    start: 'top 80%',
+                    toggleActions: 'play none none none'
+                },
+                opacity: 0,
+                x: 45,
+                duration: 0.85,
+                ease: 'power2.out'
+            });
+
+            // 5. HOW IT WORKS SECTION (Header + 3-step cards on scroll)
+            gsap.from('.chathub-steps-section .section-header-center', {
+                scrollTrigger: {
+                    trigger: '.chathub-steps-section',
+                    start: 'top 85%',
+                    toggleActions: 'play none none none'
+                },
+                opacity: 0,
+                y: 30,
+                duration: 0.7,
+                ease: 'power2.out'
+            });
+
+            gsap.from('.steps-cards-row .step-card', {
+                scrollTrigger: {
+                    trigger: '.steps-cards-row',
+                    start: 'top 85%',
+                    toggleActions: 'play none none none'
+                },
+                opacity: 0,
+                y: 35,
+                stagger: 0.15,
+                duration: 0.75,
+                ease: 'power2.out'
+            });
+
+            // 6. BOTTOM CALL TO ACTION BANNER (Glow scale on scroll)
+            gsap.from('.cta-banner-card', {
+                scrollTrigger: {
+                    trigger: '.chathub-bottom-cta',
+                    start: 'top 85%',
+                    toggleActions: 'play none none none'
+                },
+                opacity: 0,
+                scale: 0.94,
+                y: 30,
+                duration: 0.8,
+                ease: 'back.out(1.2)'
             });
         }, containerRef);
 
-        return () => ctx.revert();
+        // Refresh triggers once fonts and DOM layouts settle
+        const refreshTimer = setTimeout(() => {
+            ScrollTrigger.refresh();
+        }, 150);
+
+        return () => {
+            clearTimeout(refreshTimer);
+            ctx.revert();
+        };
     }, []);
 
     return (
