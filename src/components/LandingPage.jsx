@@ -77,119 +77,154 @@ export default function LandingPage() {
             // SCROLL-TRIGGERED ANIMATIONS (Animate on User Scroll)
             // ========================================================
 
-            // 2. STATS SECTION (Triggers when user scrolls to stats row)
-            gsap.from('.stat-card', {
-                scrollTrigger: {
-                    trigger: '.chathub-stats-section',
-                    start: 'top 85%',
-                    toggleActions: 'play none none none'
-                },
-                opacity: 0,
-                y: 35,
-                stagger: 0.12,
-                duration: 0.75,
-                ease: 'power2.out'
-            });
+            // 2. STATS SECTION (Triggers when user reaches stats banner)
+            gsap.fromTo('.stat-card', 
+                { opacity: 0, y: 30 },
+                {
+                    opacity: 1,
+                    y: 0,
+                    stagger: 0.12,
+                    duration: 0.7,
+                    ease: 'power2.out',
+                    scrollTrigger: {
+                        trigger: '.chathub-stats-section',
+                        start: 'top 90%',
+                        toggleActions: 'play none none none'
+                    }
+                }
+            );
 
             // 3. CORE FEATURES SECTION (Header + cards stagger on scroll)
-            gsap.from('.chathub-features-section .section-header-center', {
-                scrollTrigger: {
-                    trigger: '.chathub-features-section',
-                    start: 'top 85%',
-                    toggleActions: 'play none none none'
-                },
-                opacity: 0,
-                y: 30,
-                duration: 0.7,
-                ease: 'power2.out'
-            });
+            gsap.fromTo('.chathub-features-section .section-header-center',
+                { opacity: 0, y: 25 },
+                {
+                    opacity: 1,
+                    y: 0,
+                    duration: 0.65,
+                    ease: 'power2.out',
+                    scrollTrigger: {
+                        trigger: '.chathub-features-section',
+                        start: 'top 90%',
+                        toggleActions: 'play none none none'
+                    }
+                }
+            );
 
-            gsap.from('.features-cards-grid .feature-card', {
-                scrollTrigger: {
-                    trigger: '.features-cards-grid',
-                    start: 'top 85%',
-                    toggleActions: 'play none none none'
-                },
-                opacity: 0,
-                y: 40,
-                stagger: 0.14,
-                duration: 0.8,
-                ease: 'power2.out'
-            });
+            gsap.fromTo('.features-cards-grid .feature-card',
+                { opacity: 0, y: 35 },
+                {
+                    opacity: 1,
+                    y: 0,
+                    stagger: 0.12,
+                    duration: 0.75,
+                    ease: 'power2.out',
+                    scrollTrigger: {
+                        trigger: '.chathub-features-section',
+                        start: 'top 85%',
+                        toggleActions: 'play none none none'
+                    }
+                }
+            );
 
             // 4. SHOWCASE SECTION (Info block from left, visual block from right)
-            gsap.from('.showcase-info-block', {
-                scrollTrigger: {
-                    trigger: '.chathub-showcase-section',
-                    start: 'top 80%',
-                    toggleActions: 'play none none none'
-                },
-                opacity: 0,
-                x: -45,
-                duration: 0.85,
-                ease: 'power2.out'
-            });
+            gsap.fromTo('.showcase-info-block',
+                { opacity: 0, x: -40 },
+                {
+                    opacity: 1,
+                    x: 0,
+                    duration: 0.8,
+                    ease: 'power2.out',
+                    scrollTrigger: {
+                        trigger: '.chathub-showcase-section',
+                        start: 'top 85%',
+                        toggleActions: 'play none none none'
+                    }
+                }
+            );
 
-            gsap.from('.showcase-card-visual', {
-                scrollTrigger: {
-                    trigger: '.chathub-showcase-section',
-                    start: 'top 80%',
-                    toggleActions: 'play none none none'
-                },
-                opacity: 0,
-                x: 45,
-                duration: 0.85,
-                ease: 'power2.out'
-            });
+            gsap.fromTo('.showcase-card-visual',
+                { opacity: 0, x: 40 },
+                {
+                    opacity: 1,
+                    x: 0,
+                    duration: 0.8,
+                    ease: 'power2.out',
+                    scrollTrigger: {
+                        trigger: '.chathub-showcase-section',
+                        start: 'top 85%',
+                        toggleActions: 'play none none none'
+                    }
+                }
+            );
 
             // 5. HOW IT WORKS SECTION (Header + 3-step cards on scroll)
-            gsap.from('.chathub-steps-section .section-header-center', {
-                scrollTrigger: {
-                    trigger: '.chathub-steps-section',
-                    start: 'top 85%',
-                    toggleActions: 'play none none none'
-                },
-                opacity: 0,
-                y: 30,
-                duration: 0.7,
-                ease: 'power2.out'
-            });
+            gsap.fromTo('.chathub-steps-section .section-header-center',
+                { opacity: 0, y: 25 },
+                {
+                    opacity: 1,
+                    y: 0,
+                    duration: 0.65,
+                    ease: 'power2.out',
+                    scrollTrigger: {
+                        trigger: '.chathub-steps-section',
+                        start: 'top 90%',
+                        toggleActions: 'play none none none'
+                    }
+                }
+            );
 
-            gsap.from('.steps-cards-row .step-card', {
-                scrollTrigger: {
-                    trigger: '.steps-cards-row',
-                    start: 'top 85%',
-                    toggleActions: 'play none none none'
-                },
-                opacity: 0,
-                y: 35,
-                stagger: 0.15,
-                duration: 0.75,
-                ease: 'power2.out'
-            });
+            gsap.fromTo('.steps-cards-row .step-card',
+                { opacity: 0, y: 35 },
+                {
+                    opacity: 1,
+                    y: 0,
+                    stagger: 0.14,
+                    duration: 0.75,
+                    ease: 'power2.out',
+                    scrollTrigger: {
+                        trigger: '.chathub-steps-section',
+                        start: 'top 85%',
+                        toggleActions: 'play none none none'
+                    }
+                }
+            );
 
             // 6. BOTTOM CALL TO ACTION BANNER (Glow scale on scroll)
-            gsap.from('.cta-banner-card', {
-                scrollTrigger: {
-                    trigger: '.chathub-bottom-cta',
-                    start: 'top 85%',
-                    toggleActions: 'play none none none'
-                },
-                opacity: 0,
-                scale: 0.94,
-                y: 30,
-                duration: 0.8,
-                ease: 'back.out(1.2)'
-            });
+            gsap.fromTo('.cta-banner-card',
+                { opacity: 0, scale: 0.95, y: 25 },
+                {
+                    opacity: 1,
+                    scale: 1,
+                    y: 0,
+                    duration: 0.75,
+                    ease: 'power2.out',
+                    scrollTrigger: {
+                        trigger: '.chathub-bottom-cta',
+                        start: 'top 90%',
+                        toggleActions: 'play none none none'
+                    }
+                }
+            );
         }, containerRef);
 
-        // Refresh triggers once fonts and DOM layouts settle
-        const refreshTimer = setTimeout(() => {
+        // Immediate refresh and fail-safe to guarantee zero missing content
+        ScrollTrigger.refresh();
+
+        const safetyCheckTimer = setTimeout(() => {
             ScrollTrigger.refresh();
-        }, 150);
+            // Fail-safe: ensure all cards and sections are completely visible
+            if (containerRef.current) {
+                containerRef.current.querySelectorAll('.stat-card, .feature-card, .step-card, .showcase-info-block, .showcase-card-visual, .cta-banner-card')
+                    .forEach((el) => {
+                        if (window.getComputedStyle(el).opacity === '0') {
+                            gsap.to(el, { opacity: 1, y: 0, x: 0, duration: 0.4 });
+                        }
+                    });
+            }
+        }, 500);
 
         return () => {
-            clearTimeout(refreshTimer);
+            clearTimeout(safetyCheckTimer);
             ctx.revert();
         };
     }, []);
