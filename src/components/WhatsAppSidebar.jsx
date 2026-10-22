@@ -284,12 +284,14 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
 
                             <button 
                                 type="button" 
-                                className="wa-dropdown-item"
-                                onClick={() => {
-                                    toggleTheme();
+                                className="wa-dropdown-item wa-theme-dropdown-item"
+                                onClick={(e) => {
+                                    toggleTheme(e);
                                 }}
                             >
-                                {isDark ? <Sun size={16} /> : <Moon size={16} />}
+                                <span className="theme-toggle-icon-wrap">
+                                    {isDark ? <Sun size={16} /> : <Moon size={16} />}
+                                </span>
                                 <span>Appearance: {isDark ? 'Dark Mode' : 'Light Mode'}</span>
                             </button>
 

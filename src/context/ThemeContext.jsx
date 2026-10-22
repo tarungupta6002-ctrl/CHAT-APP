@@ -27,8 +27,46 @@ export function ThemeProvider({ children }) {
         } catch (_) {}
     }, [theme]);
 
-    const toggleTheme = () => {
-        setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+    const toggleTheme = (event) => {
+        const nextTheme = theme === 'dark' ? 'light' : 'dark';
+
+        // Check if View Transitions API is supported and user has not requested reduced motion
+        const isReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (document.startViewTransition && !isReducedMotion) {
+            // Get click origin coordinates from event, fallback to center of screen
+            const x = event?.clientX ?? (window.innerWidth / 2);
+            const y = event?.clientY ?? (window.innerHeight / 2);
+
+            // Compute distance to the furthest corner of the viewport
+            const endRadius = Math.hypot(
+                Math.max(x, window.innerWidth - x),
+                Math.max(y, window.innerHeight - y)
+            );
+
+            const transition = document.startViewTransition(() => {
+                setTheme(nextTheme);
+            });
+
+            transition.ready.then(() => {
+                document.documentElement.animate(
+                    {
+                        clipPath: [
+                            `circle(0px at ${x}px ${y}px)`,
+                            `circle(${endRadius}px at ${x}px ${y}px)`
+                        ]
+                    },
+                    {
+                        duration: 520,
+                        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+                        pseudoElement: '::view-transition-new(root)'
+                    }
+                );
+            });
+        } else {
+            // Fallback for browsers without View Transitions
+            setTheme(nextTheme);
+        }
     };
 
     return (
