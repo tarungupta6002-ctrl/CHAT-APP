@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import gsap from 'gsap';
 import { useSocket } from '../context/SocketContext';
 import { 
     X, 
@@ -34,20 +35,29 @@ export default function StatusViewerModal({
     const { markStatusViewed, deleteStatus, sendMessage, selectChat } = useSocket();
 
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
-    const [progress, setProgress] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const [replyText, setReplyText] = useState('');
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
     const [isAudioMuted, setIsAudioMuted] = useState(false);
 
     const audioRef = useRef(null);
-    const progressIntervalRef = useRef(null);
+    const tweenRef = useRef(null);
+    const activeBarRef = useRef(null);
     const currentStatus = statusList[currentIndex] || null;
 
     useEffect(() => {
         setCurrentIndex(initialIndex);
-        setProgress(0);
     }, [initialIndex, isOpen]);
+
+    // Modal entrance animation
+    useEffect(() => {
+        if (isOpen) {
+            gsap.fromTo('.wa-story-container',
+                { scale: 0.94, opacity: 0, y: 15 },
+                { scale: 1, opacity: 1, y: 0, duration: 0.28, ease: 'power2.out' }
+            );
+        }
+    }, [isOpen]);
 
     // Mark current status as viewed
     useEffect(() => {
@@ -59,7 +69,6 @@ export default function StatusViewerModal({
     const handleNext = useCallback(() => {
         if (currentIndex < statusList.length - 1) {
             setCurrentIndex((prev) => prev + 1);
-            setProgress(0);
         } else {
             onClose();
         }
@@ -68,7 +77,6 @@ export default function StatusViewerModal({
     const handlePrev = useCallback(() => {
         if (currentIndex > 0) {
             setCurrentIndex((prev) => prev - 1);
-            setProgress(0);
         }
     }, [currentIndex]);
 
@@ -84,27 +92,60 @@ export default function StatusViewerModal({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, handleNext, handlePrev, onClose]);
 
-    // 6-Second Auto Progress Timer
+    // GSAP 60fps Story Progress Bar Animation
     useEffect(() => {
-        if (!isOpen || !currentStatus || isPaused) return;
+        if (!isOpen || !currentStatus) {
+            if (tweenRef.current) {
+                tweenRef.current.kill();
+                tweenRef.current = null;
+            }
+            return;
+        }
 
-        const DURATION = currentStatus.type === 'voice' ? 12000 : 6000;
-        const STEP_INTERVAL = 40;
-        const stepProgress = 100 / (DURATION / STEP_INTERVAL);
+        // Kill any previous tween on story change
+        if (tweenRef.current) {
+            tweenRef.current.kill();
+            tweenRef.current = null;
+        }
 
-        progressIntervalRef.current = setInterval(() => {
-            setProgress((prev) => {
-                if (prev >= 100) {
-                    clearInterval(progressIntervalRef.current);
+        const duration = currentStatus.type === 'voice' ? 12 : 6;
+
+        if (activeBarRef.current) {
+            gsap.set(activeBarRef.current, { width: '0%' });
+            tweenRef.current = gsap.to(activeBarRef.current, {
+                width: '100%',
+                duration: duration,
+                ease: 'none',
+                paused: isPaused,
+                onComplete: () => {
                     handleNext();
-                    return 0;
                 }
-                return prev + stepProgress;
             });
-        }, STEP_INTERVAL);
+        }
 
-        return () => clearInterval(progressIntervalRef.current);
-    }, [isOpen, currentStatus, isPaused, handleNext]);
+        return () => {
+            if (tweenRef.current) {
+                tweenRef.current.kill();
+                tweenRef.current = null;
+            }
+        };
+    }, [isOpen, currentIndex, currentStatus, handleNext]);
+
+    // Sync pause/resume on press and hold
+    useEffect(() => {
+        if (!tweenRef.current) return;
+        if (isPaused) {
+            tweenRef.current.pause();
+            if (audioRef.current && !audioRef.current.paused) {
+                audioRef.current.pause();
+            }
+        } else {
+            tweenRef.current.resume();
+            if (audioRef.current && audioRef.current.paused && currentStatus?.type === 'voice') {
+                audioRef.current.play().catch(() => {});
+            }
+        }
+    }, [isPaused, currentStatus]);
 
     if (!isOpen || !currentStatus) return null;
 
@@ -175,9 +216,10 @@ export default function StatusViewerModal({
                     {statusList.map((st, idx) => (
                         <div key={st.id || idx} className="wa-story-bar-track">
                             <div 
+                                ref={idx === currentIndex ? activeBarRef : null}
                                 className="wa-story-bar-fill"
                                 style={{
-                                    width: idx < currentIndex ? '100%' : (idx === currentIndex ? `${progress}%` : '0%')
+                                    width: idx < currentIndex ? '100%' : '0%'
                                 }}
                             />
                         </div>

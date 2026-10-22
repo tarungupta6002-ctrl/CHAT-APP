@@ -1,13 +1,112 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import gsap from 'gsap';
 import { useAuth } from '../context/AuthContext';
 import ChatHubNavbar from './ChatHubNavbar';
 
 export default function LandingPage() {
     const { isAuthenticated, navigateTo } = useAuth();
     const [activeTab, setActiveTab] = useState('messaging');
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        const ctx = gsap.context(() => {
+            // 1. Hero text & CTA entrance timeline
+            const heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+            heroTl
+                .from('.hero-eyebrow-badge', { y: -24, opacity: 0, duration: 0.6 })
+                .from('.landing-hero-title', { y: 35, opacity: 0, duration: 0.8 }, '-=0.3')
+                .from('.landing-hero-subtitle', { y: 25, opacity: 0, duration: 0.7 }, '-=0.5')
+                .from('.landing-cta-row', { y: 20, opacity: 0, duration: 0.6 }, '-=0.4')
+                .from('.hero-trust-metrics .trust-item', { y: 15, opacity: 0, stagger: 0.12, duration: 0.5 }, '-=0.3');
+
+            // 2. 3D entrance for app mockup preview
+            gsap.from('.app-mockup-wrapper', {
+                opacity: 0,
+                y: 50,
+                rotationX: 10,
+                scale: 0.95,
+                duration: 1.1,
+                ease: 'power2.out',
+                delay: 0.2
+            });
+
+            // 3. Smooth continuous floating animation for app mockup
+            gsap.to('.app-mockup-wrapper', {
+                y: -12,
+                duration: 3.5,
+                repeat: -1,
+                yoyo: true,
+                ease: 'sine.inOut'
+            });
+
+            // 4. Subtle independent floating for the preview badges
+            gsap.to('.badge-top-left', {
+                y: -9,
+                x: -4,
+                duration: 2.8,
+                repeat: -1,
+                yoyo: true,
+                ease: 'sine.inOut',
+                delay: 0.2
+            });
+            gsap.to('.badge-bottom-right', {
+                y: 9,
+                x: 5,
+                duration: 3.2,
+                repeat: -1,
+                yoyo: true,
+                ease: 'sine.inOut',
+                delay: 0.5
+            });
+
+            // 5. Mockup live chat message bubbles popping in
+            gsap.from('.mockup-messages-feed .mock-msg', {
+                opacity: 0,
+                y: 16,
+                scale: 0.92,
+                stagger: 0.35,
+                duration: 0.55,
+                ease: 'back.out(1.5)',
+                delay: 0.7
+            });
+
+            // 6. Stats section staggered reveal
+            gsap.from('.stat-card', {
+                opacity: 0,
+                y: 30,
+                stagger: 0.12,
+                duration: 0.7,
+                ease: 'power2.out',
+                delay: 0.9
+            });
+
+            // 7. Core feature cards staggered entrance
+            gsap.from('.features-cards-grid .feature-card', {
+                opacity: 0,
+                y: 35,
+                stagger: 0.12,
+                duration: 0.8,
+                ease: 'power2.out',
+                delay: 1.1
+            });
+
+            // 8. How it works 3-step cards
+            gsap.from('.steps-cards-row .step-card', {
+                opacity: 0,
+                y: 30,
+                stagger: 0.15,
+                duration: 0.7,
+                ease: 'power2.out',
+                delay: 1.3
+            });
+        }, containerRef);
+
+        return () => ctx.revert();
+    }, []);
 
     return (
-        <div className="chathub-landing-page">
+        <div ref={containerRef} className="chathub-landing-page">
             {/* Ambient Background Gradient Orbs */}
             <div className="ambient-glow-orb orb-1"></div>
             <div className="ambient-glow-orb orb-2"></div>
@@ -22,23 +121,23 @@ export default function LandingPage() {
                     <div className="landing-hero-grid">
                         {/* Left Hero Content */}
                         <div className="hero-text-block">
-                            <div className="hero-eyebrow-badge animate-fade-in">
+                            <div className="hero-eyebrow-badge">
                                 <span className="eyebrow-dot"></span>
                                 <span>Real-time Messaging • HD Video Calls • VideoSDK Cloud</span>
                             </div>
 
-                            <h1 className="landing-hero-title animate-slide-up">
+                            <h1 className="landing-hero-title">
                                 Chat. Call. <br />
                                 Share. <span className="emerald-gradient-text">Together.</span>
                             </h1>
 
-                            <p className="landing-hero-subtitle animate-slide-up-delay-1">
+                            <p className="landing-hero-subtitle">
                                 Experience ultra-fast, secure, and seamless communication with ChatHub.
                                 Connect with your friends, family and teams across the world with crystal-clear
                                 voice & video calls, view-once photos, voice notes, and real-time private messaging.
                             </p>
 
-                            <div className="landing-cta-row animate-slide-up-delay-2">
+                            <div className="landing-cta-row">
                                 <button
                                     type="button"
                                     className="chathub-btn-primary glow-btn"
@@ -60,7 +159,7 @@ export default function LandingPage() {
                             </div>
 
                             {/* Trust badges */}
-                            <div className="hero-trust-metrics animate-slide-up-delay-3">
+                            <div className="hero-trust-metrics">
                                 <div className="trust-item">
                                     <div className="trust-icon-pill">⚡</div>
                                     <div>
@@ -88,7 +187,7 @@ export default function LandingPage() {
                         </div>
 
                         {/* Right Product Mockup with 3D Floating Animation */}
-                        <div className="hero-visual-block animate-float">
+                        <div className="hero-visual-block">
                             {/* Floating Feature Badges around Mockup */}
                             <div className="floating-preview-badge badge-top-left">
                                 <span className="badge-icon">📹</span>
