@@ -6,7 +6,8 @@ import {
     decryptIncomingMessage,
     getConversationKey,
     encryptText,
-    decryptText
+    decryptText,
+    isEncrypted
 } from '../utils/e2ee';
 
 const SocketContext = createContext(null);
@@ -131,7 +132,23 @@ export function SocketProvider({ children }) {
                     }
                     return true;
                 });
-                setRecentChats(filteredChats);
+                // Client-Side E2EE: Decrypt lastMessage in recent chats for sidebar preview
+                const decryptedChats = await Promise.all(
+                    filteredChats.map(async (chat) => {
+                        let text = chat.lastMessage || '';
+                        if (text && isEncrypted(text)) {
+                            try {
+                                const key = await getConversationKey(username, chat.partnerUsername, 'dm');
+                                if (key) {
+                                    text = await decryptText(text, key);
+                                }
+                            } catch (_) {}
+                        }
+                        return { ...chat, lastMessage: text };
+                    })
+                );
+
+                setRecentChats(decryptedChats);
             }
         } catch (e) {
             console.warn("Failed fetching contacts:", e);

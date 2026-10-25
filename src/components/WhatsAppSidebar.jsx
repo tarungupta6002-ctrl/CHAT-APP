@@ -448,7 +448,11 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                                         )}
                                     </div>
                                     <div className="wa-item-bottom-row">
-                                        <p className="wa-item-snippet">{chat.lastMessage}</p>
+                                        <p className="wa-item-snippet">
+                                            {typeof chat.lastMessage === 'string' && chat.lastMessage.startsWith('e2ee:v1:')
+                                                ? '🔒 Encrypted message'
+                                                : chat.lastMessage}
+                                        </p>
                                         {chat.unread > 0 && (
                                             <span className="wa-unread-badge">{chat.unread}</span>
                                         )}
