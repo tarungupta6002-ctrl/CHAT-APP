@@ -21,6 +21,8 @@ const db = createClient({
 
 // Fast in-memory cache for instant 0ms block checks
 const blockedCache = new Set();
+// Fast in-memory cache for instant 0ms cleared chat lookups
+const chatClearsCache = new Map();
 
 // Initialize schema
 async function initDb() {
@@ -170,6 +172,18 @@ async function initDb() {
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_ai_results_user ON ai_results(user_id);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_ai_results_conv ON ai_results(conversation_id);`);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_ai_usage_user ON ai_usage(user_id, period_start);`);
+
+        // Per-user chat clear tracking (clearing chat never deletes messages for other users)
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS chat_clears (
+                id TEXT PRIMARY KEY,
+                username TEXT NOT NULL COLLATE NOCASE,
+                chat_key TEXT NOT NULL COLLATE NOCASE,
+                cleared_at INTEGER NOT NULL,
+                UNIQUE(username, chat_key)
+            );
+        `);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_chat_clears_user ON chat_clears(username, chat_key);`);
         
         // Pre-fill in-memory blocked cache
         try {
@@ -177,6 +191,16 @@ async function initDb() {
             blkRows.rows.forEach((r) => {
                 if (r.blocker_username && r.blocked_username) {
                     blockedCache.add(`${String(r.blocker_username).toLowerCase()}:${String(r.blocked_username).toLowerCase()}`);
+                }
+            });
+        } catch (_) {}
+
+        // Pre-fill in-memory chat clears cache
+        try {
+            const clrRows = await db.execute(`SELECT username, chat_key, cleared_at FROM chat_clears`);
+            clrRows.rows.forEach((r) => {
+                if (r.username && r.chat_key) {
+                    chatClearsCache.set(`${String(r.username).toLowerCase()}:${String(r.chat_key).toLowerCase()}`, Number(r.cleared_at) || 0);
                 }
             });
         } catch (_) {}
@@ -261,19 +285,51 @@ async function editMessage(messageId, newText) {
     }
 }
 
-// Retrieve public General Room messages (with dynamic sender profile info)
-async function getGeneralHistory(limit = 100) {
+// Fast in-memory cleared timestamp lookup
+function getChatClearedAt(username, chatKey) {
+    if (!username || !chatKey) return 0;
+    const cacheKey = `${username.toLowerCase().trim()}:${chatKey.toLowerCase().trim()}`;
+    return chatClearsCache.get(cacheKey) || 0;
+}
+
+// Persist chat cleared timestamp for a user (per-user isolation)
+async function setChatCleared(username, chatKey, clearedAt = Date.now()) {
+    if (!username || !chatKey) return false;
+    const cleanUser = username.toLowerCase().trim();
+    const cleanKey = chatKey.toLowerCase().trim();
+    const ts = Number(clearedAt) || Date.now();
+    chatClearsCache.set(`${cleanUser}:${cleanKey}`, ts);
     try {
+        const id = `clr_${cleanUser}_${cleanKey}`;
+        await db.execute({
+            sql: `
+                INSERT OR REPLACE INTO chat_clears (id, username, chat_key, cleared_at)
+                VALUES (?, ?, ?, ?)
+            `,
+            args: [id, cleanUser, cleanKey, ts]
+        });
+        return true;
+    } catch (err) {
+        console.error("Error setting chat cleared in DB:", err);
+        return false;
+    }
+}
+
+// Retrieve public General Room messages (with dynamic sender profile info)
+async function getGeneralHistory(limit = 100, forUsername = null) {
+    try {
+        const clearedAt = forUsername ? getChatClearedAt(forUsername, "general") : 0;
         const rs = await db.execute({
             sql: `
                 SELECT m.*, u.avatar_url AS current_sender_avatar, u.avatar_color AS current_sender_color 
                 FROM messages m
                 LEFT JOIN users u ON LOWER(u.username) = LOWER(m.sender_username)
                 WHERE m.recipient_username IS NULL 
+                  AND (? = 0 OR COALESCE(m.created_at, 0) > ?)
                 ORDER BY m.created_at ASC 
                 LIMIT ?
             `,
-            args: [limit]
+            args: [clearedAt, clearedAt, limit]
         });
         return rs.rows.map(mapRowToMessage);
     } catch (err) {
@@ -283,8 +339,14 @@ async function getGeneralHistory(limit = 100) {
 }
 
 // Retrieve DM history between two usernames (with dynamic sender profile info)
-async function getDmHistory(usernameA, usernameB, limit = 100) {
+async function getDmHistory(usernameA, usernameB, limit = 100, forUsername = null) {
     try {
+        let clearedAt = 0;
+        if (forUsername) {
+            const partner = (forUsername.toLowerCase() === usernameA.toLowerCase()) ? usernameB : usernameA;
+            clearedAt = getChatClearedAt(forUsername, partner);
+        }
+
         const rs = await db.execute({
             sql: `
                 SELECT m.*, u.avatar_url AS current_sender_avatar, u.avatar_color AS current_sender_color 
@@ -293,10 +355,11 @@ async function getDmHistory(usernameA, usernameB, limit = 100) {
                 WHERE ((m.sender_username = ? COLLATE NOCASE AND m.recipient_username = ? COLLATE NOCASE)
                    OR (m.sender_username = ? COLLATE NOCASE AND m.recipient_username = ? COLLATE NOCASE))
                   AND NOT (m.recipient_username = ? COLLATE NOCASE AND COALESCE(m.is_blocked_send, 0) = 1)
+                  AND (? = 0 OR COALESCE(m.created_at, 0) > ?)
                 ORDER BY m.created_at ASC 
                 LIMIT ?
             `,
-            args: [usernameA, usernameB, usernameB, usernameA, usernameA, limit]
+            args: [usernameA, usernameB, usernameB, usernameA, usernameA, clearedAt, clearedAt, limit]
         });
         return rs.rows.map(mapRowToMessage);
     } catch (err) {
@@ -790,6 +853,7 @@ async function getAllUsers() {
 
 async function getRecentChatsForUser(username) {
     try {
+        const cleanUser = (username || "").toLowerCase().trim();
         const rs = await db.execute({
             sql: `
                 SELECT m.*, u.avatar_url AS partner_avatar_url, u.avatar_color AS partner_avatar_color
@@ -808,14 +872,19 @@ async function getRecentChatsForUser(username) {
 
         const chatsMap = new Map();
         rs.rows.forEach((r) => {
-            const partner = (r.sender_username.toLowerCase() === username.toLowerCase()) 
+            const partner = (r.sender_username.toLowerCase() === cleanUser) 
                 ? r.recipient_username 
                 : r.sender_username;
             
             if (partner && !chatsMap.has(partner.toLowerCase())) {
-                chatsMap.set(partner.toLowerCase(), {
+                const partnerKey = partner.toLowerCase();
+                const clearedAt = getChatClearedAt(cleanUser, partnerKey);
+                if (clearedAt > 0 && Number(r.created_at || 0) <= clearedAt) {
+                    return;
+                }
+                chatsMap.set(partnerKey, {
                     partnerUsername: partner,
-                    partnerColor: r.partner_avatar_color || ((r.sender_username.toLowerCase() === partner.toLowerCase()) ? r.avatar_color : '#10b981'),
+                    partnerColor: r.partner_avatar_color || ((r.sender_username.toLowerCase() === partnerKey) ? r.avatar_color : '#10b981'),
                     partnerAvatarUrl: r.partner_avatar_url || '',
                     lastMessage: r.text || (r.image ? "📷 Photo" : (r.audio ? "🎙️ Voice note" : (r.file ? ("📄 " + (r.file_name || "Document")) : ""))),
                     lastTime: r.time,
@@ -1172,5 +1241,7 @@ module.exports = {
     getRecentConversationMessages,
     saveStatus,
     getActiveStatuses,
-    deleteStatus
+    deleteStatus,
+    setChatCleared,
+    getChatClearedAt
 };

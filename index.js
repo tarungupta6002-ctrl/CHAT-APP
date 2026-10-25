@@ -157,8 +157,8 @@ io.on("connection", (socket) => {
             });
         } catch (_) {}
 
-        // Send persisted General Room history from SQLite / Turso
-        const history = await db.getGeneralHistory(100);
+        // Send persisted General Room history from SQLite / Turso (filtered by user clear timestamp)
+        const history = await db.getGeneralHistory(100, cleanName);
         socket.emit("chat-history", { type: "general", messages: history });
 
         // Send user their blocked list from DB
@@ -387,20 +387,32 @@ io.on("connection", (socket) => {
         }
     });
 
-    // Clear DM History in Database & notify both clients
-    socket.on("clear-dm-history", async ({ partnerUsername }) => {
+    // Clear Chat (General or DM) in Database per-user
+    socket.on("clear-chat", async ({ chatKey, clearedAt }) => {
+        const user = users.get(socket.id);
+        if (!user || !chatKey) return;
+        const ts = Number(clearedAt) || Date.now();
+        await db.setChatCleared(user.username, chatKey, ts);
+        if (chatKey.toLowerCase() !== "general") {
+            socket.emit("dm-cleared", { partnerUsername: chatKey });
+        }
+    });
+
+    // Clear DM History in Database & notify client
+    socket.on("clear-dm-history", async ({ partnerUsername, clearedAt }) => {
         const user = users.get(socket.id);
         if (!user || !partnerUsername) return;
-        await db.clearDmHistory(user.username, partnerUsername);
+        const ts = Number(clearedAt) || Date.now();
+        await db.setChatCleared(user.username, partnerUsername, ts);
         socket.emit("dm-cleared", { partnerUsername });
-        io.to(`user:${partnerUsername.toLowerCase()}`).emit("dm-cleared", { partnerUsername: user.username });
     });
 
     // Delete DM Chat in Database
-    socket.on("delete-dm-chat", async ({ partnerUsername }) => {
+    socket.on("delete-dm-chat", async ({ partnerUsername, clearedAt }) => {
         const user = users.get(socket.id);
         if (!user || !partnerUsername) return;
-        await db.clearDmHistory(user.username, partnerUsername);
+        const ts = Number(clearedAt) || Date.now();
+        await db.setChatCleared(user.username, partnerUsername, ts);
         socket.emit("dm-deleted", { partnerUsername });
     });
 
@@ -466,7 +478,7 @@ io.on("connection", (socket) => {
             }
         } catch (e) {}
 
-        const dmHistory = await db.getDmHistory(user.username, partnerUsername, 100);
+        const dmHistory = await db.getDmHistory(user.username, partnerUsername, 100, user.username);
         socket.emit("chat-history", { type: "dm", partnerUsername, messages: dmHistory });
     });
 

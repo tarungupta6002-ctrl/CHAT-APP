@@ -439,6 +439,35 @@ async function runTests() {
         assert(Array.isArray(data.users));
     });
 
+    console.log("\n[6] Per-User Clear Chat Persistence Tests:");
+    await test("setChatCleared saves timestamp and getChatClearedAt retrieves it", async () => {
+        const testUser = "clear_test_user_" + Date.now();
+        const ts = Date.now();
+        await db.setChatCleared(testUser, "general", ts);
+        const retrieved = db.getChatClearedAt(testUser, "general");
+        assert.strictEqual(retrieved, ts);
+    });
+
+    await test("getGeneralHistory filters out messages before user cleared_at timestamp", async () => {
+        const testUser = "clear_test_user_2_" + Date.now();
+        const clearTime = Date.now() + 1000;
+        await db.setChatCleared(testUser, "general", clearTime);
+        const history = await db.getGeneralHistory(50, testUser);
+        for (const msg of history) {
+            assert(msg.createdAt > clearTime);
+        }
+    });
+
+    await test("Cross-user isolation: User A clearing general chat does NOT clear for User B", async () => {
+        const userA = "clear_user_a_" + Date.now();
+        const userB = "clear_user_b_" + Date.now();
+        await db.setChatCleared(userA, "general", Date.now() + 5000);
+        const histA = await db.getGeneralHistory(50, userA);
+        const histB = await db.getGeneralHistory(50, userB);
+        assert.strictEqual(histA.length, 0);
+        assert(histB.length >= histA.length);
+    });
+
     console.log("\n=======================================================");
     console.log(`Test Results: ${passedCount} Passed, ${failedCount} Failed`);
     console.log("=======================================================\n");

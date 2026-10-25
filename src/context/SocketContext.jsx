@@ -119,7 +119,19 @@ export function SocketProvider({ children }) {
             }
             if (cRes.ok) {
                 const cData = await cRes.json();
-                setRecentChats(cData.chats || []);
+                const cleanMyUser = (username || '').toLowerCase();
+                const filteredChats = (cData.chats || []).filter((c) => {
+                    const pKey = (c.partnerUsername || '').toLowerCase();
+                    let clearedAt = 0;
+                    try {
+                        clearedAt = Number(localStorage.getItem(`chathub_cleared_${cleanMyUser}_${pKey}`)) || 0;
+                    } catch (_) {}
+                    if (clearedAt > 0 && c.createdAt && Number(c.createdAt) <= clearedAt) {
+                        return false;
+                    }
+                    return true;
+                });
+                setRecentChats(filteredChats);
             }
         } catch (e) {
             console.warn("Failed fetching contacts:", e);
@@ -212,7 +224,22 @@ export function SocketProvider({ children }) {
                 deletedForMeSet = new Set(JSON.parse(localStorage.getItem(key) || '[]'));
             } catch (_) {}
 
-            const filtered = messages.filter((m) => !deletedForMeSet.has(m.id));
+            const chatKey = type === 'dm' ? (partnerUsername || '').toLowerCase() : 'general';
+            let clearedAt = 0;
+            if (myUsername && chatKey) {
+                try {
+                    clearedAt = Number(localStorage.getItem(`chathub_cleared_${myUsername}_${chatKey}`)) || 0;
+                } catch (_) {}
+            }
+
+            const filtered = messages.filter((m) => {
+                if (deletedForMeSet.has(m.id)) return false;
+                if (clearedAt > 0) {
+                    const msgTime = Number(m.createdAt) || (m.id ? parseInt(m.id.split('-').pop(), 10) : 0);
+                    if (msgTime && msgTime <= clearedAt) return false;
+                }
+                return true;
+            });
             const partner = type === 'dm' ? partnerUsername : 'general';
 
             // Client-Side E2EE: Decrypt messages in history
@@ -651,23 +678,40 @@ export function SocketProvider({ children }) {
         });
     }, [onlineUsers, selectChat]);
 
-    // Clear messages for a conversation (local state + database)
+    // Clear messages for a conversation (local state + database + localStorage)
     const clearConversation = useCallback((chatKey) => {
         if (!chatKey) return;
         const key = chatKey.toLowerCase();
+        const now = Date.now();
+        const myUsername = (authUser?.username || '').trim().toLowerCase();
+        if (myUsername) {
+            try {
+                localStorage.setItem(`chathub_cleared_${myUsername}_${key}`, String(now));
+            } catch (_) {}
+        }
         setConversations((prev) => ({
             ...prev,
             [key]: []
         }));
-        if (socketRef.current && key !== "general") {
-            socketRef.current.emit("clear-dm-history", { partnerUsername: chatKey });
+        if (socketRef.current) {
+            socketRef.current.emit("clear-chat", { chatKey: key, clearedAt: now });
+            if (key !== "general") {
+                socketRef.current.emit("clear-dm-history", { partnerUsername: chatKey, clearedAt: now });
+            }
         }
-    }, []);
+    }, [authUser]);
 
-    // Delete conversation and exit active chat (local state + database)
+    // Delete conversation and exit active chat (local state + database + localStorage)
     const deleteConversation = useCallback((chatKey) => {
         if (!chatKey) return;
         const key = chatKey.toLowerCase();
+        const now = Date.now();
+        const myUsername = (authUser?.username || '').trim().toLowerCase();
+        if (myUsername) {
+            try {
+                localStorage.setItem(`chathub_cleared_${myUsername}_${key}`, String(now));
+            } catch (_) {}
+        }
         setConversations((prev) => {
             const next = { ...prev };
             delete next[key];
@@ -680,10 +724,13 @@ export function SocketProvider({ children }) {
             }
             return curr;
         });
-        if (socketRef.current && key !== "general") {
-            socketRef.current.emit("delete-dm-chat", { partnerUsername: chatKey });
+        if (socketRef.current) {
+            socketRef.current.emit("clear-chat", { chatKey: key, clearedAt: now });
+            if (key !== "general") {
+                socketRef.current.emit("delete-dm-chat", { partnerUsername: chatKey, clearedAt: now });
+            }
         }
-    }, []);
+    }, [authUser]);
 
     // Block/unblock users (persisted in DB + localStorage)
     const [blockedUsers, setBlockedUsers] = useState(() => {
