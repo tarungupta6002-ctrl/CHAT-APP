@@ -1474,6 +1474,53 @@ async function removeGroupMember(groupId, targetUsername, requestedByUsername) {
     }
 }
 
+async function updateGroupDetails(groupId, { name, description, avatarUrl, avatarColor }, requestedByUsername) {
+    if (!groupId || !requestedByUsername) return { success: false, error: "Missing parameters" };
+    const cleanReq = requestedByUsername.trim().toLowerCase();
+    try {
+        const adminRs = await db.execute({
+            sql: `SELECT role FROM group_members WHERE group_id = ? AND username = ? COLLATE NOCASE LIMIT 1`,
+            args: [groupId, cleanReq]
+        });
+        if (adminRs.rows.length === 0 || adminRs.rows[0].role !== 'admin') {
+            return { success: false, error: "Only group admins can update group details." };
+        }
+
+        const updates = [];
+        const args = [];
+        if (name !== undefined && name.trim()) {
+            updates.push(`name = ?`);
+            args.push(name.trim());
+        }
+        if (description !== undefined) {
+            updates.push(`description = ?`);
+            args.push(description.trim());
+        }
+        if (avatarUrl !== undefined) {
+            updates.push(`avatar_url = ?`);
+            args.push(avatarUrl);
+        }
+        if (avatarColor !== undefined) {
+            updates.push(`avatar_color = ?`);
+            args.push(avatarColor);
+        }
+
+        if (updates.length > 0) {
+            args.push(groupId);
+            await db.execute({
+                sql: `UPDATE groups SET ${updates.join(', ')} WHERE id = ?`,
+                args
+            });
+        }
+
+        const updatedDetails = await getGroupDetails(groupId, cleanReq);
+        return { success: true, group: updatedDetails };
+    } catch (err) {
+        console.error("Error updating group details:", err);
+        return { success: false, error: err.message };
+    }
+}
+
 async function getGroupHistory(groupId, limit = 100, forUsername = null) {
     if (!groupId) return [];
     try {
@@ -1549,5 +1596,6 @@ module.exports = {
     getGroupDetails,
     addGroupMember,
     removeGroupMember,
+    updateGroupDetails,
     getGroupHistory
 };

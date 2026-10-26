@@ -681,6 +681,26 @@ io.on("connection", (socket) => {
         }
     });
 
+    // Update group details (e.g. group picture, name, description, avatarColor)
+    socket.on("update-group-details", async (data, callback) => {
+        const user = users.get(socket.id);
+        if (!user || !data?.groupId) {
+            if (typeof callback === "function") callback({ error: "Unauthorized or missing group ID" });
+            return;
+        }
+        try {
+            const { groupId, name, description, avatarUrl, avatarColor } = data;
+            const res = await db.updateGroupDetails(groupId, { name, description, avatarUrl, avatarColor }, user.username);
+            if (res.success && res.group) {
+                io.to(`group:${groupId}`).emit("group-updated", res.group);
+            }
+            if (typeof callback === "function") callback(res);
+        } catch (err) {
+            console.error("Error updating group details:", err);
+            if (typeof callback === "function") callback({ error: err.message });
+        }
+    });
+
     // Delete Message (For Everyone)
     socket.on("message-delete", async ({ messageId, recipientId }) => {
         if (!messageId) return;

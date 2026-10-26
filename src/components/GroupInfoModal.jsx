@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { 
     X, 
@@ -10,7 +10,8 @@ import {
     Calendar, 
     Info,
     Check,
-    Loader2
+    Loader2,
+    Camera
 } from 'lucide-react';
 
 export default function GroupInfoModal({ isOpen, onClose }) {
@@ -18,6 +19,7 @@ export default function GroupInfoModal({ isOpen, onClose }) {
         activeGroupDetails, 
         addGroupMember, 
         removeGroupMember, 
+        updateGroupDetails,
         allRegisteredUsers, 
         currentUser,
         selectChat 
@@ -29,6 +31,7 @@ export default function GroupInfoModal({ isOpen, onClose }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [confirmExit, setConfirmExit] = useState(false);
+    const avatarInputRef = useRef(null);
 
     const myUsername = (currentUser?.username || '').toLowerCase();
 
@@ -41,6 +44,48 @@ export default function GroupInfoModal({ isOpen, onClose }) {
         );
         return myMemberRec?.role === 'admin';
     }, [activeGroupDetails, myUsername]);
+
+    const handleUpdateGroupPic = (e) => {
+        const file = e.target.files?.[0];
+        if (!file || !activeGroupDetails) return;
+        if (file.size > 8 * 1024 * 1024) {
+            alert('Please choose an image under 8MB.');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (loadEvent) => {
+            const img = new Image();
+            img.onload = async () => {
+                const canvas = document.createElement('canvas');
+                const maxDim = 256;
+                let width = img.width;
+                let height = img.height;
+                if (width > height) {
+                    if (width > maxDim) {
+                        height = Math.round(height * (maxDim / width));
+                        width = maxDim;
+                    }
+                } else {
+                    if (height > maxDim) {
+                        width = Math.round(width * (maxDim / height));
+                        height = maxDim;
+                    }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressed = canvas.toDataURL('image/jpeg', 0.85);
+                try {
+                    await updateGroupDetails(activeGroupDetails.id, { avatarUrl: compressed });
+                } catch (err) {
+                    alert('Failed to update group picture.');
+                }
+            };
+            img.src = loadEvent.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
 
     // Available users who are NOT yet in the group
     const nonMemberUsers = useMemo(() => {
@@ -124,15 +169,36 @@ export default function GroupInfoModal({ isOpen, onClose }) {
                     {/* Hero Avatar & Title */}
                     <div className="wa-group-hero">
                         <div 
-                            className="wa-group-hero-avatar"
-                            style={{ backgroundColor: group.avatarColor || '#00a884' }}
+                            className="wa-group-hero-avatar-wrap"
+                            onClick={() => isAdmin && avatarInputRef.current?.click()}
+                            style={{ cursor: isAdmin ? 'pointer' : 'default' }}
+                            title={isAdmin ? "Click to change group picture" : ""}
                         >
-                            {group.avatarUrl ? (
-                                <img src={group.avatarUrl} alt={group.name} className="wa-group-hero-img" />
-                            ) : (
-                                <Users size={48} color="#ffffff" />
+                            <div 
+                                className="wa-group-hero-avatar"
+                                style={{ backgroundColor: group.avatarColor || '#00a884' }}
+                            >
+                                {group.avatarUrl ? (
+                                    <img src={group.avatarUrl} alt={group.name} className="wa-group-hero-img" />
+                                ) : (
+                                    <Users size={48} color="#ffffff" />
+                                )}
+                            </div>
+                            {isAdmin && (
+                                <div className="wa-group-hero-badge" title="Change group photo">
+                                    <Camera size={16} color="#ffffff" />
+                                </div>
                             )}
                         </div>
+                        {isAdmin && (
+                            <input 
+                                type="file" 
+                                ref={avatarInputRef} 
+                                accept="image/*" 
+                                style={{ display: 'none' }} 
+                                onChange={handleUpdateGroupPic} 
+                            />
+                        )}
                         <h3 className="wa-group-hero-name">{group.name}</h3>
                         <p className="wa-group-hero-meta">
                             Group • {members.length} {members.length === 1 ? 'member' : 'members'}

@@ -15124,17 +15124,80 @@ body.theme-light .wa-group-footer,
   padding-bottom: 6px;
 }
 
+.wa-group-avatar-upload-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .wa-group-large-avatar {
-  width: 68px;
-  height: 68px;
-  min-width: 68px;
+  position: relative;
+  width: 72px;
+  height: 72px;
+  min-width: 72px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
   flex-shrink: 0;
+}
+
+.wa-group-large-avatar:hover {
+  transform: scale(1.04);
+}
+
+.wa-group-large-avatar-img {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50%;
+  object-fit: cover !important;
+  display: block;
+}
+
+.wa-group-avatar-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: #00a884;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  border: 2px solid #111b21;
+  transition: transform 0.15s;
+}
+
+body.theme-light .wa-group-avatar-badge,
+[data-theme="light"] .wa-group-avatar-badge {
+  border-color: #ffffff;
+}
+
+.wa-remove-avatar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #ea4335;
+  font-size: 0.74rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 0.85;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+
+.wa-remove-avatar-btn:hover {
+  opacity: 1;
+  background-color: rgba(234, 67, 53, 0.1);
 }
 
 .wa-group-color-picker {
@@ -15332,16 +15395,46 @@ body.theme-light .wa-group-info-header,
   padding: 10px 0;
 }
 
+.wa-group-hero-avatar-wrap {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
 .wa-group-hero-avatar {
-  width: 80px;
-  height: 80px;
+  width: 84px;
+  height: 84px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 10px;
   overflow: hidden;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.wa-group-hero-badge {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #00a884;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  border: 2px solid #111b21;
+  transition: transform 0.15s;
+}
+
+.wa-group-hero-avatar-wrap:hover .wa-group-hero-badge {
+  transform: scale(1.1);
+}
+
+body.theme-light .wa-group-hero-badge,
+[data-theme="light"] .wa-group-hero-badge {
+  border-color: #ffffff;
 }
 
 .wa-group-hero-img {

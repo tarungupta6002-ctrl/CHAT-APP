@@ -878,6 +878,15 @@ export function SocketProvider({ children }) {
         });
     }, []);
 
+    const updateGroupDetails = useCallback((groupId, updates) => {
+        return new Promise((resolve) => {
+            if (!socketRef.current) return resolve({ error: "Socket not connected" });
+            socketRef.current.emit("update-group-details", { groupId, ...updates }, (res) => {
+                resolve(res);
+            });
+        });
+    }, []);
+
     // Block/unblock users (persisted in DB + localStorage)
     const [blockedUsers, setBlockedUsers] = useState(() => {
         try {
@@ -963,6 +972,7 @@ export function SocketProvider({ children }) {
         createGroup,
         addGroupMember,
         removeGroupMember,
+        updateGroupDetails,
         currentChat,
         selectChat,
         startChatWithUser,

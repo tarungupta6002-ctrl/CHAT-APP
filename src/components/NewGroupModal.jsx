@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
-import { X, Search, Check, ArrowRight, ArrowLeft, Users, Loader2 } from 'lucide-react';
+import { X, Search, Check, ArrowRight, ArrowLeft, Users, Loader2, Camera, Trash2 } from 'lucide-react';
 
 const AVATAR_COLORS = [
     '#00a884', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', 
@@ -18,10 +18,52 @@ export default function NewGroupModal({ isOpen, onClose }) {
     const [groupName, setGroupName] = useState('');
     const [groupDesc, setGroupDesc] = useState('');
     const [selectedColor, setSelectedColor] = useState('#00a884');
+    const [groupAvatarUrl, setGroupAvatarUrl] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+    const fileInputRef = useRef(null);
 
     const myUsername = (authUser?.username || '').toLowerCase();
+
+    // Handle group picture file selection and lightweight canvas resize/compression
+    const handleAvatarFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 8 * 1024 * 1024) {
+            setErrorMsg('Please choose an image under 8MB.');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (loadEvent) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const maxDim = 256;
+                let width = img.width;
+                let height = img.height;
+                if (width > height) {
+                    if (width > maxDim) {
+                        height = Math.round(height * (maxDim / width));
+                        width = maxDim;
+                    }
+                } else {
+                    if (height > maxDim) {
+                        width = Math.round(width * (maxDim / height));
+                        height = maxDim;
+                    }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressed = canvas.toDataURL('image/jpeg', 0.85);
+                setGroupAvatarUrl(compressed);
+                setErrorMsg('');
+            };
+            img.src = loadEvent.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
 
     // Filter candidate members (exclude current user)
     const availableUsers = useMemo(() => {
@@ -68,6 +110,7 @@ export default function NewGroupModal({ isOpen, onClose }) {
             const res = await createGroup({
                 name: groupName.trim(),
                 description: groupDesc.trim(),
+                avatarUrl: groupAvatarUrl || '',
                 avatarColor: selectedColor,
                 members: selectedMembers
             });
@@ -104,6 +147,7 @@ export default function NewGroupModal({ isOpen, onClose }) {
         setSelectedMembers([]);
         setGroupName('');
         setGroupDesc('');
+        setGroupAvatarUrl('');
         setErrorMsg('');
         setIsCreating(false);
         onClose();
@@ -243,14 +287,44 @@ export default function NewGroupModal({ isOpen, onClose }) {
                 {/* STEP 2: GROUP DETAILS */}
                 {step === 2 && (
                     <div className="wa-group-step2-wrap">
-                        {/* Group Avatar Preview & Color Palette */}
+                        {/* Group Avatar Preview, Camera Upload & Color Palette */}
                         <div className="wa-group-icon-section">
-                            <div 
-                                className="wa-group-large-avatar"
-                                style={{ backgroundColor: selectedColor }}
-                            >
-                                <Users size={36} color="#ffffff" />
+                            <div className="wa-group-avatar-upload-box">
+                                <div 
+                                    className="wa-group-large-avatar"
+                                    style={{ backgroundColor: selectedColor, cursor: 'pointer' }}
+                                    onClick={() => fileInputRef.current?.click()}
+                                    title="Click to add or change group picture"
+                                >
+                                    {groupAvatarUrl ? (
+                                        <img src={groupAvatarUrl} alt="Group pic" className="wa-group-large-avatar-img" />
+                                    ) : (
+                                        <Users size={34} color="#ffffff" />
+                                    )}
+                                    <div className="wa-group-avatar-badge" title="Upload picture">
+                                        <Camera size={14} color="#ffffff" />
+                                    </div>
+                                </div>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    accept="image/*"
+                                    style={{ display: 'none' }}
+                                    onChange={handleAvatarFileChange}
+                                />
+                                {groupAvatarUrl && (
+                                    <button 
+                                        type="button" 
+                                        className="wa-remove-avatar-btn"
+                                        onClick={() => setGroupAvatarUrl('')}
+                                        title="Remove photo"
+                                    >
+                                        <Trash2 size={12} />
+                                        <span>Remove</span>
+                                    </button>
+                                )}
                             </div>
+
                             <div className="wa-group-color-picker">
                                 <span>Group Color</span>
                                 <div className="wa-group-colors-row">
