@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
-import { X, Search, Check, ArrowRight, ArrowLeft, Users, Camera, Loader2 } from 'lucide-react';
+import { X, Search, Check, ArrowRight, ArrowLeft, Users, Loader2 } from 'lucide-react';
 
 const AVATAR_COLORS = [
     '#00a884', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', 
@@ -87,7 +87,7 @@ export default function NewGroupModal({ isOpen, onClose }) {
                     partnerColor: res.group.avatarColor,
                     partnerAvatarUrl: res.group.avatarUrl || '',
                     isGroup: true,
-                    members: res.group.members
+                    memberCount: (res.group.members || []).length || selectedMembers.length + 1
                 });
             }
 
@@ -110,11 +110,11 @@ export default function NewGroupModal({ isOpen, onClose }) {
     };
 
     return (
-        <div className="wa-modal-backdrop" onClick={handleClose}>
+        <div className="wa-modal-backdrop" onClick={handleClose} role="dialog" aria-modal="true">
             <div className="wa-new-group-modal" onClick={(e) => e.stopPropagation()}>
                 {/* Modal Header */}
-                <header className="wa-modal-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="wa-new-group-header">
+                    <div className="wa-new-group-header-left">
                         {step === 2 && (
                             <button 
                                 type="button" 
@@ -125,33 +125,39 @@ export default function NewGroupModal({ isOpen, onClose }) {
                                 <ArrowLeft size={20} />
                             </button>
                         )}
-                        <h3 className="wa-modal-title">
-                            {step === 1 ? 'Add group members' : 'New group'}
-                        </h3>
+                        <h2>{step === 1 ? 'Add group members' : 'New group'}</h2>
                     </div>
-                    <button type="button" className="wa-modal-icon-btn" onClick={handleClose} title="Close">
-                        <X size={20} />
-                    </button>
-                </header>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="wa-step-indicator">{step} of 2</span>
+                        <button type="button" className="wa-modal-icon-btn" onClick={handleClose} title="Close">
+                            <X size={20} />
+                        </button>
+                    </div>
+                </div>
 
                 {errorMsg && (
-                    <div className="wa-group-error-banner">
+                    <div className="wa-modal-error">
                         {errorMsg}
                     </div>
                 )}
 
                 {/* STEP 1: MEMBER SELECTION */}
                 {step === 1 && (
-                    <div className="wa-group-step1-body">
+                    <div className="wa-group-step1-wrap">
                         {/* Selected chips bar */}
                         {selectedMembers.length > 0 && (
-                            <div className="wa-group-selected-chips">
+                            <div className="wa-selected-chips-scroll">
                                 {selectedMembers.map((m) => {
                                     const u = allRegisteredUsers?.find((x) => x.username?.toLowerCase() === m.toLowerCase());
                                     return (
-                                        <div key={m} className="wa-group-chip">
+                                        <div key={m} className="wa-member-chip">
                                             <span>{u?.fullName || m}</span>
-                                            <button type="button" onClick={() => toggleMember(m)}>
+                                            <button 
+                                                type="button" 
+                                                className="wa-member-chip-remove"
+                                                onClick={() => toggleMember(m)}
+                                                title="Remove member"
+                                            >
                                                 <X size={12} />
                                             </button>
                                         </div>
@@ -160,16 +166,18 @@ export default function NewGroupModal({ isOpen, onClose }) {
                             </div>
                         )}
 
-                        {/* Search Input */}
-                        <div className="wa-group-search-box">
-                            <Search size={16} className="wa-group-search-icon" />
-                            <input
-                                type="text"
-                                placeholder="Search contacts..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                autoFocus
-                            />
+                        {/* Search Bar */}
+                        <div className="wa-group-search-row">
+                            <div className="wa-group-search-box">
+                                <Search size={16} className="wa-group-search-icon" />
+                                <input
+                                    type="text"
+                                    placeholder="Search contacts..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
                         </div>
 
                         {/* Contacts List */}
@@ -187,13 +195,19 @@ export default function NewGroupModal({ isOpen, onClose }) {
                                             key={user.username}
                                             className={`wa-group-contact-item ${isSelected ? 'selected' : ''}`}
                                             onClick={() => toggleMember(user.username)}
+                                            role="button"
+                                            tabIndex={0}
                                         >
                                             <div 
                                                 className="wa-group-contact-avatar"
                                                 style={{ backgroundColor: user.color || '#10b981' }}
                                             >
                                                 {user.avatarUrl ? (
-                                                    <img src={user.avatarUrl} alt={user.username} />
+                                                    <img 
+                                                        src={user.avatarUrl} 
+                                                        alt={user.username} 
+                                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                    />
                                                 ) : (
                                                     user.username.slice(0, 2).toUpperCase()
                                                 )}
@@ -202,7 +216,7 @@ export default function NewGroupModal({ isOpen, onClose }) {
                                                 <span className="wa-group-contact-name">{user.fullName || user.username}</span>
                                                 <span className="wa-group-contact-sub">@{user.username}</span>
                                             </div>
-                                            <div className={`wa-group-checkbox ${isSelected ? 'checked' : ''}`}>
+                                            <div className={`wa-checkbox ${isSelected ? 'checked' : ''}`}>
                                                 {isSelected && <Check size={14} color="#fff" strokeWidth={3} />}
                                             </div>
                                         </div>
@@ -218,7 +232,7 @@ export default function NewGroupModal({ isOpen, onClose }) {
                                 className="wa-group-fab-btn"
                                 onClick={handleNext}
                                 disabled={selectedMembers.length === 0}
-                                title="Next step"
+                                title={selectedMembers.length === 0 ? "Select at least 1 member" : "Next step"}
                             >
                                 <ArrowRight size={22} />
                             </button>
@@ -228,7 +242,7 @@ export default function NewGroupModal({ isOpen, onClose }) {
 
                 {/* STEP 2: GROUP DETAILS */}
                 {step === 2 && (
-                    <div className="wa-group-step2-body">
+                    <div className="wa-group-step2-wrap">
                         {/* Group Avatar Preview & Color Palette */}
                         <div className="wa-group-icon-section">
                             <div 
@@ -238,7 +252,7 @@ export default function NewGroupModal({ isOpen, onClose }) {
                                 <Users size={36} color="#ffffff" />
                             </div>
                             <div className="wa-group-color-picker">
-                                <span>Group Color:</span>
+                                <span>Group Color</span>
                                 <div className="wa-group-colors-row">
                                     {AVATAR_COLORS.map((col) => (
                                         <button
@@ -247,6 +261,7 @@ export default function NewGroupModal({ isOpen, onClose }) {
                                             className={`wa-group-color-dot ${selectedColor === col ? 'active' : ''}`}
                                             style={{ backgroundColor: col }}
                                             onClick={() => setSelectedColor(col)}
+                                            title={col}
                                         />
                                     ))}
                                 </div>
@@ -270,7 +285,7 @@ export default function NewGroupModal({ isOpen, onClose }) {
                         </div>
 
                         {/* Group Description Input */}
-                        <div className="wa-group-input-wrap" style={{ marginTop: '16px' }}>
+                        <div className="wa-group-input-wrap">
                             <label>Group Description (Optional)</label>
                             <textarea
                                 placeholder="Add group description / topic..."
