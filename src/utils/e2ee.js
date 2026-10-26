@@ -56,7 +56,9 @@ export async function getConversationKey(currentUser, partnerName, chatType = 'd
     // Unique deterministic conversation identifier
     const convId = chatType === 'general'
         ? 'chathub_public_general_community_room_key'
-        : [u1, u2].sort().join(':chathub_e2ee_channel:');
+        : (chatType === 'group'
+            ? `chathub_group_channel_${u2}`
+            : [u1, u2].sort().join(':chathub_e2ee_channel:'));
 
     if (keyCache.has(convId)) {
         return keyCache.get(convId);
@@ -227,5 +229,32 @@ export async function decryptIncomingMessage(messageData, currentUser, partnerNa
             text: await decryptText(decrypted.replyTo.text, key)
         };
     }
+
+    // Legacy fallback for group messages encrypted prior to shared group key update
+    if (chatType === 'group') {
+        const stillEncrypted = (decrypted.text && isEncrypted(decrypted.text)) ||
+                               (decrypted.image && isEncrypted(decrypted.image)) ||
+                               (decrypted.audio && isEncrypted(decrypted.audio)) ||
+                               (decrypted.file && isEncrypted(decrypted.file));
+        const sender = (messageData.username || messageData.senderUsername || '').trim().toLowerCase();
+        if (stillEncrypted && sender) {
+            const legacyKey = await getConversationKey(sender, partnerName, 'dm');
+            if (legacyKey) {
+                if (decrypted.text && isEncrypted(decrypted.text)) {
+                    decrypted.text = await decryptText(decrypted.text, legacyKey);
+                }
+                if (decrypted.image && isEncrypted(decrypted.image)) {
+                    decrypted.image = await decryptText(decrypted.image, legacyKey);
+                }
+                if (decrypted.audio && isEncrypted(decrypted.audio)) {
+                    decrypted.audio = await decryptText(decrypted.audio, legacyKey);
+                }
+                if (decrypted.file && isEncrypted(decrypted.file)) {
+                    decrypted.file = await decryptText(decrypted.file, legacyKey);
+                }
+            }
+        }
+    }
+
     return decrypted;
 }

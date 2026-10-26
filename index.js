@@ -703,6 +703,26 @@ io.on("connection", (socket) => {
         }
     });
 
+    // Delete group completely (Admin or Creator only)
+    socket.on("delete-group", async ({ groupId }, callback) => {
+        const user = users.get(socket.id);
+        if (!user || !groupId) {
+            if (typeof callback === "function") callback({ error: "Unauthorized or missing group ID" });
+            return;
+        }
+        try {
+            const res = await db.deleteGroup(groupId, user.username);
+            if (res.success) {
+                io.to(`group:${groupId}`).emit("group-removed", { groupId, deletedBy: user.username });
+                io.emit("group-removed", { groupId, deletedBy: user.username });
+            }
+            if (typeof callback === "function") callback(res);
+        } catch (err) {
+            console.error("Error deleting group:", err);
+            if (typeof callback === "function") callback({ error: err.message });
+        }
+    });
+
     // Delete Message (For Everyone)
     socket.on("message-delete", async ({ messageId, recipientId }) => {
         if (!messageId) return;

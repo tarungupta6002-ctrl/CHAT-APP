@@ -14,7 +14,8 @@ import {
     Ban, 
     Eraser, 
     Trash2,
-    Users
+    Users,
+    LogOut
 } from 'lucide-react';
 import MessagesContainer from './MessagesContainer';
 import TypingBar from './TypingBar';
@@ -36,6 +37,7 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
         blockedUsers,
         activeGroupDetails,
         removeGroupMember,
+        deleteGroup,
         currentUser
     } = useSocket();
     const { initiateCall } = useWebRTC();
@@ -217,15 +219,44 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
         });
     };
 
+    const isGroupAdmin = useMemo(() => {
+        if (!isGroup) return false;
+        const myName = (currentUser?.username || '').toLowerCase();
+        if (activeGroupDetails?.createdBy?.toLowerCase() === myName) return true;
+        if (activeGroupDetails?.myRole === 'admin') return true;
+        const myMember = (activeGroupDetails?.members || []).find(
+            (m) => m.username?.toLowerCase() === myName
+        );
+        return myMember?.role === 'admin';
+    }, [isGroup, activeGroupDetails, currentUser]);
+
     const handleDeleteChat = () => {
         setIsMenuOpen(false);
         setConfirmModal({
             type: 'delete',
-            title: isGroup ? 'Exit & Delete group?' : 'Delete this chat?',
-            message: isGroup 
-                ? `Are you sure you want to exit and delete "${partnerName}" from your chats?`
-                : `Are you sure you want to delete this chat with ${partnerName}?`,
-            confirmText: isGroup ? 'Exit & Delete' : 'Delete'
+            title: 'Delete this chat?',
+            message: `Are you sure you want to delete this chat with ${partnerName}?`,
+            confirmText: 'Delete'
+        });
+    };
+
+    const handleExitGroup = () => {
+        setIsMenuOpen(false);
+        setConfirmModal({
+            type: 'exit-group',
+            title: `Exit "${partnerName}" group?`,
+            message: `Are you sure you want to exit "${partnerName}"? You will no longer receive messages.`,
+            confirmText: 'Exit group'
+        });
+    };
+
+    const handleDeleteGroup = () => {
+        setIsMenuOpen(false);
+        setConfirmModal({
+            type: 'delete-group',
+            title: `Delete "${partnerName}" group?`,
+            message: `Are you sure you want to delete this group? All members will be removed and chat history will be permanently deleted for everyone.`,
+            confirmText: 'Delete for everyone'
         });
     };
 
@@ -233,13 +264,17 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
         if (!confirmModal) return;
         if (confirmModal.type === 'clear') {
             clearConversation(activeKey);
-        } else if (confirmModal.type === 'delete') {
-            if (isGroup && currentChat?.groupId) {
+        } else if (confirmModal.type === 'delete-group') {
+            if (currentChat?.groupId) {
+                deleteGroup(currentChat.groupId);
+            }
+        } else if (confirmModal.type === 'exit-group') {
+            if (currentChat?.groupId) {
                 removeGroupMember(currentChat.groupId, currentUser.username);
                 selectChat(null);
-            } else {
-                deleteConversation(activeKey);
             }
+        } else if (confirmModal.type === 'delete') {
+            deleteConversation(activeKey);
         } else if (confirmModal.type === 'block') {
             blockUser(partnerName);
         }
@@ -472,14 +507,37 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
                                     <span>Clear Chat</span>
                                 </button>
                                 <div className="wa-header-menu-divider" />
-                                <button
-                                    type="button"
-                                    className="wa-header-menu-item danger"
-                                    onClick={handleDeleteChat}
-                                >
-                                    <Trash2 size={16} />
-                                    <span>{isGroup ? 'Exit & Delete Group' : 'Delete Chat'}</span>
-                                </button>
+                                {isGroup ? (
+                                    <>
+                                        <button
+                                            type="button"
+                                            className="wa-header-menu-item"
+                                            onClick={handleExitGroup}
+                                        >
+                                            <LogOut size={16} />
+                                            <span>Exit Group</span>
+                                        </button>
+                                        {isGroupAdmin && (
+                                            <button
+                                                type="button"
+                                                className="wa-header-menu-item danger"
+                                                onClick={handleDeleteGroup}
+                                            >
+                                                <Trash2 size={16} />
+                                                <span>Delete Group</span>
+                                            </button>
+                                        )}
+                                    </>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="wa-header-menu-item danger"
+                                        onClick={handleDeleteChat}
+                                    >
+                                        <Trash2 size={16} />
+                                        <span>Delete Chat</span>
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>

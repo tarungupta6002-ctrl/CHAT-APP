@@ -11,7 +11,8 @@ import {
     Info,
     Check,
     Loader2,
-    Camera
+    Camera,
+    Trash2
 } from 'lucide-react';
 
 export default function GroupInfoModal({ isOpen, onClose }) {
@@ -20,6 +21,7 @@ export default function GroupInfoModal({ isOpen, onClose }) {
         addGroupMember, 
         removeGroupMember, 
         updateGroupDetails,
+        deleteGroup,
         allRegisteredUsers, 
         currentUser,
         selectChat 
@@ -31,6 +33,7 @@ export default function GroupInfoModal({ isOpen, onClose }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [confirmExit, setConfirmExit] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
     const [isUploadingPic, setIsUploadingPic] = useState(false);
     const avatarInputRef = useRef(null);
 
@@ -167,6 +170,16 @@ export default function GroupInfoModal({ isOpen, onClose }) {
             onClose();
         } catch (err) {
             alert(err.message || 'Failed to exit group');
+        }
+    };
+
+    const handleDeleteGroup = async () => {
+        try {
+            await deleteGroup(group.id);
+            selectChat(null);
+            onClose();
+        } catch (err) {
+            alert(err.message || 'Failed to delete group');
         }
     };
 
@@ -325,7 +338,7 @@ export default function GroupInfoModal({ isOpen, onClose }) {
                         </div>
                     </div>
 
-                    {/* Exit Group Button */}
+                    {/* Exit & Delete Group Buttons */}
                     <div className="wa-group-info-card wa-group-exit-card">
                         <button 
                             type="button" 
@@ -335,6 +348,16 @@ export default function GroupInfoModal({ isOpen, onClose }) {
                             <LogOut size={18} />
                             <span>Exit group</span>
                         </button>
+                        {isAdmin && (
+                            <button 
+                                type="button" 
+                                className="wa-group-exit-btn wa-group-delete-btn"
+                                onClick={() => setConfirmDelete(true)}
+                            >
+                                <Trash2 size={18} />
+                                <span>Delete group for everyone</span>
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -457,6 +480,34 @@ export default function GroupInfoModal({ isOpen, onClose }) {
                                     onClick={handleExitGroup}
                                 >
                                     Exit Group
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Delete Group Confirmation (For Everyone) */}
+                {confirmDelete && (
+                    <div className="wa-modal-backdrop submodal" onClick={() => setConfirmDelete(false)}>
+                        <div className="wa-modal-box" onClick={(e) => e.stopPropagation()}>
+                            <h3 className="wa-modal-title">Delete "{group.name}" group?</h3>
+                            <p className="wa-modal-desc">
+                                Are you sure you want to delete this group? All members will be removed and this group will be deleted for everyone. This action cannot be undone.
+                            </p>
+                            <div className="wa-modal-actions">
+                                <button 
+                                    type="button" 
+                                    className="wa-modal-btn-cancel" 
+                                    onClick={() => setConfirmDelete(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    type="button" 
+                                    className="wa-modal-btn-danger" 
+                                    onClick={handleDeleteGroup}
+                                >
+                                    Delete for everyone
                                 </button>
                             </div>
                         </div>

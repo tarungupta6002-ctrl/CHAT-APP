@@ -1532,6 +1532,50 @@ async function updateGroupDetails(groupId, { name, description, avatarUrl, avata
     }
 }
 
+async function deleteGroup(groupId, requestedByUsername) {
+    if (!groupId || !requestedByUsername) return { success: false, error: "Missing parameters" };
+    const cleanReq = requestedByUsername.trim().toLowerCase();
+    try {
+        const grpRs = await db.execute({
+            sql: `SELECT created_by FROM groups WHERE id = ? LIMIT 1`,
+            args: [groupId]
+        });
+        if (grpRs.rows.length === 0) return { success: false, error: "Group not found" };
+        const isCreator = (grpRs.rows[0].created_by || '').trim().toLowerCase() === cleanReq;
+
+        const adminRs = await db.execute({
+            sql: `SELECT role FROM group_members WHERE group_id = ? AND username = ? COLLATE NOCASE LIMIT 1`,
+            args: [groupId, cleanReq]
+        });
+        const isAdmin = adminRs.rows.length > 0 && adminRs.rows[0].role === 'admin';
+
+        if (!isCreator && !isAdmin) {
+            return { success: false, error: "Only group admins or the creator can delete this group." };
+        }
+
+        // 1. Delete all members of this group
+        await db.execute({
+            sql: `DELETE FROM group_members WHERE group_id = ?`,
+            args: [groupId]
+        });
+        // 2. Delete all messages sent in this group
+        await db.execute({
+            sql: `DELETE FROM messages WHERE group_id = ?`,
+            args: [groupId]
+        });
+        // 3. Delete the group itself
+        await db.execute({
+            sql: `DELETE FROM groups WHERE id = ?`,
+            args: [groupId]
+        });
+
+        return { success: true };
+    } catch (err) {
+        console.error("Error deleting group:", err);
+        return { success: false, error: err.message };
+    }
+}
+
 async function getGroupHistory(groupId, limit = 100, forUsername = null) {
     if (!groupId) return [];
     try {
@@ -1608,5 +1652,6 @@ module.exports = {
     addGroupMember,
     removeGroupMember,
     updateGroupDetails,
+    deleteGroup,
     getGroupHistory
 };

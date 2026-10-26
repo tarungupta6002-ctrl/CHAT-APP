@@ -312,8 +312,21 @@ export function SocketProvider({ children }) {
         });
 
         socket.on("group-removed", ({ groupId }) => {
+            if (!groupId) return;
+            const groupKey = `group:${groupId}`;
             setUserGroups((prev) => prev.filter((g) => g.id !== groupId));
+            setConversations((prev) => {
+                const next = { ...prev };
+                delete next[groupKey];
+                return next;
+            });
+            setUnreadCounts((prev) => {
+                const next = { ...prev };
+                delete next[groupKey];
+                return next;
+            });
             setCurrentChat((curr) => (curr?.type === "group" && curr.groupId === groupId ? null : curr));
+            setActiveGroupDetails((curr) => (curr?.id === groupId ? null : curr));
         });
 
         socket.on("group-details", (details) => {
@@ -691,7 +704,7 @@ export function SocketProvider({ children }) {
         if (!socketRef.current || !messageId || !newText || !newText.trim()) return;
         const recipientId = currentChat?.type === "dm" ? currentChat.partnerId : null;
         const myName = authUser?.username || currentUser?.username || 'User';
-        const partner = currentChat?.type === 'dm' ? currentChat.partnerName : 'general';
+        const partner = currentChat?.type === 'dm' ? currentChat.partnerName : (currentChat?.type === 'group' ? currentChat.groupId : 'general');
         const key = await getConversationKey(myName, partner, currentChat?.type || 'general');
         const encryptedText = key ? await encryptText(newText.trim(), key) : newText.trim();
 
@@ -895,6 +908,33 @@ export function SocketProvider({ children }) {
         });
     }, []);
 
+    const deleteGroup = useCallback((groupId) => {
+        return new Promise((resolve, reject) => {
+            if (!socketRef.current || !groupId) return reject(new Error("Socket not connected or missing group ID"));
+            socketRef.current.emit("delete-group", { groupId }, (res) => {
+                if (res?.error) {
+                    reject(new Error(res.error));
+                } else {
+                    const groupKey = `group:${groupId}`;
+                    setUserGroups((prev) => prev.filter((g) => g.id !== groupId));
+                    setConversations((prev) => {
+                        const next = { ...prev };
+                        delete next[groupKey];
+                        return next;
+                    });
+                    setUnreadCounts((prev) => {
+                        const next = { ...prev };
+                        delete next[groupKey];
+                        return next;
+                    });
+                    setCurrentChat((curr) => (curr?.type === "group" && curr.groupId === groupId ? null : curr));
+                    setActiveGroupDetails((curr) => (curr?.id === groupId ? null : curr));
+                    resolve(res);
+                }
+            });
+        });
+    }, []);
+
     // Block/unblock users (persisted in DB + localStorage)
     const [blockedUsers, setBlockedUsers] = useState(() => {
         try {
@@ -981,6 +1021,7 @@ export function SocketProvider({ children }) {
         addGroupMember,
         removeGroupMember,
         updateGroupDetails,
+        deleteGroup,
         currentChat,
         selectChat,
         startChatWithUser,
