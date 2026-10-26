@@ -165,16 +165,28 @@ export default function NewGroupModal({ isOpen, onClose }) {
                                 className="wa-modal-icon-btn" 
                                 onClick={() => setStep(1)}
                                 title="Back to members"
+                                aria-label="Back to members"
                             >
-                                <ArrowLeft size={20} />
+                                <ArrowLeft size={19} />
                             </button>
                         )}
-                        <h2>{step === 1 ? 'Add group members' : 'New group'}</h2>
+                        <div>
+                            <h2>{step === 1 ? 'Add group members' : 'New group'}</h2>
+                            <span className="wa-new-group-subtitle">
+                                {step === 1 ? 'Select contacts to add' : 'Provide group details'}
+                            </span>
+                        </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div className="wa-new-group-header-right">
                         <span className="wa-step-indicator">{step} of 2</span>
-                        <button type="button" className="wa-modal-icon-btn" onClick={handleClose} title="Close">
-                            <X size={20} />
+                        <button 
+                            type="button" 
+                            className="wa-modal-icon-btn" 
+                            onClick={handleClose} 
+                            title="Close"
+                            aria-label="Close"
+                        >
+                            <X size={19} />
                         </button>
                     </div>
                 </div>
@@ -195,12 +207,23 @@ export default function NewGroupModal({ isOpen, onClose }) {
                                     const u = allRegisteredUsers?.find((x) => x.username?.toLowerCase() === m.toLowerCase());
                                     return (
                                         <div key={m} className="wa-member-chip">
-                                            <span>{u?.fullName || m}</span>
+                                            <div 
+                                                className="wa-member-chip-avatar"
+                                                style={{ backgroundColor: u?.color || '#10b981' }}
+                                            >
+                                                {u?.avatarUrl ? (
+                                                    <img src={u.avatarUrl} alt={m} />
+                                                ) : (
+                                                    (u?.fullName || m).slice(0, 1).toUpperCase()
+                                                )}
+                                            </div>
+                                            <span className="wa-member-chip-text">{u?.fullName || m}</span>
                                             <button 
                                                 type="button" 
                                                 className="wa-member-chip-remove"
                                                 onClick={() => toggleMember(m)}
-                                                title="Remove member"
+                                                title={`Remove ${u?.fullName || m}`}
+                                                aria-label={`Remove ${u?.fullName || m}`}
                                             >
                                                 <X size={12} />
                                             </button>
@@ -261,7 +284,7 @@ export default function NewGroupModal({ isOpen, onClose }) {
                                                 <span className="wa-group-contact-sub">@{user.username}</span>
                                             </div>
                                             <div className={`wa-checkbox ${isSelected ? 'checked' : ''}`}>
-                                                {isSelected && <Check size={14} color="#fff" strokeWidth={3} />}
+                                                {isSelected && <Check size={13} color="#fff" strokeWidth={3} />}
                                             </div>
                                         </div>
                                     );
@@ -269,17 +292,33 @@ export default function NewGroupModal({ isOpen, onClose }) {
                             )}
                         </div>
 
-                        {/* Bottom action button */}
+                        {/* Compact Footer */}
                         <div className="wa-group-footer">
-                            <button
-                                type="button"
-                                className="wa-group-fab-btn"
-                                onClick={handleNext}
-                                disabled={selectedMembers.length === 0}
-                                title={selectedMembers.length === 0 ? "Select at least 1 member" : "Next step"}
-                            >
-                                <ArrowRight size={22} />
-                            </button>
+                            <div className="wa-group-footer-info">
+                                {selectedMembers.length > 0 ? (
+                                    <span>{selectedMembers.length} {selectedMembers.length === 1 ? 'member' : 'members'} selected</span>
+                                ) : (
+                                    <span className="wa-group-footer-hint">Select at least 1 member</span>
+                                )}
+                            </div>
+                            <div className="wa-group-footer-actions">
+                                <button
+                                    type="button"
+                                    className="wa-group-btn-secondary"
+                                    onClick={handleClose}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    className="wa-group-btn-primary"
+                                    onClick={handleNext}
+                                    disabled={selectedMembers.length === 0}
+                                >
+                                    <span>Next</span>
+                                    <ArrowRight size={15} />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -378,17 +417,39 @@ export default function NewGroupModal({ isOpen, onClose }) {
                             </p>
                         </div>
 
-                        {/* Create Fab Button */}
+                        {/* Step 2 Footer */}
                         <div className="wa-group-footer">
-                            <button
-                                type="button"
-                                className="wa-group-fab-btn"
-                                onClick={handleCreate}
-                                disabled={!groupName.trim() || isCreating}
-                                title="Create Group"
-                            >
-                                {isCreating ? <Loader2 size={22} className="spin" /> : <Check size={22} strokeWidth={3} />}
-                            </button>
+                            <div className="wa-group-footer-info">
+                                <span>{selectedMembers.length + 1} total members</span>
+                            </div>
+                            <div className="wa-group-footer-actions">
+                                <button
+                                    type="button"
+                                    className="wa-group-btn-secondary"
+                                    onClick={() => setStep(1)}
+                                    disabled={isCreating}
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    type="button"
+                                    className="wa-group-btn-primary"
+                                    onClick={handleCreate}
+                                    disabled={!groupName.trim() || isCreating}
+                                >
+                                    {isCreating ? (
+                                        <>
+                                            <Loader2 size={15} className="wa-spin" />
+                                            <span>Creating...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Check size={15} strokeWidth={2.5} />
+                                            <span>Create group</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
