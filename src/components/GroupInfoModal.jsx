@@ -31,6 +31,7 @@ export default function GroupInfoModal({ isOpen, onClose }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [confirmExit, setConfirmExit] = useState(false);
+    const [isUploadingPic, setIsUploadingPic] = useState(false);
     const avatarInputRef = useRef(null);
 
     const myUsername = (currentUser?.username || '').toLowerCase();
@@ -50,39 +51,58 @@ export default function GroupInfoModal({ isOpen, onClose }) {
         if (!file || !activeGroupDetails) return;
         if (file.size > 8 * 1024 * 1024) {
             alert('Please choose an image under 8MB.');
+            if (avatarInputRef.current) avatarInputRef.current.value = '';
             return;
         }
+        setIsUploadingPic(true);
         const reader = new FileReader();
         reader.onload = (loadEvent) => {
             const img = new Image();
             img.onload = async () => {
-                const canvas = document.createElement('canvas');
-                const maxDim = 256;
-                let width = img.width;
-                let height = img.height;
-                if (width > height) {
-                    if (width > maxDim) {
-                        height = Math.round(height * (maxDim / width));
-                        width = maxDim;
-                    }
-                } else {
-                    if (height > maxDim) {
-                        width = Math.round(width * (maxDim / height));
-                        height = maxDim;
-                    }
-                }
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                const compressed = canvas.toDataURL('image/jpeg', 0.85);
                 try {
-                    await updateGroupDetails(activeGroupDetails.id, { avatarUrl: compressed });
+                    const canvas = document.createElement('canvas');
+                    const maxDim = 256;
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > height) {
+                        if (width > maxDim) {
+                            height = Math.round(height * (maxDim / width));
+                            width = maxDim;
+                        }
+                    } else {
+                        if (height > maxDim) {
+                            width = Math.round(width * (maxDim / height));
+                            height = maxDim;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const compressed = canvas.toDataURL('image/jpeg', 0.85);
+
+                    const res = await updateGroupDetails(activeGroupDetails.id, { avatarUrl: compressed });
+                    if (res?.error) {
+                        alert(res.error || 'Failed to update group picture.');
+                    }
                 } catch (err) {
-                    alert('Failed to update group picture.');
+                    alert(err?.message || 'Failed to update group picture.');
+                } finally {
+                    setIsUploadingPic(false);
+                    if (avatarInputRef.current) avatarInputRef.current.value = '';
                 }
             };
+            img.onerror = () => {
+                setIsUploadingPic(false);
+                if (avatarInputRef.current) avatarInputRef.current.value = '';
+                alert('Invalid image file.');
+            };
             img.src = loadEvent.target.result;
+        };
+        reader.onerror = () => {
+            setIsUploadingPic(false);
+            if (avatarInputRef.current) avatarInputRef.current.value = '';
+            alert('Failed to read selected image.');
         };
         reader.readAsDataURL(file);
     };
@@ -159,7 +179,13 @@ export default function GroupInfoModal({ isOpen, onClose }) {
             <div className="wa-group-info-modal" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
                 <div className="wa-group-info-header">
-                    <button type="button" className="wa-close-btn" onClick={onClose} aria-label="Close group info">
+                    <button 
+                        type="button" 
+                        className="wa-group-info-close-btn" 
+                        onClick={onClose} 
+                        aria-label="Close group info"
+                        title="Close"
+                    >
                         <X size={20} />
                     </button>
                     <h2 className="wa-group-info-title">Group info</h2>
@@ -169,10 +195,10 @@ export default function GroupInfoModal({ isOpen, onClose }) {
                     {/* Hero Avatar & Title */}
                     <div className="wa-group-hero">
                         <div 
-                            className="wa-group-hero-avatar-wrap"
-                            onClick={() => isAdmin && avatarInputRef.current?.click()}
-                            style={{ cursor: isAdmin ? 'pointer' : 'default' }}
-                            title={isAdmin ? "Click to change group picture" : ""}
+                            className={`wa-group-hero-avatar-wrap ${isUploadingPic ? 'is-uploading' : ''}`}
+                            onClick={() => !isUploadingPic && isAdmin && avatarInputRef.current?.click()}
+                            style={{ cursor: isAdmin && !isUploadingPic ? 'pointer' : 'default' }}
+                            title={isAdmin ? (isUploadingPic ? "Updating group picture..." : "Click to change group picture") : ""}
                         >
                             <div 
                                 className="wa-group-hero-avatar"
@@ -183,10 +209,19 @@ export default function GroupInfoModal({ isOpen, onClose }) {
                                 ) : (
                                     <Users size={48} color="#ffffff" />
                                 )}
+                                {isUploadingPic && (
+                                    <div className="wa-group-avatar-loading-overlay">
+                                        <Loader2 size={24} className="wa-spin" color="#ffffff" />
+                                    </div>
+                                )}
                             </div>
                             {isAdmin && (
                                 <div className="wa-group-hero-badge" title="Change group photo">
-                                    <Camera size={16} color="#ffffff" />
+                                    {isUploadingPic ? (
+                                        <Loader2 size={14} className="wa-spin" color="#ffffff" />
+                                    ) : (
+                                        <Camera size={16} color="#ffffff" />
+                                    )}
                                 </div>
                             )}
                         </div>

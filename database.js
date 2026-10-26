@@ -1478,12 +1478,23 @@ async function updateGroupDetails(groupId, { name, description, avatarUrl, avata
     if (!groupId || !requestedByUsername) return { success: false, error: "Missing parameters" };
     const cleanReq = requestedByUsername.trim().toLowerCase();
     try {
+        const grpRs = await db.execute({
+            sql: `SELECT created_by FROM groups WHERE id = ? LIMIT 1`,
+            args: [groupId]
+        });
+        if (grpRs.rows.length === 0) {
+            return { success: false, error: "Group not found" };
+        }
+        const isCreator = (grpRs.rows[0].created_by || '').trim().toLowerCase() === cleanReq;
+
         const adminRs = await db.execute({
             sql: `SELECT role FROM group_members WHERE group_id = ? AND username = ? COLLATE NOCASE LIMIT 1`,
             args: [groupId, cleanReq]
         });
-        if (adminRs.rows.length === 0 || adminRs.rows[0].role !== 'admin') {
-            return { success: false, error: "Only group admins can update group details." };
+        const isAdmin = adminRs.rows.length > 0 && adminRs.rows[0].role === 'admin';
+
+        if (!isCreator && !isAdmin) {
+            return { success: false, error: "Only group admins or the group creator can update group details." };
         }
 
         const updates = [];

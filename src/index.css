@@ -15358,10 +15358,10 @@ body.theme-light .wa-group-info-modal,
 }
 
 .wa-group-info-header {
-  padding: 16px 20px;
+  padding: 14px 18px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background-color: #202c33;
 }
@@ -15372,10 +15372,71 @@ body.theme-light .wa-group-info-header,
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
+/* Close & Icon buttons in Modals */
+.wa-group-info-close-btn,
+.wa-close-btn,
+.wa-modal-icon-btn {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  color: #aebac1;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0 !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  box-shadow: none !important;
+}
+
+.wa-group-info-close-btn:hover,
+.wa-close-btn:hover,
+.wa-modal-icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e9edef;
+  transform: rotate(90deg);
+}
+
+.wa-group-info-close-btn:active,
+.wa-close-btn:active,
+.wa-modal-icon-btn:active {
+  transform: scale(0.92) rotate(90deg);
+}
+
+body.theme-light .wa-group-info-close-btn,
+body.theme-light .wa-close-btn,
+body.theme-light .wa-modal-icon-btn,
+[data-theme="light"] .wa-group-info-close-btn,
+[data-theme="light"] .wa-close-btn,
+[data-theme="light"] .wa-modal-icon-btn {
+  color: #54656f;
+}
+
+body.theme-light .wa-group-info-close-btn:hover,
+body.theme-light .wa-close-btn:hover,
+body.theme-light .wa-modal-icon-btn:hover,
+[data-theme="light"] .wa-group-info-close-btn:hover,
+[data-theme="light"] .wa-close-btn:hover,
+[data-theme="light"] .wa-modal-icon-btn:hover {
+  background-color: rgba(0, 0, 0, 0.07) !important;
+  color: #111b21;
+}
+
 .wa-group-info-title {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 600;
   margin: 0;
+  color: #e9edef;
+}
+
+body.theme-light .wa-group-info-title,
+[data-theme="light"] .wa-group-info-title {
+  color: #111b21;
 }
 
 .wa-group-info-scrollable {
@@ -15385,6 +15446,35 @@ body.theme-light .wa-group-info-header,
   display: flex;
   flex-direction: column;
   gap: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.wa-group-info-scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.wa-group-info-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.wa-group-info-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 6px;
+}
+
+.wa-group-info-scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+body.theme-light .wa-group-info-scrollable,
+[data-theme="light"] .wa-group-info-scrollable {
+  scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+}
+
+body.theme-light .wa-group-info-scrollable::-webkit-scrollbar-thumb,
+[data-theme="light"] .wa-group-info-scrollable::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
 }
 
 .wa-group-hero {
@@ -15402,6 +15492,7 @@ body.theme-light .wa-group-info-header,
 }
 
 .wa-group-hero-avatar {
+  position: relative;
   width: 84px;
   height: 84px;
   border-radius: 50%;
@@ -15410,6 +15501,26 @@ body.theme-light .wa-group-info-header,
   justify-content: center;
   overflow: hidden;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.wa-group-avatar-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  z-index: 2;
+}
+
+@keyframes waSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.wa-spin {
+  animation: waSpin 0.9s linear infinite;
 }
 
 .wa-group-hero-badge {

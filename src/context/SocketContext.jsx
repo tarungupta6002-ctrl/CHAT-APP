@@ -879,10 +879,18 @@ export function SocketProvider({ children }) {
     }, []);
 
     const updateGroupDetails = useCallback((groupId, updates) => {
-        return new Promise((resolve) => {
-            if (!socketRef.current) return resolve({ error: "Socket not connected" });
+        return new Promise((resolve, reject) => {
+            if (!socketRef.current) return reject(new Error("Socket not connected"));
             socketRef.current.emit("update-group-details", { groupId, ...updates }, (res) => {
-                resolve(res);
+                if (res?.error) {
+                    reject(new Error(res.error));
+                } else {
+                    if (res?.group) {
+                        setUserGroups((prev) => prev.map((g) => (g.id === res.group.id ? { ...g, ...res.group } : g)));
+                        setActiveGroupDetails((curr) => (curr?.id === res.group.id ? { ...curr, ...res.group } : curr));
+                    }
+                    resolve(res);
+                }
             });
         });
     }, []);

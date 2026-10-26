@@ -692,7 +692,9 @@ io.on("connection", (socket) => {
             const { groupId, name, description, avatarUrl, avatarColor } = data;
             const res = await db.updateGroupDetails(groupId, { name, description, avatarUrl, avatarColor }, user.username);
             if (res.success && res.group) {
+                socket.join(`group:${groupId}`);
                 io.to(`group:${groupId}`).emit("group-updated", res.group);
+                socket.emit("group-updated", res.group);
             }
             if (typeof callback === "function") callback(res);
         } catch (err) {
