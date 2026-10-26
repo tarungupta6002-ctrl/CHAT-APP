@@ -14,6 +14,12 @@ const app = express();
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ limit: "15mb", extended: true }));
 
+// Lightweight health endpoint for Uptime / Cron pings (Render keep-alive)
+app.get("/api/health", (req, res) => {
+    res.status(200).json({ status: "ok", timestamp: Date.now() });
+});
+
+
 const server = http.createServer(app);
 const io = new Server(server, {
     maxHttpBufferSize: 1e8 // Allow up to 100MB for image transfers
