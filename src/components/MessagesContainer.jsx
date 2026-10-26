@@ -59,7 +59,9 @@ export default function MessagesContainer({ searchQuery = '' }) {
 
     const activeKey = !currentChat || currentChat.type === 'general'
         ? 'general'
-        : (currentChat.partnerName ? currentChat.partnerName.toLowerCase() : (currentChat.partnerId || 'dm'));
+        : currentChat.type === 'group'
+            ? `group:${currentChat.groupId}`
+            : (currentChat.partnerName ? currentChat.partnerName.toLowerCase() : (currentChat.partnerId || 'dm'));
 
     const activeList = conversations[activeKey] || [];
 
@@ -94,6 +96,8 @@ export default function MessagesContainer({ searchQuery = '' }) {
                                 <span>Welcome to ChatHub Community!</span>
                                 <VerifiedBadge size={18} />
                             </>
+                        ) : currentChat?.type === 'group' ? (
+                            `Group: ${currentChat?.partnerName || 'Group Chat'}`
                         ) : (
                             `Private chat with ${currentChat?.partnerName || 'User'}`
                         )}

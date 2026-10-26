@@ -93,6 +93,7 @@ async function initDb() {
         try { await db.execute(`ALTER TABLE messages ADD COLUMN file_name TEXT;`); } catch (_) {}
         try { await db.execute(`ALTER TABLE messages ADD COLUMN file_size TEXT;`); } catch (_) {}
         try { await db.execute(`ALTER TABLE messages ADD COLUMN file_type TEXT;`); } catch (_) {}
+        try { await db.execute(`ALTER TABLE messages ADD COLUMN group_id TEXT;`); } catch (_) {}
 
         await db.execute(`
             CREATE TABLE IF NOT EXISTS blocked_users (
@@ -184,6 +185,32 @@ async function initDb() {
             );
         `);
         await db.execute(`CREATE INDEX IF NOT EXISTS idx_chat_clears_user ON chat_clears(username, chat_key);`);
+
+        // Custom Groups & Members
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS groups (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                avatar_url TEXT DEFAULT '',
+                avatar_color TEXT DEFAULT '#10b981',
+                created_by TEXT NOT NULL COLLATE NOCASE,
+                created_at INTEGER NOT NULL
+            );
+        `);
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS group_members (
+                id TEXT PRIMARY KEY,
+                group_id TEXT NOT NULL,
+                username TEXT NOT NULL COLLATE NOCASE,
+                role TEXT DEFAULT 'member',
+                joined_at INTEGER NOT NULL,
+                UNIQUE(group_id, username)
+            );
+        `);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(username);`);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_group_members_group ON group_members(group_id);`);
+        await db.execute(`CREATE INDEX IF NOT EXISTS idx_messages_group ON messages(group_id);`);
         
         // Pre-fill in-memory blocked cache
         try {
@@ -220,8 +247,8 @@ async function saveMessage(msg) {
                     avatar_color, text, image, audio, audio_duration,
                     reply_to, is_view_once, is_deleted, time, created_at,
                     status, sender_avatar_url, is_blocked_send,
-                    file, file_name, file_size, file_type
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    file, file_name, file_size, file_type, group_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `,
             args: [
                 msg.id,
@@ -245,7 +272,8 @@ async function saveMessage(msg) {
                 msg.file || null,
                 msg.fileName || null,
                 msg.fileSize || null,
-                msg.fileType || null
+                msg.fileType || null,
+                msg.groupId || null
             ]
         });
     } catch (err) {
@@ -501,6 +529,7 @@ function mapRowToMessage(row) {
         fileSize: row.file_size || null,
         fileType: row.file_type || null,
         replyTo: replyTo,
+        groupId: row.group_id || null,
         isViewOnce: Boolean(row.is_view_once),
         isDeleted: Boolean(row.is_deleted),
         time: row.time,
@@ -1203,6 +1232,276 @@ async function deleteStatus(statusId, username) {
     }
 }
 
+// --- Custom Group Operations ---
+
+async function createGroup({ name, description = '', avatarUrl = '', avatarColor = '#10b981', createdBy, members = [] }) {
+    if (!name || !createdBy) throw new Error("Group name and createdBy are required");
+    const groupId = `grp_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+    const cleanCreator = createdBy.trim().toLowerCase();
+    const cleanName = name.trim();
+    const now = Date.now();
+
+    // 1. Insert Group
+    await db.execute({
+        sql: `
+            INSERT INTO groups (id, name, description, avatar_url, avatar_color, created_by, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `,
+        args: [groupId, cleanName, description.trim(), avatarUrl || '', avatarColor || '#10b981', cleanCreator, now]
+    });
+
+    // 2. Add Creator as Admin
+    const creatorMemberId = `grm_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+    await db.execute({
+        sql: `
+            INSERT INTO group_members (id, group_id, username, role, joined_at)
+            VALUES (?, ?, ?, 'admin', ?)
+        `,
+        args: [creatorMemberId, groupId, cleanCreator, now]
+    });
+
+    // 3. Add other members
+    const cleanMembers = Array.from(new Set(
+        (Array.isArray(members) ? members : [])
+            .map(m => String(m).trim().toLowerCase())
+            .filter(m => m && m !== cleanCreator)
+    ));
+
+    for (const mem of cleanMembers) {
+        const memId = `grm_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+        try {
+            await db.execute({
+                sql: `
+                    INSERT OR IGNORE INTO group_members (id, group_id, username, role, joined_at)
+                    VALUES (?, ?, ?, 'member', ?)
+                `,
+                args: [memId, groupId, mem, now]
+            });
+        } catch (_) {}
+    }
+
+    return {
+        id: groupId,
+        name: cleanName,
+        description: description.trim(),
+        avatarUrl: avatarUrl || '',
+        avatarColor: avatarColor || '#10b981',
+        createdBy: cleanCreator,
+        createdAt: now,
+        memberCount: cleanMembers.length + 1,
+        members: [cleanCreator, ...cleanMembers]
+    };
+}
+
+async function isGroupMember(groupId, username) {
+    if (!groupId || !username) return false;
+    try {
+        const rs = await db.execute({
+            sql: `SELECT 1 FROM group_members WHERE group_id = ? AND username = ? COLLATE NOCASE LIMIT 1`,
+            args: [groupId, username.trim().toLowerCase()]
+        });
+        return rs.rows.length > 0;
+    } catch (_) {
+        return false;
+    }
+}
+
+async function getUserGroups(username) {
+    if (!username) return [];
+    const cleanUser = username.trim().toLowerCase();
+    try {
+        const rs = await db.execute({
+            sql: `
+                SELECT g.*, 
+                       (SELECT COUNT(*) FROM group_members gm2 WHERE gm2.group_id = g.id) AS member_count,
+                       (SELECT m.text FROM messages m WHERE m.group_id = g.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_text,
+                       (SELECT m.image FROM messages m WHERE m.group_id = g.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_image,
+                       (SELECT m.audio FROM messages m WHERE m.group_id = g.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_audio,
+                       (SELECT m.file FROM messages m WHERE m.group_id = g.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_file,
+                       (SELECT m.file_name FROM messages m WHERE m.group_id = g.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_file_name,
+                       (SELECT m.sender_username FROM messages m WHERE m.group_id = g.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_sender,
+                       (SELECT m.time FROM messages m WHERE m.group_id = g.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_time,
+                       (SELECT m.created_at FROM messages m WHERE m.group_id = g.id ORDER BY m.created_at DESC LIMIT 1) AS last_message_created_at
+                FROM groups g
+                INNER JOIN group_members gm ON gm.group_id = g.id AND gm.username = ? COLLATE NOCASE
+                ORDER BY COALESCE(last_message_created_at, g.created_at) DESC
+            `,
+            args: [cleanUser]
+        });
+
+        return rs.rows.map((row) => {
+            let lastSnippet = '';
+            if (row.last_message_text) {
+                lastSnippet = row.last_message_text;
+            } else if (row.last_message_image) {
+                lastSnippet = '📷 Photo';
+            } else if (row.last_message_audio) {
+                lastSnippet = '🎙️ Voice note';
+            } else if (row.last_message_file) {
+                lastSnippet = `📄 ${row.last_message_file_name || 'Document'}`;
+            }
+
+            return {
+                id: row.id,
+                name: row.name,
+                description: row.description || '',
+                avatarUrl: row.avatar_url || '',
+                avatarColor: row.avatar_color || '#10b981',
+                createdBy: row.created_by,
+                createdAt: row.created_at,
+                memberCount: Number(row.member_count) || 1,
+                lastMessage: lastSnippet,
+                lastSender: row.last_message_sender || '',
+                lastTime: row.last_message_time || '',
+                lastCreatedAt: row.last_message_created_at || row.created_at
+            };
+        });
+    } catch (err) {
+        console.error("Error fetching user groups:", err);
+        return [];
+    }
+}
+
+async function getGroupDetails(groupId, requestingUsername) {
+    if (!groupId || !requestingUsername) return null;
+    const cleanUser = requestingUsername.trim().toLowerCase();
+    try {
+        const isMember = await isGroupMember(groupId, cleanUser);
+        if (!isMember) return { authorized: false, error: "Not a member of this group" };
+
+        const gRs = await db.execute({
+            sql: `SELECT * FROM groups WHERE id = ? LIMIT 1`,
+            args: [groupId]
+        });
+        if (gRs.rows.length === 0) return null;
+        const group = gRs.rows[0];
+
+        const mRs = await db.execute({
+            sql: `
+                SELECT gm.username, gm.role, gm.joined_at, 
+                       u.full_name, u.avatar_color, u.avatar_url, u.bio
+                FROM group_members gm
+                LEFT JOIN users u ON LOWER(u.username) = LOWER(gm.username)
+                WHERE gm.group_id = ?
+                ORDER BY CASE WHEN gm.role = 'admin' THEN 0 ELSE 1 END, gm.joined_at ASC
+            `,
+            args: [groupId]
+        });
+
+        const members = mRs.rows.map(r => ({
+            username: r.username,
+            fullName: r.full_name || r.username,
+            avatarColor: r.avatar_color || '#10b981',
+            avatarUrl: r.avatar_url || '',
+            bio: r.bio || '',
+            role: r.role || 'member',
+            joinedAt: r.joined_at
+        }));
+
+        const myRole = members.find(m => m.username.toLowerCase() === cleanUser)?.role || 'member';
+
+        return {
+            authorized: true,
+            id: group.id,
+            name: group.name,
+            description: group.description || '',
+            avatarUrl: group.avatar_url || '',
+            avatarColor: group.avatar_color || '#10b981',
+            createdBy: group.created_by,
+            createdAt: group.created_at,
+            myRole,
+            members
+        };
+    } catch (err) {
+        console.error("Error fetching group details:", err);
+        return null;
+    }
+}
+
+async function addGroupMember(groupId, newUsername, addedByUsername) {
+    if (!groupId || !newUsername || !addedByUsername) return { success: false, error: "Missing parameters" };
+    const cleanAddedBy = addedByUsername.trim().toLowerCase();
+    const cleanNew = newUsername.trim().toLowerCase();
+    try {
+        const adminRs = await db.execute({
+            sql: `SELECT role FROM group_members WHERE group_id = ? AND username = ? COLLATE NOCASE LIMIT 1`,
+            args: [groupId, cleanAddedBy]
+        });
+        if (adminRs.rows.length === 0 || adminRs.rows[0].role !== 'admin') {
+            return { success: false, error: "Only group admins can add new members." };
+        }
+
+        const id = `grm_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+        await db.execute({
+            sql: `
+                INSERT OR IGNORE INTO group_members (id, group_id, username, role, joined_at)
+                VALUES (?, ?, ?, 'member', ?)
+            `,
+            args: [id, groupId, cleanNew, Date.now()]
+        });
+
+        return { success: true };
+    } catch (err) {
+        console.error("Error adding group member:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+async function removeGroupMember(groupId, targetUsername, requestedByUsername) {
+    if (!groupId || !targetUsername || !requestedByUsername) return { success: false, error: "Missing parameters" };
+    const cleanTarget = targetUsername.trim().toLowerCase();
+    const cleanReq = requestedByUsername.trim().toLowerCase();
+    try {
+        if (cleanTarget !== cleanReq) {
+            const adminRs = await db.execute({
+                sql: `SELECT role FROM group_members WHERE group_id = ? AND username = ? COLLATE NOCASE LIMIT 1`,
+                args: [groupId, cleanReq]
+            });
+            if (adminRs.rows.length === 0 || adminRs.rows[0].role !== 'admin') {
+                return { success: false, error: "Only group admins can remove other members." };
+            }
+        }
+
+        await db.execute({
+            sql: `DELETE FROM group_members WHERE group_id = ? AND username = ? COLLATE NOCASE`,
+            args: [groupId, cleanTarget]
+        });
+
+        return { success: true, isSelf: cleanTarget === cleanReq };
+    } catch (err) {
+        console.error("Error removing group member:", err);
+        return { success: false, error: err.message };
+    }
+}
+
+async function getGroupHistory(groupId, limit = 100, forUsername = null) {
+    if (!groupId) return [];
+    try {
+        if (forUsername) {
+            const isMember = await isGroupMember(groupId, forUsername);
+            if (!isMember) return [];
+        }
+
+        const clearedAt = forUsername ? getChatClearedAt(forUsername, groupId) : 0;
+        const rs = await db.execute({
+            sql: `
+                SELECT m.*, u.avatar_url AS current_sender_avatar, u.avatar_color AS current_sender_color 
+                FROM messages m
+                LEFT JOIN users u ON LOWER(u.username) = LOWER(m.sender_username)
+                WHERE m.group_id = ?
+                  AND (? = 0 OR COALESCE(m.created_at, 0) > ?)
+                ORDER BY m.created_at ASC 
+                LIMIT ?
+            `,
+            args: [groupId, clearedAt, clearedAt, limit]
+        });
+        return rs.rows.map(mapRowToMessage);
+    } catch (err) {
+        console.error("Error getting group history from SQLite/Turso:", err);
+        return [];
+    }
+}
+
 module.exports = {
     saveMessage,
     deleteMessage,
@@ -1243,5 +1542,12 @@ module.exports = {
     getActiveStatuses,
     deleteStatus,
     setChatCleared,
-    getChatClearedAt
+    getChatClearedAt,
+    createGroup,
+    isGroupMember,
+    getUserGroups,
+    getGroupDetails,
+    addGroupMember,
+    removeGroupMember,
+    getGroupHistory
 };

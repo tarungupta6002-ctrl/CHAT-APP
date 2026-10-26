@@ -19,6 +19,7 @@ import {
 import VerifiedBadge from './VerifiedBadge';
 import StatusDrawerModal from './StatusDrawerModal';
 import StatusViewerModal from './StatusViewerModal';
+import NewGroupModal from './NewGroupModal';
 
 export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettings }) {
     const { 
@@ -30,6 +31,9 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
         allRegisteredUsers, 
         unreadCounts, 
         conversations,
+        userGroups,
+        showNewGroupModal,
+        setShowNewGroupModal,
         statuses = [],
         viewedStatusIds = new Set()
     } = useSocket();
@@ -176,9 +180,42 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
             }
         });
 
-        // 4. Mark online status for live socket users
+        // 4. Add Custom Groups
+        (userGroups || []).forEach((g) => {
+            const groupKey = `group:${g.id}`;
+            const unread = unreadCounts[groupKey] || 0;
+            const groupMsgs = conversations?.[groupKey] || [];
+            const lastMsg = groupMsgs.length > 0 ? groupMsgs[groupMsgs.length - 1] : null;
+
+            let snippet = g.lastMessage || 'Group created';
+            let time = g.lastTime || '';
+            if (lastMsg) {
+                const text = lastMsg.data?.text || lastMsg.text || (lastMsg.data?.file ? ('📄 ' + (lastMsg.data?.fileName || 'Document')) : (lastMsg.data?.image ? 'Photo' : 'Voice note'));
+                const sender = lastMsg.data?.username || lastMsg.username || '';
+                snippet = sender ? `${sender}: ${text}` : text;
+                time = lastMsg.data?.time || lastMsg.time || '';
+            }
+
+            map.set(groupKey, {
+                id: groupKey,
+                groupId: g.id,
+                type: 'group',
+                partnerName: g.name,
+                partnerColor: g.avatarColor || '#00a884',
+                partnerAvatarUrl: g.avatarUrl || '',
+                memberCount: g.memberCount || 1,
+                description: g.description || '',
+                lastMessage: snippet,
+                lastTime: time,
+                unread: unread,
+                isOnline: false,
+                isGroup: true
+            });
+        });
+
+        // 5. Mark online status for live socket users
         map.forEach((item, key) => {
-            if (key !== 'general') {
+            if (key !== 'general' && !key.startsWith('group:')) {
                 const isLive = (onlineUsers || []).some((u) => u.username?.toLowerCase() === key);
                 item.isOnline = isLive;
             }
@@ -203,7 +240,7 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
         }
 
         return list;
-    }, [recentChats, conversations, onlineUsers, currentUser, unreadCounts, allRegisteredUsers, searchQuery, activeFilter]);
+    }, [recentChats, conversations, onlineUsers, currentUser, unreadCounts, allRegisteredUsers, userGroups, searchQuery, activeFilter]);
 
     // Handle selecting a chat
     const handleSelectChat = (chat) => {
@@ -212,6 +249,16 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                 type: 'general',
                 partnerName: 'ChatHub Community',
                 partnerColor: '#2563eb'
+            });
+        } else if (chat.type === 'group') {
+            selectChat({
+                type: 'group',
+                groupId: chat.groupId,
+                partnerName: chat.partnerName,
+                partnerColor: chat.partnerColor,
+                partnerAvatarUrl: chat.partnerAvatarUrl || '',
+                memberCount: chat.memberCount,
+                description: chat.description
             });
         } else {
             selectChat({
@@ -284,6 +331,18 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
 
                             <button 
                                 type="button" 
+                                className="wa-dropdown-item"
+                                onClick={() => {
+                                    setIsMenuOpen(false);
+                                    setShowNewGroupModal(true);
+                                }}
+                            >
+                                <Users size={16} />
+                                <span>New Group</span>
+                            </button>
+
+                            <button 
+                                type="button" 
                                 className="wa-dropdown-item wa-theme-dropdown-item"
                                 onClick={(e) => {
                                     toggleTheme(e);
@@ -312,8 +371,17 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                     )}
                 </div>
 
-                {/* Right Action: Status & New Chat Flat Icons */}
+                {/* Right Action: Group, Status & New Chat Flat Icons */}
                 <div className="wa-sidebar-actions">
+                    <button 
+                        type="button" 
+                        className="wa-icon-btn"
+                        title="New Group"
+                        onClick={() => setShowNewGroupModal(true)}
+                        aria-label="New Group"
+                    >
+                        <Users size={19} />
+                    </button>
                     <button 
                         type="button" 
                         className="wa-icon-btn wa-status-trigger-btn"
@@ -386,10 +454,11 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                     chatList.map((chat) => {
                         const isCurrentActive = currentChat && (
                             (chat.type === 'general' && currentChat.type === 'general') ||
+                            (chat.type === 'group' && currentChat.type === 'group' && currentChat.groupId === chat.groupId) ||
                             (chat.type === 'dm' && currentChat.type === 'dm' && currentChat.partnerName?.toLowerCase() === chat.partnerName?.toLowerCase())
                         );
 
-                        const contactStatuses = chat.type !== 'general' 
+                        const contactStatuses = (chat.type !== 'general' && chat.type !== 'group') 
                             ? (statuses || []).filter((s) => s.username?.toLowerCase() === chat.partnerName?.toLowerCase())
                             : [];
                         const hasStory = contactStatuses.length > 0;
@@ -415,10 +484,21 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                                 >
                                     <div 
                                         className="wa-item-avatar"
-                                        style={{ backgroundColor: chat.partnerColor || '#00a884', overflow: 'hidden' }}
+                                        style={{ backgroundColor: chat.partnerColor || '#00a884', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                     >
-                                        {chat.isGroup ? (
+                                        {chat.type === 'general' ? (
                                             <img src="/chathub-logo.png" alt="ChatHub" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                        ) : chat.type === 'group' ? (
+                                            chat.partnerAvatarUrl ? (
+                                                <img 
+                                                    src={chat.partnerAvatarUrl} 
+                                                    alt={chat.partnerName} 
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                />
+                                            ) : (
+                                                <Users size={20} color="#ffffff" />
+                                            )
                                         ) : chat.partnerAvatarUrl ? (
                                             <img 
                                                 src={chat.partnerAvatarUrl} 
@@ -523,6 +603,12 @@ export default function WhatsAppSidebar({ onNewChat, onOpenProfile, onOpenSettin
                 statusList={singleViewerStatusList}
                 initialIndex={singleViewerIndex}
                 currentUser={currentUser}
+            />
+
+            {/* Custom Private Group Creation Modal */}
+            <NewGroupModal 
+                isOpen={showNewGroupModal} 
+                onClose={() => setShowNewGroupModal(false)} 
             />
         </aside>
     );

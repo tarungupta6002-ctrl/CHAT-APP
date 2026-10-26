@@ -13,12 +13,14 @@ import {
     MoreVertical, 
     Ban, 
     Eraser, 
-    Trash2 
+    Trash2,
+    Users
 } from 'lucide-react';
 import MessagesContainer from './MessagesContainer';
 import TypingBar from './TypingBar';
 import ChatFooter from './ChatFooter';
 import VerifiedBadge from './VerifiedBadge';
+import GroupInfoModal from './GroupInfoModal';
 
 export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
     const { 
@@ -31,7 +33,10 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
         deleteConversation,
         blockUser,
         unblockUser,
-        blockedUsers
+        blockedUsers,
+        activeGroupDetails,
+        removeGroupMember,
+        currentUser
     } = useSocket();
     const { initiateCall } = useWebRTC();
 
@@ -40,8 +45,9 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
 
-    // Three-Dots Menu state
+    // Three-Dots Menu & Group Info state
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
     const menuRef = useRef(null);
     const searchInputRef = useRef(null);
 
@@ -78,7 +84,13 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
     if (!currentChat) return null;
 
     const isDm = currentChat.type === 'dm';
-    const partnerName = isDm ? currentChat.partnerName : 'ChatHub Community';
+    const isGroup = currentChat.type === 'group';
+    const isGeneral = currentChat.type === 'general';
+
+    const partnerName = isGroup 
+        ? (currentChat.partnerName || 'Group') 
+        : (isDm ? currentChat.partnerName : 'ChatHub Community');
+
     const registeredPartner = isDm 
         ? allRegisteredUsers?.find((u) => u.username?.toLowerCase() === currentChat.partnerName?.toLowerCase())
         : null;
@@ -86,12 +98,16 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
     const isOnline = isDm && onlineUsers.some(
         (u) => u.username?.toLowerCase() === currentChat.partnerName?.toLowerCase()
     );
-    const initials = isDm ? partnerName.slice(0, 2).toUpperCase() : '#';
+    const initials = isDm 
+        ? partnerName.slice(0, 2).toUpperCase() 
+        : (isGroup ? partnerName.slice(0, 2).toUpperCase() : '#');
     const avatarColor = currentChat.partnerColor || registeredPartner?.color || '#00a884';
 
     const activeKey = !currentChat || currentChat.type === 'general'
         ? 'general'
-        : (currentChat.partnerName ? currentChat.partnerName.toLowerCase() : (currentChat.partnerId || 'dm'));
+        : currentChat.type === 'group'
+            ? `group:${currentChat.groupId}`
+            : (currentChat.partnerName ? currentChat.partnerName.toLowerCase() : (currentChat.partnerId || 'dm'));
     const activeList = conversations[activeKey] || [];
 
     // Filter matching message IDs for navigation
@@ -205,9 +221,11 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
         setIsMenuOpen(false);
         setConfirmModal({
             type: 'delete',
-            title: 'Delete this chat?',
-            message: `Are you sure you want to delete this chat with ${partnerName}?`,
-            confirmText: 'Delete'
+            title: isGroup ? 'Exit & Delete group?' : 'Delete this chat?',
+            message: isGroup 
+                ? `Are you sure you want to exit and delete "${partnerName}" from your chats?`
+                : `Are you sure you want to delete this chat with ${partnerName}?`,
+            confirmText: isGroup ? 'Exit & Delete' : 'Delete'
         });
     };
 
@@ -216,7 +234,12 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
         if (confirmModal.type === 'clear') {
             clearConversation(activeKey);
         } else if (confirmModal.type === 'delete') {
-            deleteConversation(activeKey);
+            if (isGroup && currentChat?.groupId) {
+                removeGroupMember(currentChat.groupId, currentUser.username);
+                selectChat(null);
+            } else {
+                deleteConversation(activeKey);
+            }
         } else if (confirmModal.type === 'block') {
             blockUser(partnerName);
         }
@@ -291,7 +314,16 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
 
                         <div
                             className="chat-avatar-circle"
-                            style={{ backgroundColor: avatarColor, overflow: 'hidden' }}
+                            style={{ 
+                                backgroundColor: avatarColor, 
+                                overflow: 'hidden', 
+                                cursor: isGroup ? 'pointer' : 'default',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                            onClick={() => { if (isGroup) setIsGroupInfoOpen(true); }}
+                            title={isGroup ? 'View group info' : ''}
                         >
                             {isDm ? (
                                 partnerAvatarUrl ? (
@@ -302,6 +334,17 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
                                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                     />
                                 ) : initials
+                            ) : isGroup ? (
+                                partnerAvatarUrl ? (
+                                    <img 
+                                        src={partnerAvatarUrl} 
+                                        alt={partnerName} 
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                ) : (
+                                    <Users size={20} color="#ffffff" />
+                                )
                             ) : (
                                 <img 
                                     src="/chathub-logo.png" 
@@ -311,15 +354,24 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
                             )}
                         </div>
 
-                        <div className="chat-contact-info">
+                        <div 
+                            className="chat-contact-info"
+                            style={isGroup ? { cursor: 'pointer' } : {}}
+                            onClick={() => { if (isGroup) setIsGroupInfoOpen(true); }}
+                            title={isGroup ? 'Tap to view group details and members' : ''}
+                        >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <h3>{partnerName}</h3>
-                                {!isDm && (
+                                {isGeneral && (
                                     <VerifiedBadge size={17} />
                                 )}
                             </div>
                             <span className="contact-status">
-                                {isDm ? (isOnline ? 'online' : 'offline') : 'Official Community Channel'}
+                                {isDm 
+                                    ? (isOnline ? 'online' : 'offline') 
+                                    : isGroup 
+                                        ? `${activeGroupDetails?.members?.length || currentChat.memberCount || 1} members • Tap for info`
+                                        : 'Official Community Channel'}
                             </span>
                         </div>
                     </div>
@@ -388,6 +440,19 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
                         {/* Dropdown Menu */}
                         {isMenuOpen && (
                             <div className="wa-header-dropdown-menu">
+                                {isGroup && (
+                                    <button
+                                        type="button"
+                                        className="wa-header-menu-item"
+                                        onClick={() => {
+                                            setIsMenuOpen(false);
+                                            setIsGroupInfoOpen(true);
+                                        }}
+                                    >
+                                        <Users size={16} />
+                                        <span>Group info</span>
+                                    </button>
+                                )}
                                 {isDm && (
                                     <button
                                         type="button"
@@ -413,7 +478,7 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
                                     onClick={handleDeleteChat}
                                 >
                                     <Trash2 size={16} />
-                                    <span>Delete Chat</span>
+                                    <span>{isGroup ? 'Exit & Delete Group' : 'Delete Chat'}</span>
                                 </button>
                             </div>
                         )}
@@ -469,6 +534,12 @@ export default function WhatsAppChatWindow({ isAiOpen, setIsAiOpen }) {
                     </div>
                 </div>
             )}
+
+            {/* Group Info Modal & Member Management */}
+            <GroupInfoModal 
+                isOpen={isGroupInfoOpen} 
+                onClose={() => setIsGroupInfoOpen(false)} 
+            />
         </section>
     );
 }

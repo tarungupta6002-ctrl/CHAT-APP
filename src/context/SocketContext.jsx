@@ -42,6 +42,11 @@ export function SocketProvider({ children }) {
 
     // Active DM tabs & recent chats list
     const [recentChats, setRecentChats] = useState([]);
+
+    // Custom Group States
+    const [userGroups, setUserGroups] = useState([]);
+    const [activeGroupDetails, setActiveGroupDetails] = useState(null);
+    const [showNewGroupModal, setShowNewGroupModal] = useState(false);
     
     // In-memory conversation messages: { general: [], [partnerIdOrUsername]: [] }
     const [conversations, setConversations] = useState({ general: [] });
@@ -110,13 +115,18 @@ export function SocketProvider({ children }) {
     // Fetch registered users & recent chats
     const fetchRegisteredData = useCallback(async (username) => {
         try {
-            const [uRes, cRes] = await Promise.all([
+            const [uRes, cRes, gRes] = await Promise.all([
                 fetch('/api/users'),
-                fetch(`/api/chats/recent?username=${encodeURIComponent(username)}`)
+                fetch(`/api/chats/recent?username=${encodeURIComponent(username)}`),
+                fetch(`/api/groups?username=${encodeURIComponent(username)}`)
             ]);
             if (uRes.ok) {
                 const uData = await uRes.json();
                 setAllRegisteredUsers(uData.users || []);
+            }
+            if (gRes && gRes.ok) {
+                const gData = await gRes.json();
+                setUserGroups(gData.groups || []);
             }
             if (cRes.ok) {
                 const cData = await cRes.json();
@@ -232,7 +242,7 @@ export function SocketProvider({ children }) {
             }));
         });
 
-        socket.on("chat-history", async ({ type, partnerUsername, messages }) => {
+        socket.on("chat-history", async ({ type, partnerUsername, groupId, messages }) => {
             if (!messages || !Array.isArray(messages)) return;
             const myUsername = (authUser?.username || '').trim().toLowerCase();
             const key = `chathub_deleted_for_me_${myUsername || 'guest'}`;
@@ -241,7 +251,9 @@ export function SocketProvider({ children }) {
                 deletedForMeSet = new Set(JSON.parse(localStorage.getItem(key) || '[]'));
             } catch (_) {}
 
-            const chatKey = type === 'dm' ? (partnerUsername || '').toLowerCase() : 'general';
+            const chatKey = type === 'dm' 
+                ? (partnerUsername || '').toLowerCase() 
+                : (type === 'group' ? `group:${groupId}` : 'general');
             let clearedAt = 0;
             if (myUsername && chatKey) {
                 try {
@@ -257,7 +269,7 @@ export function SocketProvider({ children }) {
                 }
                 return true;
             });
-            const partner = type === 'dm' ? partnerUsername : 'general';
+            const partner = type === 'dm' ? partnerUsername : (type === 'group' ? groupId : 'general');
 
             // Client-Side E2EE: Decrypt messages in history
             const decryptedMessages = await Promise.all(
@@ -273,7 +285,39 @@ export function SocketProvider({ children }) {
                     ...prev,
                     [partnerUsername.toLowerCase()]: mapped
                 }));
+            } else if (type === "group" && groupId) {
+                setConversations((prev) => ({
+                    ...prev,
+                    [`group:${groupId}`]: mapped
+                }));
             }
+        });
+
+        socket.on("user-groups", (groups) => {
+            setUserGroups(groups || []);
+        });
+
+        socket.on("group-created", (group) => {
+            if (!group) return;
+            setUserGroups((prev) => {
+                if (prev.some((g) => g.id === group.id)) return prev;
+                return [group, ...prev];
+            });
+        });
+
+        socket.on("group-updated", (updated) => {
+            if (!updated) return;
+            setUserGroups((prev) => prev.map((g) => (g.id === updated.id ? { ...g, ...updated } : g)));
+            setActiveGroupDetails((curr) => (curr?.id === updated.id ? updated : curr));
+        });
+
+        socket.on("group-removed", ({ groupId }) => {
+            setUserGroups((prev) => prev.filter((g) => g.id !== groupId));
+            setCurrentChat((curr) => (curr?.type === "group" && curr.groupId === groupId ? null : curr));
+        });
+
+        socket.on("group-details", (details) => {
+            if (details) setActiveGroupDetails(details);
         });
 
         socket.on("message", async (msg) => {
@@ -281,16 +325,59 @@ export function SocketProvider({ children }) {
             const msgSender = (msg.username || msg.senderUsername || '').trim().toLowerCase();
             const isSelf = msgSender === myUsername || msg.senderId === socket.id;
 
-            const isDm = Boolean(msg.recipientUsername || msg.recipientId);
+            const isGroup = Boolean(msg.groupId);
+            const isDm = !isGroup && Boolean(msg.recipientUsername || msg.recipientId);
             const partnerName = isDm
                 ? (isSelf ? (msg.recipientUsername || '').trim() : (msg.username || msg.senderUsername || '').trim())
-                : 'general';
-            const chatType = isDm ? 'dm' : 'general';
+                : (isGroup ? msg.groupId : 'general');
+            const chatType = isDm ? 'dm' : (isGroup ? 'group' : 'general');
 
             // Client-Side E2EE: Decrypt incoming message
             const decryptedMsg = await decryptIncomingMessage(msg, myUsername, partnerName, chatType);
 
-            if (isDm) {
+            if (isGroup) {
+                const groupKey = `group:${msg.groupId}`;
+                setConversations((prev) => {
+                    const currentList = prev[groupKey] || [];
+                    if (currentList.some((item) => item.type === "message" && item.data?.id === decryptedMsg.id)) {
+                        return prev;
+                    }
+                    return {
+                        ...prev,
+                        [groupKey]: [...currentList, { type: "message", data: decryptedMsg }]
+                    };
+                });
+
+                // Update userGroups lastMessage snippet
+                setUserGroups((prev) => {
+                    return prev.map((g) => {
+                        if (g.id === msg.groupId) {
+                            return {
+                                ...g,
+                                lastMessage: decryptedMsg.text || (decryptedMsg.image ? '📷 Photo' : (decryptedMsg.audio ? '🎙️ Voice note' : (decryptedMsg.file ? `📄 ${decryptedMsg.fileName || 'Document'}` : ''))),
+                                lastSender: decryptedMsg.username || '',
+                                lastTime: decryptedMsg.time,
+                                lastCreatedAt: Date.now()
+                            };
+                        }
+                        return g;
+                    });
+                });
+
+                // Update unread if not actively open
+                setCurrentChat((curr) => {
+                    if (curr?.type === "group" && curr.groupId === msg.groupId) {
+                        // Already viewing this group
+                    } else {
+                        setUnreadCounts((u) => ({
+                            ...u,
+                            [groupKey]: (u[groupKey] || 0) + 1
+                        }));
+                        if (!isSelf) playChime();
+                    }
+                    return curr;
+                });
+            } else if (isDm) {
                 const partnerKey = partnerName ? partnerName.toLowerCase() : 'dm';
 
                 setConversations((prev) => {
@@ -550,6 +637,9 @@ export function SocketProvider({ children }) {
             if (foundOnline) recipientId = foundOnline.id;
         }
 
+        const isGroup = currentChat.type === "group";
+        const isDm = currentChat.type === "dm";
+
         const rawPayload = {
             text: text ? text.trim() : "",
             image: image || null,
@@ -561,13 +651,14 @@ export function SocketProvider({ children }) {
             fileType: fileType || null,
             isViewOnce: Boolean(isViewOnce),
             replyTo: replyTo || null,
-            recipientId: currentChat.type === "dm" ? recipientId : null,
-            recipientUsername: currentChat.type === "dm" ? currentChat.partnerName : null
+            groupId: isGroup ? currentChat.groupId : null,
+            recipientId: isDm ? recipientId : null,
+            recipientUsername: isDm ? currentChat.partnerName : null
         };
 
         // Client-Side E2EE: Encrypt payload before emitting to server
         const myName = authUser?.username || currentUser?.username || 'User';
-        const partner = currentChat.type === 'dm' ? currentChat.partnerName : 'general';
+        const partner = isDm ? currentChat.partnerName : (isGroup ? currentChat.groupId : 'general');
         const encryptedPayload = await encryptOutgoingMessage(rawPayload, myName, partner, currentChat.type);
 
         socketRef.current.emit("user-message", encryptedPayload);
@@ -669,12 +760,22 @@ export function SocketProvider({ children }) {
 
         if (chatSpec.type === "general") {
             setUnreadCounts((u) => ({ ...u, general: 0 }));
+            setActiveGroupDetails(null);
         } else if (chatSpec.type === "dm" && chatSpec.partnerName) {
             const key = chatSpec.partnerName.toLowerCase();
             setUnreadCounts((u) => ({ ...u, [key]: 0 }));
+            setActiveGroupDetails(null);
             // Request DM history from backend & mark read
             socketRef.current?.emit("get-dm-history", { partnerUsername: chatSpec.partnerName });
             socketRef.current?.emit("mark-messages-read", { partnerUsername: chatSpec.partnerName });
+        } else if (chatSpec.type === "group" && chatSpec.groupId) {
+            const key = `group:${chatSpec.groupId}`;
+            setUnreadCounts((u) => ({ ...u, [key]: 0 }));
+            // Request group history and details
+            socketRef.current?.emit("get-group-history", { groupId: chatSpec.groupId });
+            socketRef.current?.emit("get-group-details", { groupId: chatSpec.groupId }, (details) => {
+                if (details) setActiveGroupDetails(details);
+            });
         }
     }, []);
 
@@ -743,11 +844,39 @@ export function SocketProvider({ children }) {
         });
         if (socketRef.current) {
             socketRef.current.emit("clear-chat", { chatKey: key, clearedAt: now });
-            if (key !== "general") {
+            if (key !== "general" && !key.startsWith("group:")) {
                 socketRef.current.emit("delete-dm-chat", { partnerUsername: chatKey, clearedAt: now });
             }
         }
     }, [authUser]);
+
+    // Custom Group Actions
+    const createGroup = useCallback(({ name, description, avatarUrl, avatarColor, members }) => {
+        return new Promise((resolve) => {
+            if (!socketRef.current) return resolve({ error: "Socket not connected" });
+            socketRef.current.emit("create-group", { name, description, avatarUrl, avatarColor, members }, (res) => {
+                resolve(res);
+            });
+        });
+    }, []);
+
+    const addGroupMember = useCallback((groupId, username) => {
+        return new Promise((resolve) => {
+            if (!socketRef.current) return resolve({ error: "Socket not connected" });
+            socketRef.current.emit("add-group-member", { groupId, username }, (res) => {
+                resolve(res);
+            });
+        });
+    }, []);
+
+    const removeGroupMember = useCallback((groupId, username) => {
+        return new Promise((resolve) => {
+            if (!socketRef.current) return resolve({ error: "Socket not connected" });
+            socketRef.current.emit("remove-group-member", { groupId, username }, (res) => {
+                resolve(res);
+            });
+        });
+    }, []);
 
     // Block/unblock users (persisted in DB + localStorage)
     const [blockedUsers, setBlockedUsers] = useState(() => {
@@ -827,6 +956,13 @@ export function SocketProvider({ children }) {
         onlineCount,
         allRegisteredUsers,
         recentChats,
+        userGroups,
+        activeGroupDetails,
+        showNewGroupModal,
+        setShowNewGroupModal,
+        createGroup,
+        addGroupMember,
+        removeGroupMember,
         currentChat,
         selectChat,
         startChatWithUser,

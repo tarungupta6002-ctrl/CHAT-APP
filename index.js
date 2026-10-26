@@ -173,6 +173,17 @@ io.on("connection", (socket) => {
             socket.emit("statuses-list", activeStatuses);
         } catch (_) {}
 
+        // Auto-join socket rooms for custom groups and send user's group list
+        try {
+            const userGroups = await db.getUserGroups(cleanName);
+            userGroups.forEach((g) => {
+                socket.join(`group:${g.id}`);
+            });
+            socket.emit("user-groups", userGroups);
+        } catch (e) {
+            console.error("Error loading user groups on join:", e);
+        }
+
         // Broadcast active users list
         broadcastUsersList();
 
@@ -218,6 +229,7 @@ io.on("connection", (socket) => {
         const isViewOnce = Boolean(data?.isViewOnce);
         const recipientId = data?.recipientId || null;
         let recipientUsername = (data?.recipientUsername || "").trim() || null;
+        const groupId = data?.groupId || null;
 
         const hasText = messageText && messageText.trim().length > 0;
         const hasImage = Boolean(image);
@@ -228,6 +240,51 @@ io.on("connection", (socket) => {
 
         const user = users.get(socket.id) || { username: "Guest", color: "#6366f1", avatarUrl: "" };
         const senderUsername = user.username || "Guest";
+
+        // Handle Custom Group Messaging
+        if (groupId) {
+            db.isGroupMember(groupId, senderUsername).then((isMember) => {
+                if (!isMember) {
+                    socket.emit("chat-error", { message: "You are not a member of this group." });
+                    return;
+                }
+
+                const now = Date.now();
+                const messagePayload = {
+                    id: `${socket.id}-${now}`,
+                    senderId: socket.id,
+                    groupId: groupId,
+                    recipientId: null,
+                    recipientUsername: null,
+                    username: senderUsername,
+                    avatarColor: user.color,
+                    avatarUrl: user.avatarUrl || '',
+                    status: 'delivered',
+                    isBlockedSend: 0,
+                    text: hasText ? messageText.trim() : "",
+                    image: hasImage ? image : null,
+                    audio: hasAudio ? audio : null,
+                    audioDuration: hasAudio ? audioDuration : null,
+                    file: hasFile ? file : null,
+                    fileName: hasFile ? fileName : null,
+                    fileSize: hasFile ? fileSize : null,
+                    fileType: hasFile ? fileType : null,
+                    replyTo: data?.replyTo || null,
+                    isViewOnce: false,
+                    openedBy: [],
+                    time: format12HourTime(now),
+                    createdAt: now
+                };
+
+                io.to(`group:${groupId}`).emit("message", messagePayload);
+                db.saveMessage(messagePayload).catch((err) => {
+                    console.error("Async DB saveMessage (group) error:", err);
+                });
+            }).catch((err) => {
+                console.error("Error verifying group membership:", err);
+            });
+            return;
+        }
 
         let targetSocketId = recipientId;
         if (!targetSocketId && recipientUsername) {
@@ -480,6 +537,148 @@ io.on("connection", (socket) => {
 
         const dmHistory = await db.getDmHistory(user.username, partnerUsername, 100, user.username);
         socket.emit("chat-history", { type: "dm", partnerUsername, messages: dmHistory });
+    });
+
+    // --- Custom Group Socket Handlers ---
+
+    // Create a new custom group
+    socket.on("create-group", async (data, callback) => {
+        try {
+            const user = users.get(socket.id);
+            if (!user) {
+                if (typeof callback === "function") callback({ error: "Unauthorized" });
+                return;
+            }
+            const { name, description, avatarUrl, avatarColor, members } = data || {};
+            if (!name || !name.trim()) {
+                if (typeof callback === "function") callback({ error: "Group name is required." });
+                return;
+            }
+
+            const group = await db.createGroup({
+                name: name.trim(),
+                description: description || '',
+                avatarUrl: avatarUrl || '',
+                avatarColor: avatarColor || '#10b981',
+                createdBy: user.username,
+                members: members || []
+            });
+
+            // Join creator to group room
+            socket.join(`group:${group.id}`);
+
+            // Join online members and notify them
+            if (Array.isArray(group.members)) {
+                group.members.forEach((m) => {
+                    const mSockId = findSocketIdByUsername(m);
+                    if (mSockId) {
+                        const mSock = io.sockets.sockets.get(mSockId);
+                        if (mSock) {
+                            mSock.join(`group:${group.id}`);
+                            mSock.emit("group-created", group);
+                        }
+                    }
+                });
+            }
+
+            socket.emit("group-created", group);
+            if (typeof callback === "function") callback({ success: true, group });
+        } catch (err) {
+            console.error("Error creating group:", err);
+            if (typeof callback === "function") callback({ error: err.message || "Failed to create group" });
+        }
+    });
+
+    // Request user's group list on demand
+    socket.on("get-user-groups", async () => {
+        const user = users.get(socket.id);
+        if (!user) return;
+        try {
+            const userGroups = await db.getUserGroups(user.username);
+            userGroups.forEach((g) => socket.join(`group:${g.id}`));
+            socket.emit("user-groups", userGroups);
+        } catch (err) {
+            console.error("Error fetching user groups:", err);
+        }
+    });
+
+    // Retrieve group history on demand
+    socket.on("get-group-history", async ({ groupId }) => {
+        const user = users.get(socket.id);
+        if (!user || !groupId) return;
+        try {
+            const messages = await db.getGroupHistory(groupId, 100, user.username);
+            socket.emit("chat-history", { type: "group", groupId, messages });
+        } catch (err) {
+            console.error("Error fetching group history:", err);
+        }
+    });
+
+    // Retrieve group details & member list
+    socket.on("get-group-details", async ({ groupId }, callback) => {
+        const user = users.get(socket.id);
+        if (!user || !groupId) return;
+        try {
+            const details = await db.getGroupDetails(groupId, user.username);
+            socket.emit("group-details", details);
+            if (typeof callback === "function") callback(details);
+        } catch (err) {
+            console.error("Error getting group details:", err);
+            if (typeof callback === "function") callback({ error: err.message });
+        }
+    });
+
+    // Add member to group (Admin only)
+    socket.on("add-group-member", async ({ groupId, username }, callback) => {
+        const user = users.get(socket.id);
+        if (!user || !groupId || !username) return;
+        try {
+            const res = await db.addGroupMember(groupId, username, user.username);
+            if (res.success) {
+                const targetSockId = findSocketIdByUsername(username);
+                if (targetSockId) {
+                    const targetSock = io.sockets.sockets.get(targetSockId);
+                    if (targetSock) {
+                        targetSock.join(`group:${groupId}`);
+                        const gDetails = await db.getGroupDetails(groupId, username);
+                        targetSock.emit("group-created", gDetails);
+                    }
+                }
+                const updatedDetails = await db.getGroupDetails(groupId, user.username);
+                io.to(`group:${groupId}`).emit("group-updated", updatedDetails);
+            }
+            if (typeof callback === "function") callback(res);
+        } catch (err) {
+            console.error("Error adding group member:", err);
+            if (typeof callback === "function") callback({ error: err.message });
+        }
+    });
+
+    // Remove member or leave group
+    socket.on("remove-group-member", async ({ groupId, username }, callback) => {
+        const user = users.get(socket.id);
+        if (!user || !groupId || !username) return;
+        try {
+            const res = await db.removeGroupMember(groupId, username, user.username);
+            if (res.success) {
+                const targetSockId = findSocketIdByUsername(username);
+                if (targetSockId) {
+                    const targetSock = io.sockets.sockets.get(targetSockId);
+                    if (targetSock) {
+                        targetSock.leave(`group:${groupId}`);
+                        targetSock.emit("group-removed", { groupId });
+                    }
+                }
+                const updatedDetails = await db.getGroupDetails(groupId, user.username);
+                if (updatedDetails && updatedDetails.authorized) {
+                    io.to(`group:${groupId}`).emit("group-updated", updatedDetails);
+                }
+            }
+            if (typeof callback === "function") callback(res);
+        } catch (err) {
+            console.error("Error removing group member:", err);
+            if (typeof callback === "function") callback({ error: err.message });
+        }
     });
 
     // Delete Message (For Everyone)
@@ -1368,6 +1567,17 @@ app.get("/api/chats/recent", async (req, res) => {
         return res.json({ chats });
     } catch (err) {
         return res.status(500).json({ error: "Failed to fetch recent chats" });
+    }
+});
+
+app.get("/api/groups", async (req, res) => {
+    try {
+        const username = req.query.username;
+        if (!username) return res.json({ groups: [] });
+        const groups = await db.getUserGroups(username);
+        return res.json({ groups });
+    } catch (err) {
+        return res.status(500).json({ error: "Failed to fetch groups" });
     }
 });
 
