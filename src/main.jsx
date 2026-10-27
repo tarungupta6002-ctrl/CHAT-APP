@@ -3,8 +3,19 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 
-// Dynamic safe-area runtime verification for Android & iOS Capacitor apps
+// Backend API router for native mobile app (Capacitor)
+const BACKEND_URL = 'https://chat-app-pmab.onrender.com';
 if (typeof window !== 'undefined') {
+    const originalFetch = window.fetch;
+    window.fetch = function(input, init) {
+        if (typeof input === 'string' && input.startsWith('/')) {
+            const isLiveRender = window.location.origin.includes('onrender.com');
+            const target = isLiveRender ? input : `${BACKEND_URL}${input}`;
+            return originalFetch(target, init);
+        }
+        return originalFetch(input, init);
+    };
+
     const markMobileApp = () => {
         try {
             const isCap = !!(window.Capacitor && (typeof window.Capacitor.isNativePlatform === 'function' ? window.Capacitor.isNativePlatform() : true));

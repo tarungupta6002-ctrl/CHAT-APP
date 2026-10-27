@@ -198,7 +198,12 @@ export function SocketProvider({ children }) {
     useEffect(() => {
         if (!isAuthenticated || !authUser) return;
 
-        const socket = io();
+        const socketServerUrl = (typeof window !== 'undefined' && window.location.origin.includes('onrender.com')) 
+            ? undefined 
+            : 'https://chat-app-pmab.onrender.com';
+        const socket = io(socketServerUrl, {
+            transports: ['websocket', 'polling']
+        });
         socketRef.current = socket;
 
         socket.on("connect", () => {

@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     name: Build Android APK
@@ -47,10 +50,22 @@ jobs:
         run: |
           cd android
           ./gradlew assembleDebug --no-daemon --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/ChatHub.apk
 
       - name: Upload ChatHub APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ChatHub-Android-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/debug/ChatHub.apk
           retention-days: 14
+
+      - name: Publish Direct GitHub Release APK
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: latest
+          name: ChatHub Android App (Latest)
+          body: "Official ChatHub Android APK with native status bar padding and notch optimization."
+          files: android/app/build/outputs/apk/debug/ChatHub.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
