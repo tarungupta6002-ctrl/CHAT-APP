@@ -1,0 +1,12 @@
+{
+  "appId": "com.chathub.app",
+  "appName": "ChatHub",
+  "webDir": "dist",
+  "server": {
+    "url": "https://chat-app-pmab.onrender.com",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

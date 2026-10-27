@@ -15,6 +15,9 @@
     "test": "node test/ai-suite.test.js"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
     "@libsql/client": "^0.18.0",
     "@videosdk.live/react-sdk": "^1.1.1",
     "bcryptjs": "^3.0.3",

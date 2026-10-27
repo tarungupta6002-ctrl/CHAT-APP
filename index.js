@@ -14,6 +14,17 @@ const app = express();
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ limit: "15mb", extended: true }));
 
+// Enable CORS for mobile apps (Capacitor), PWAs and cross-origin access
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
 // Lightweight health endpoint for Uptime / Cron pings (Render keep-alive)
 app.get("/api/health", (req, res) => {
     res.status(200).json({ status: "ok", timestamp: Date.now() });
@@ -22,6 +33,10 @@ app.get("/api/health", (req, res) => {
 
 const server = http.createServer(app);
 const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    },
     maxHttpBufferSize: 1e8 // Allow up to 100MB for image transfers
 });
 

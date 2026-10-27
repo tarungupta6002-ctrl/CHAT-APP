@@ -3,3 +3,8 @@ node_modules/
 chat.db
 chat.db-journal
 .DS_Store
+.gradle/
+build/
+android/app/build/
+android/build/
+android/.gradle/
