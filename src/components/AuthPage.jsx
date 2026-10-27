@@ -85,13 +85,14 @@ export default function AuthPage() {
 
                     if (googleBtnContainerRef.current) {
                         googleBtnContainerRef.current.innerHTML = '';
+                        const dynamicWidth = Math.min(window.innerWidth > 440 ? 380 : Math.max(window.innerWidth - 64, 260), 380);
                         window.google.accounts.id.renderButton(googleBtnContainerRef.current, {
                             theme: 'outline',
                             size: 'large',
                             text: currentView === 'signup' ? 'signup_with' : 'signin_with',
                             shape: 'rectangular',
                             logo_alignment: 'left',
-                            width: 380
+                            width: dynamicWidth
                         });
                     }
                     return true;
@@ -519,14 +520,14 @@ export default function AuthPage() {
                                 )}
 
                                 {/* Direct Toggle between Log In and Sign Up */}
-                                <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e5e7eb', textAlign: 'center', fontSize: '14px', color: '#64748b' }}>
+                                <div className="auth-toggle-footer">
                                     {isLoginView ? (
                                         <span>
                                             Don't have an account yet?{' '}
                                             <button
                                                 type="button"
                                                 onClick={() => navigateTo('signup')}
-                                                style={{ background: 'none', border: 'none', color: '#10b981', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                                                className="auth-switch-link"
                                             >
                                                 Create Account / Sign Up →
                                             </button>
@@ -537,7 +538,7 @@ export default function AuthPage() {
                                             <button
                                                 type="button"
                                                 onClick={() => navigateTo('login')}
-                                                style={{ background: 'none', border: 'none', color: '#10b981', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                                                className="auth-switch-link"
                                             >
                                                 Log In →
                                             </button>

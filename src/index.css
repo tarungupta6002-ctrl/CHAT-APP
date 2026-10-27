@@ -4178,16 +4178,19 @@ body.light-theme .call-ctrl-btn {
    Theme: Crisp White / Light-Grey + Emerald Green (#10b981) + Navy Typography
    ========================================================================== */
 
-/* 1. Global Navigation Bar */
+/* 1. Global Navigation Bar (Dark Theme & Mobile-Optimized) */
 .chathub-global-nav {
   position: sticky;
   top: 0;
   left: 0;
   width: 100%;
-  background: #ffffff;
-  border-bottom: 1px solid #f1f5f9;
+  background: rgba(11, 20, 26, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid #202c33;
   z-index: 100;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: all 0.2s ease;
 }
 
 .chathub-global-nav .nav-container {
@@ -4217,6 +4220,7 @@ body.light-theme .call-ctrl-btn {
   justify-content: center;
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+  flex-shrink: 0;
 }
 
 .chathub-icon svg {
@@ -4228,7 +4232,7 @@ body.light-theme .call-ctrl-btn {
   font-family: 'Plus Jakarta Sans', Inter, -apple-system, sans-serif;
   font-size: 1.45rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #e9edef;
   letter-spacing: -0.6px;
 }
 
@@ -4240,7 +4244,7 @@ body.light-theme .call-ctrl-btn {
 
 .auth-switch-text {
   font-size: 0.92rem;
-  color: #64748b;
+  color: #8696a0;
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -4259,7 +4263,7 @@ body.light-theme .call-ctrl-btn {
 }
 
 .auth-switch-btn:hover {
-  color: #047857;
+  color: #34d399;
   text-decoration: underline;
 }
 
@@ -4268,14 +4272,14 @@ body.light-theme .call-ctrl-btn {
   border: none;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #475569;
+  color: #aebac1;
   cursor: pointer;
   padding: 0.5rem 0.85rem;
   transition: color 0.2s ease;
 }
 
 .nav-link-btn:hover {
-  color: #0f172a;
+  color: #ffffff;
 }
 
 .nav-cta-btn {
@@ -4289,6 +4293,7 @@ body.light-theme .call-ctrl-btn {
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+  white-space: nowrap;
 }
 
 .nav-cta-btn:hover {
@@ -4296,15 +4301,16 @@ body.light-theme .call-ctrl-btn {
   transform: translateY(-1px);
 }
 
-/* 2. Main Auth Page Layout */
+/* 2. Main Auth Page Layout (Dark Theme & Mobile-Friendly) */
 .chathub-auth-page-root {
   min-height: 100vh;
   min-height: 100dvh;
-  background-color: #f8fafc;
+  background-color: #0b141a;
   display: flex;
   flex-direction: column;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1e293b;
+  color: #e9edef;
+  overflow-x: hidden;
 }
 
 .auth-main-layout {
@@ -4313,6 +4319,7 @@ body.light-theme .call-ctrl-btn {
   align-items: center;
   justify-content: center;
   padding: 2.5rem 1.5rem;
+  width: 100%;
 }
 
 .auth-split-grid {
@@ -4327,14 +4334,18 @@ body.light-theme .call-ctrl-btn {
 /* 3. Form Card (Left Column) */
 .auth-form-column {
   width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .auth-form-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: #111b21;
+  border: 1px solid #202c33;
   border-radius: 24px;
   padding: 2.75rem 2.25rem;
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  max-width: 480px;
 }
 
 .form-title-group {
@@ -4346,14 +4357,14 @@ body.light-theme .call-ctrl-btn {
   font-family: 'Plus Jakarta Sans', Inter, sans-serif;
   font-size: 1.85rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #e9edef;
   letter-spacing: -0.5px;
   margin: 0 0 0.4rem 0;
 }
 
 .form-sub-heading {
   font-size: 0.92rem;
-  color: #64748b;
+  color: #8696a0;
   line-height: 1.5;
   margin: 0;
 }
@@ -4368,15 +4379,15 @@ body.light-theme .call-ctrl-btn {
 }
 
 .auth-alert-box.error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
 }
 
 .auth-alert-box.success {
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #047857;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
 }
 
 /* Inputs & Form Groups */
@@ -4395,23 +4406,23 @@ body.light-theme .call-ctrl-btn {
 .chathub-input-group label {
   font-size: 0.84rem;
   font-weight: 600;
-  color: #334155;
+  color: #e9edef;
   margin-bottom: 0.45rem;
 }
 
 .input-with-icon {
   display: flex;
   align-items: center;
-  border: 1.5px solid #cbd5e1;
+  border: 1.5px solid #2a3942;
   border-radius: 12px;
   padding: 0.65rem 0.9rem;
-  background: #ffffff;
+  background: #0b141a;
   transition: all 0.2s ease;
 }
 
 .input-with-icon:focus-within {
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  border-color: #00a884;
+  box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.2);
 }
 
 .field-icon {
@@ -4420,7 +4431,7 @@ body.light-theme .call-ctrl-btn {
   justify-content: center;
   width: 18px;
   height: 18px;
-  color: #94a3b8;
+  color: #8696a0;
   margin-right: 0.65rem;
   flex-shrink: 0;
 }
@@ -4428,7 +4439,7 @@ body.light-theme .call-ctrl-btn {
 .field-icon.text-symbol {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #64748b;
+  color: #8696a0;
 }
 
 .input-with-icon input {
@@ -4436,13 +4447,14 @@ body.light-theme .call-ctrl-btn {
   border: none;
   outline: none;
   font-size: 0.92rem;
-  color: #0f172a;
+  color: #e9edef;
   background: transparent;
   padding: 0;
+  min-width: 0;
 }
 
 .input-with-icon input::placeholder {
-  color: #94a3b8;
+  color: #667781;
 }
 
 .password-toggle-btn {
@@ -4451,8 +4463,9 @@ body.light-theme .call-ctrl-btn {
   cursor: pointer;
   padding: 0 4px;
   font-size: 0.95rem;
-  opacity: 0.6;
+  opacity: 0.75;
   transition: opacity 0.2s;
+  color: #8696a0;
 }
 
 .password-toggle-btn:hover {
@@ -4466,13 +4479,14 @@ body.light-theme .call-ctrl-btn {
   justify-content: space-between;
   font-size: 0.85rem;
   margin-top: -0.25rem;
+  gap: 8px;
 }
 
 .checkbox-wrap {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  color: #475569;
+  color: #8696a0;
   cursor: pointer;
   user-select: none;
 }
@@ -4495,6 +4509,7 @@ body.light-theme .call-ctrl-btn {
 }
 
 .forgot-link-btn:hover {
+  color: #34d399;
   text-decoration: underline;
 }
 
@@ -4513,7 +4528,7 @@ body.light-theme .call-ctrl-btn {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 8px 20px -6px rgba(16, 185, 129, 0.5);
+  box-shadow: 0 8px 20px -6px rgba(16, 185, 129, 0.45);
   transition: all 0.2s ease;
   margin-top: 0.4rem;
 }
@@ -4521,7 +4536,7 @@ body.light-theme .call-ctrl-btn {
 .chathub-primary-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, #059669 0%, #047857 100%);
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px -6px rgba(16, 185, 129, 0.6);
+  box-shadow: 0 12px 24px -6px rgba(16, 185, 129, 0.55);
 }
 
 .chathub-primary-btn:disabled {
@@ -4553,40 +4568,49 @@ body.light-theme .call-ctrl-btn {
 
 /* Social Login Divider */
 .social-divider {
-  display: flex;
-  align-items: center;
-  margin: 1.4rem 0;
-  color: #94a3b8;
-  font-size: 0.82rem;
-  font-weight: 500;
+  position: relative;
+  text-align: center;
+  margin: 1.5rem 0 1.25rem 0;
 }
 
-.social-divider::before,
-.social-divider::after {
+.social-divider::before {
   content: '';
-  flex: 1;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
   height: 1px;
-  background: #e2e8f0;
+  background: #202c33;
 }
 
 .social-divider span {
+  position: relative;
+  background: #111b21;
   padding: 0 1rem;
+  font-size: 0.82rem;
+  color: #8696a0;
+  font-weight: 500;
 }
 
-/* Google Authentication Button (GitHub & Microsoft removed) */
+/* Google Sign-in Buttons */
 .google-auth-container {
-  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  width: 100%;
 }
 
 .gis-button-target {
   width: 100%;
   display: flex;
   justify-content: center;
+  overflow: hidden;
+}
+
+.gis-button-target iframe {
+  max-width: 100% !important;
 }
 
 .chathub-google-btn {
@@ -4596,21 +4620,20 @@ body.light-theme .call-ctrl-btn {
   justify-content: center;
   gap: 12px;
   padding: 0.78rem 1.25rem;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid #2a3942;
   border-radius: 12px;
-  background: #ffffff;
+  background: #0b141a;
   cursor: pointer;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #1e293b;
+  color: #e9edef;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .chathub-google-btn:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: #182229;
+  border-color: #3b4a54;
   transform: translateY(-1px);
 }
 
@@ -4620,22 +4643,41 @@ body.light-theme .call-ctrl-btn {
   flex-shrink: 0;
 }
 
-.social-icon {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
 .terms-privacy-note {
   margin-top: 1.4rem;
   font-size: 0.78rem;
-  color: #94a3b8;
+  color: #8696a0;
   line-height: 1.5;
   text-align: center;
 }
 
 .terms-privacy-note a {
   color: #10b981;
+  text-decoration: underline;
+}
+
+.auth-toggle-footer {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #202c33;
+  text-align: center;
+  font-size: 14px;
+  color: #8696a0;
+}
+
+.auth-switch-link {
+  background: none;
+  border: none;
+  color: #10b981;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  font-size: 14px;
+  transition: color 0.15s ease;
+}
+
+.auth-switch-link:hover {
+  color: #34d399;
   text-decoration: underline;
 }
 
@@ -4652,15 +4694,16 @@ body.light-theme .call-ctrl-btn {
 }
 
 .auth-hero-column.light-hero {
-  background: linear-gradient(145deg, #f0fdf4 0%, #ecfdf5 50%, #e6fcf5 100%);
-  border: 1px solid #dcfce7;
+  background: radial-gradient(circle at 70% 30%, #064e3b 0%, #062e24 70%, #022019 100%);
+  border: 1px solid #065f46;
+  color: #ffffff;
 }
 
 .hero-headline {
   font-family: 'Plus Jakarta Sans', Inter, sans-serif;
   font-size: 2.45rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #ffffff;
   line-height: 1.15;
   letter-spacing: -0.8px;
   margin: 0 0 0.6rem 0;
@@ -4668,12 +4711,12 @@ body.light-theme .call-ctrl-btn {
 }
 
 .highlight-green {
-  color: #10b981;
+  color: #34d399;
 }
 
 .hero-description {
   font-size: 0.96rem;
-  color: #475569;
+  color: #a7f3d0;
   line-height: 1.6;
   margin: 0 0 1.75rem 0;
   text-align: left;
@@ -4698,7 +4741,9 @@ body.light-theme .call-ctrl-btn {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #d1fae5;
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4709,13 +4754,13 @@ body.light-theme .call-ctrl-btn {
 .pill-text h4 {
   font-size: 0.88rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #ffffff;
   margin: 0 0 2px 0;
 }
 
 .pill-text p {
   font-size: 0.78rem;
-  color: #64748b;
+  color: #8696a0;
   margin: 0;
 }
 
@@ -4724,7 +4769,7 @@ body.light-theme .call-ctrl-btn {
   background: #111b21;
   border-radius: 18px;
   padding: 1.1rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   border: 1px solid #202c33;
 }
 
@@ -4948,86 +4993,49 @@ body.light-theme .call-ctrl-btn {
   background: #ef4444;
 }
 
-/* Floating Badges */
-.floating-badge {
-  position: absolute;
-  background: rgba(16, 185, 129, 0.92);
-  backdrop-filter: blur(8px);
-  color: #ffffff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 6px 12px;
-  border-radius: 20px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
-  z-index: 20;
-}
-
-.floating-badge.top-left {
-  top: 30px;
-  left: -20px;
-}
-
-.floating-badge.top-right {
-  top: 80px;
-  right: -25px;
-}
-
-.floating-badge.bottom-badge {
-  bottom: 30px;
-  left: -15px;
-  background: rgba(15, 23, 42, 0.9);
-}
-
-/* 5. Centered OTP & Recovery Screen */
-.auth-centered-container {
-  max-width: 460px;
-  width: 100%;
-  margin: 0 auto;
-}
-
+/* 5. OTP Email Verification Card (Dark Theme & Responsive) */
 .auth-verification-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: #111b21;
+  border: 1px solid #202c33;
   border-radius: 24px;
   padding: 2.75rem 2.25rem;
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.06);
   text-align: center;
-}
-
-.verification-icon-wrap {
-  margin-bottom: 1.25rem;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  max-width: 460px;
 }
 
 .icon-pulse-circle {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: #d1fae5;
+  background: rgba(16, 185, 129, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.8rem;
   margin: 0 auto;
-  box-shadow: 0 0 0 8px #ecfdf5;
+  box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.08);
+  color: #10b981;
 }
 
 .auth-verification-card h2 {
   font-family: 'Plus Jakarta Sans', Inter, sans-serif;
   font-size: 1.65rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #e9edef;
   margin: 0 0 0.5rem 0;
 }
 
 .verification-instruction {
   font-size: 0.92rem;
-  color: #64748b;
+  color: #8696a0;
   line-height: 1.6;
   margin: 0 0 1.75rem 0;
 }
 
 .verification-instruction strong {
-  color: #0f172a;
+  color: #e9edef;
 }
 
 .otp-boxes-row {
@@ -5040,20 +5048,20 @@ body.light-theme .call-ctrl-btn {
 .otp-digit-box {
   width: 48px;
   height: 56px;
-  border: 2px solid #cbd5e1;
+  border: 2px solid #2a3942;
   border-radius: 12px;
   font-size: 1.6rem;
   font-weight: 700;
   text-align: center;
-  color: #0f172a;
+  color: #e9edef;
   outline: none;
   transition: all 0.2s ease;
-  background: #ffffff;
+  background: #0b141a;
 }
 
 .otp-digit-box:focus {
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  border-color: #00a884;
+  box-shadow: 0 0 0 3px rgba(0, 168, 132, 0.2);
 }
 
 .otp-timer-row {
@@ -5065,7 +5073,7 @@ body.light-theme .call-ctrl-btn {
 }
 
 .countdown-text {
-  color: #64748b;
+  color: #8696a0;
 }
 
 .resend-code-btn {
@@ -5078,7 +5086,7 @@ body.light-theme .call-ctrl-btn {
 }
 
 .resend-code-btn:disabled {
-  color: #94a3b8;
+  color: #667781;
   cursor: not-allowed;
 }
 
@@ -5089,7 +5097,7 @@ body.light-theme .call-ctrl-btn {
 .text-link-btn {
   background: transparent;
   border: none;
-  color: #64748b;
+  color: #8696a0;
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
@@ -5097,16 +5105,16 @@ body.light-theme .call-ctrl-btn {
 }
 
 .text-link-btn:hover {
-  color: #0f172a;
+  color: #e9edef;
   text-decoration: underline;
 }
 
-/* 6. ChatHub Premium Landing Page Design System & Rich Animations */
+/* 6. ChatHub Premium Landing Page Design System (Dark Theme) */
 .chathub-landing-page {
   position: relative;
   width: 100%;
-  background: #ffffff;
-  color: #0f172a;
+  background: #0c1317;
+  color: #e9edef;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
   display: flex;
@@ -5117,36 +5125,36 @@ body.light-theme .call-ctrl-btn {
 .ambient-glow-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(90px);
+  filter: blur(100px);
   pointer-events: none;
   z-index: 0;
-  opacity: 0.55;
+  opacity: 0.45;
   animation: float-orb 12s ease-in-out infinite alternate;
 }
 
 .orb-1 {
-  width: 480px;
-  height: 480px;
+  width: 520px;
+  height: 520px;
   top: -120px;
   right: -80px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(5, 150, 105, 0.05) 70%);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.02) 70%);
 }
 
 .orb-2 {
-  width: 420px;
-  height: 420px;
+  width: 440px;
+  height: 440px;
   top: 380px;
   left: -120px;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, rgba(16, 185, 129, 0.05) 70%);
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.16) 0%, rgba(16, 185, 129, 0.02) 70%);
   animation-duration: 15s;
 }
 
 .orb-3 {
-  width: 520px;
-  height: 520px;
+  width: 540px;
+  height: 540px;
   bottom: 200px;
   right: -100px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.2) 0%, rgba(13, 148, 136, 0.05) 70%);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.18) 0%, rgba(13, 148, 136, 0.02) 70%);
   animation-duration: 18s;
 }
 
@@ -5171,7 +5179,7 @@ body.light-theme .call-ctrl-btn {
   position: relative;
   width: 100%;
   padding: 4.5rem 0 5.5rem;
-  background: radial-gradient(circle at 85% 15%, #ecfdf5 0%, #ffffff 65%);
+  background: radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.12) 0%, #0c1317 70%);
   overflow: visible;
 }
 
@@ -5186,15 +5194,15 @@ body.light-theme .call-ctrl-btn {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #047857;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
   padding: 0.45rem 1.1rem;
   border-radius: 30px;
   font-size: 0.85rem;
   font-weight: 600;
   margin-bottom: 1.5rem;
-  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .eyebrow-dot {
@@ -5215,7 +5223,7 @@ body.light-theme .call-ctrl-btn {
   font-family: 'Plus Jakarta Sans', Inter, sans-serif;
   font-size: 3.8rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #ffffff;
   line-height: 1.08;
   letter-spacing: -1.5px;
   margin: 0 0 1.35rem 0;
@@ -5223,7 +5231,7 @@ body.light-theme .call-ctrl-btn {
 }
 
 .emerald-gradient-text {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   display: inline-block;
@@ -5232,7 +5240,7 @@ body.light-theme .call-ctrl-btn {
 .landing-hero-subtitle {
   font-size: 1.15rem;
   line-height: 1.7;
-  color: #475569;
+  color: #8696a0;
   margin: 0 0 2.25rem 0;
   max-width: 580px;
   text-align: left;
@@ -5282,9 +5290,9 @@ body.light-theme .call-ctrl-btn {
 }
 
 .chathub-btn-secondary {
-  background: #ffffff;
-  color: #1e293b;
-  border: 1.5px solid #cbd5e1;
+  background: #111b21;
+  color: #e9edef;
+  border: 1.5px solid #2a3942;
   border-radius: 14px;
   padding: 0.92rem 1.75rem;
   font-size: 1.02rem;
@@ -5294,8 +5302,9 @@ body.light-theme .call-ctrl-btn {
 }
 
 .chathub-btn-secondary:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
+  background: #182229;
+  border-color: #10b981;
+  color: #ffffff;
   transform: translateY(-2px);
 }
 
@@ -5305,7 +5314,7 @@ body.light-theme .call-ctrl-btn {
   align-items: center;
   gap: 1.5rem;
   padding-top: 1.75rem;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #202c33;
   text-align: left;
 }
 
@@ -5319,7 +5328,8 @@ body.light-theme .call-ctrl-btn {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  background: #ecfdf5;
+  background: #111b21;
+  border: 1px solid #202c33;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5331,18 +5341,18 @@ body.light-theme .call-ctrl-btn {
   display: block;
   font-size: 1.02rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #e9edef;
 }
 
 .trust-item span {
   font-size: 0.8rem;
-  color: #64748b;
+  color: #8696a0;
 }
 
 .trust-divider {
   width: 1px;
   height: 32px;
-  background: #e2e8f0;
+  background: #202c33;
 }
 
 /* HERO VISUAL & 3D FLOATING MOCKUP */
@@ -5357,26 +5367,27 @@ body.light-theme .call-ctrl-btn {
 @keyframes floating-preview {
   0% {
     transform: translateY(0px) rotate(0deg);
-    filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.12));
+    filter: drop-shadow(0 20px 30px rgba(0, 0, 0, 0.4));
   }
   100% {
     transform: translateY(-12px) rotate(0.4deg);
-    filter: drop-shadow(0 30px 45px rgba(16, 185, 129, 0.18));
+    filter: drop-shadow(0 30px 45px rgba(16, 185, 129, 0.25));
   }
 }
 
 .floating-preview-badge {
   position: absolute;
   z-index: 10;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(17, 27, 33, 0.95);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(16, 185, 129, 0.3);
   border-radius: 16px;
   padding: 10px 14px;
   display: flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
   text-align: left;
   transition: transform 0.3s ease;
 }
@@ -5403,12 +5414,12 @@ body.light-theme .call-ctrl-btn {
   display: block;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #e9edef;
 }
 
 .floating-preview-badge small {
   font-size: 0.72rem;
-  color: #10b981;
+  color: #34d399;
   font-weight: 600;
 }
 
@@ -5417,7 +5428,7 @@ body.light-theme .call-ctrl-btn {
   background: #111b21;
   border-radius: 22px;
   overflow: hidden;
-  box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.6);
   border: 1px solid #202c33;
 }
 
@@ -5651,7 +5662,7 @@ body.light-theme .call-ctrl-btn {
   font-size: 0.76rem;
   text-align: left;
   line-height: 1.4;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 .mock-msg.other {
@@ -5702,12 +5713,12 @@ body.light-theme .call-ctrl-btn {
   font-size: 0.9rem;
 }
 
-/* 2. STATS & HIGHLIGHTS BANNER */
+/* 2. STATS & HIGHLIGHTS BANNER (Dark Theme) */
 .chathub-stats-section {
   padding: 3rem 0;
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  background: #111b21;
+  border-top: 1px solid #202c33;
+  border-bottom: 1px solid #202c33;
 }
 
 .stats-row {
@@ -5731,15 +5742,15 @@ body.light-theme .call-ctrl-btn {
 
 .stat-label {
   font-size: 0.9rem;
-  color: #475569;
+  color: #8696a0;
   font-weight: 600;
   margin: 0;
 }
 
-/* 3. CORE FEATURES SECTION */
+/* 3. CORE FEATURES SECTION (Dark Theme) */
 .chathub-features-section {
   padding: 5.5rem 0;
-  background: #ffffff;
+  background: #0c1317;
 }
 
 .section-header-center {
@@ -5752,9 +5763,9 @@ body.light-theme .call-ctrl-btn {
   display: inline-block;
   font-size: 0.82rem;
   font-weight: 700;
-  color: #059669;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
   padding: 0.35rem 0.9rem;
   border-radius: 20px;
   text-transform: uppercase;
@@ -5766,14 +5777,14 @@ body.light-theme .call-ctrl-btn {
   font-family: 'Plus Jakarta Sans', Inter, sans-serif;
   font-size: 2.5rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #ffffff;
   letter-spacing: -0.8px;
   margin: 0 0 0.8rem 0;
 }
 
 .section-header-center p {
   font-size: 1.1rem;
-  color: #64748b;
+  color: #8696a0;
   line-height: 1.6;
   margin: 0;
 }
@@ -5785,13 +5796,13 @@ body.light-theme .call-ctrl-btn {
 }
 
 .feature-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: #111b21;
+  border: 1px solid #202c33;
   border-radius: 22px;
   padding: 2.25rem 1.65rem;
   text-align: left;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
 }
@@ -5799,7 +5810,8 @@ body.light-theme .call-ctrl-btn {
 .feature-card:hover {
   transform: translateY(-6px);
   border-color: #10b981;
-  box-shadow: 0 20px 35px -10px rgba(16, 185, 129, 0.2);
+  background: #17242c;
+  box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.5);
 }
 
 .feature-card-icon {
@@ -5817,13 +5829,13 @@ body.light-theme .call-ctrl-btn {
 .feature-card h3 {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #e9edef;
   margin: 0 0 0.6rem 0;
 }
 
 .feature-card p {
   font-size: 0.92rem;
-  color: #64748b;
+  color: #8696a0;
   line-height: 1.6;
   margin: 0 0 1.25rem 0;
   flex: 1;
@@ -5832,15 +5844,15 @@ body.light-theme .call-ctrl-btn {
 .feature-learn-more {
   font-size: 0.86rem;
   font-weight: 700;
-  color: #10b981;
+  color: #34d399;
 }
 
-/* 4. SHOWCASE SECTION */
+/* 4. SHOWCASE SECTION (Dark Theme) */
 .chathub-showcase-section {
   padding: 5.5rem 0;
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  background: #111b21;
+  border-top: 1px solid #202c33;
+  border-bottom: 1px solid #202c33;
 }
 
 .showcase-content-grid {
@@ -5858,7 +5870,7 @@ body.light-theme .call-ctrl-btn {
   font-family: 'Plus Jakarta Sans', Inter, sans-serif;
   font-size: 2.5rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #ffffff;
   letter-spacing: -0.8px;
   line-height: 1.2;
   margin: 0.8rem 0 1rem 0;
@@ -5866,7 +5878,7 @@ body.light-theme .call-ctrl-btn {
 
 .showcase-info-block > p {
   font-size: 1.1rem;
-  color: #64748b;
+  color: #8696a0;
   line-height: 1.65;
   margin-bottom: 2rem;
 }
@@ -5903,23 +5915,23 @@ body.light-theme .call-ctrl-btn {
   display: block;
   font-size: 1.05rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #e9edef;
   margin-bottom: 2px;
 }
 
 .showcase-bullet-item p {
   font-size: 0.92rem;
-  color: #64748b;
+  color: #8696a0;
   margin: 0;
   line-height: 1.5;
 }
 
 .showcase-card-visual {
-  background: #0f172a;
+  background: #0c1317;
   border-radius: 24px;
   padding: 1.25rem;
-  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.3);
-  border: 1px solid #1e293b;
+  box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.5);
+  border: 1px solid #202c33;
 }
 
 .visual-top-bar {
@@ -5927,7 +5939,7 @@ body.light-theme .call-ctrl-btn {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 1px solid #202c33;
   color: #e2e8f0;
   font-size: 0.88rem;
   font-weight: 600;
@@ -5967,6 +5979,7 @@ body.light-theme .call-ctrl-btn {
   left: 12px;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   padding: 6px 12px;
   border-radius: 8px;
   display: flex;
@@ -5983,7 +5996,7 @@ body.light-theme .call-ctrl-btn {
   width: 80px;
   height: 110px;
   border-radius: 12px;
-  background: #334155;
+  background: #202c33;
   border: 2px solid #10b981;
   display: flex;
   align-items: center;
@@ -5991,7 +6004,7 @@ body.light-theme .call-ctrl-btn {
   color: #ffffff;
   font-size: 0.8rem;
   font-weight: 600;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
 }
 
 .call-control-bar-mock {
@@ -6005,8 +6018,8 @@ body.light-theme .call-ctrl-btn {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: #1e293b;
-  border: none;
+  background: #202c33;
+  border: 1px solid #2a3942;
   color: #ffffff;
   font-size: 1.15rem;
   cursor: pointer;
@@ -6018,16 +6031,17 @@ body.light-theme .call-ctrl-btn {
 
 .mock-call-btn.end {
   background: #ef4444;
+  border-color: #ef4444;
 }
 
 .mock-call-btn:hover {
   transform: scale(1.1);
 }
 
-/* 5. HOW IT WORKS / STEPS */
+/* 5. HOW IT WORKS / STEPS (Dark Theme) */
 .chathub-steps-section {
   padding: 5.5rem 0;
-  background: #ffffff;
+  background: #0c1317;
 }
 
 .steps-cards-row {
@@ -6039,8 +6053,8 @@ body.light-theme .call-ctrl-btn {
 
 .step-card {
   flex: 1;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: #111b21;
+  border: 1px solid #202c33;
   border-radius: 20px;
   padding: 2.25rem 1.75rem;
   text-align: left;
@@ -6050,8 +6064,8 @@ body.light-theme .call-ctrl-btn {
 .step-card:hover {
   transform: translateY(-4px);
   border-color: #10b981;
-  background: #ffffff;
-  box-shadow: 0 15px 30px -8px rgba(16, 185, 129, 0.15);
+  background: #17242c;
+  box-shadow: 0 15px 30px -8px rgba(0, 0, 0, 0.5);
 }
 
 .step-number-badge {
@@ -6065,36 +6079,37 @@ body.light-theme .call-ctrl-btn {
 .step-card h4 {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #e9edef;
   margin: 0 0 0.5rem 0;
 }
 
 .step-card p {
   font-size: 0.92rem;
-  color: #64748b;
+  color: #8696a0;
   line-height: 1.6;
   margin: 0;
 }
 
 .step-arrow-divider {
   font-size: 1.6rem;
-  color: #cbd5e1;
+  color: #2a3942;
   font-weight: 700;
 }
 
-/* 6. BOTTOM CTA BANNER */
+/* 6. BOTTOM CTA BANNER (Dark Theme) */
 .chathub-bottom-cta {
   padding: 5rem 0;
-  background: #ffffff;
+  background: #0c1317;
 }
 
 .cta-banner-card {
-  background: linear-gradient(135deg, #064e3b 0%, #062e24 100%);
+  background: radial-gradient(circle at 50% 0%, #005c4b 0%, #0a2e25 60%, #061e18 100%);
+  border: 1px solid #00a884;
   border-radius: 32px;
   padding: 4.5rem 2.5rem;
   color: #ffffff;
   text-align: center;
-  box-shadow: 0 30px 60px -15px rgba(6, 78, 59, 0.45);
+  box-shadow: 0 30px 60px -15px rgba(0, 92, 75, 0.4);
   position: relative;
   overflow: hidden;
 }
@@ -6117,6 +6132,7 @@ body.light-theme .call-ctrl-btn {
   font-weight: 800;
   margin: 0 0 1rem 0;
   letter-spacing: -0.8px;
+  color: #ffffff;
 }
 
 .cta-banner-card p {
@@ -6130,20 +6146,20 @@ body.light-theme .call-ctrl-btn {
 .chathub-btn-primary.white-btn {
   background: #ffffff;
   color: #064e3b;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
 }
 
 .chathub-btn-primary.white-btn:hover {
   background: #f0fdf4;
   transform: translateY(-3px);
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
 }
 
-/* 7. RESPONSIVE FOOTER */
+/* 7. RESPONSIVE FOOTER (Dark Theme) */
 .chathub-landing-footer {
   padding: 3rem 0;
-  border-top: 1px solid #e2e8f0;
-  background: #ffffff;
+  border-top: 1px solid #202c33;
+  background: #0b141a;
 }
 
 .footer-content-row {
@@ -6171,12 +6187,12 @@ body.light-theme .call-ctrl-btn {
   font-family: 'Plus Jakarta Sans', Inter, sans-serif;
   font-size: 1.35rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #e9edef;
 }
 
 .footer-brand p {
   font-size: 0.88rem;
-  color: #64748b;
+  color: #8696a0;
   margin: 0;
 }
 
@@ -6189,18 +6205,33 @@ body.light-theme .call-ctrl-btn {
   background: transparent;
   border: none;
   font-size: 0.95rem;
-  color: #64748b;
+  color: #8696a0;
   font-weight: 600;
   cursor: pointer;
   transition: color 0.2s;
 }
 
 .footer-links button:hover {
-  color: #10b981;
+  color: #34d399;
 }
 
-/* RESPONSIVE MEDIA QUERIES */
+/* ==========================================================================
+   MOBILE & RESPONSIVE MEDIA QUERIES FOR LANDING PAGE AND AUTH PAGE
+   ========================================================================== */
+
 @media (max-width: 1024px) {
+  /* Auth Page: Hide desktop showcase on medium/small devices */
+  .auth-split-grid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+    gap: 0;
+    margin: 0 auto;
+  }
+  .auth-hero-column {
+    display: none !important;
+  }
+
+  /* Landing Page */
   .landing-hero-grid {
     grid-template-columns: 1fr;
     gap: 3rem;
@@ -6220,8 +6251,69 @@ body.light-theme .call-ctrl-btn {
 }
 
 @media (max-width: 768px) {
+  /* Global Navbar */
+  .chathub-global-nav .nav-container {
+    padding: 0.75rem 1rem;
+  }
+  .brand-name {
+    font-size: 1.25rem;
+  }
+  .nav-actions {
+    gap: 0.5rem;
+  }
+  .nav-cta-btn {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.82rem;
+  }
+  .nav-link-btn {
+    padding: 0.45rem 0.65rem;
+    font-size: 0.82rem;
+  }
+  .auth-switch-text {
+    font-size: 0.82rem;
+  }
+
+  /* Auth Page */
+  .auth-main-layout {
+    padding: 1.5rem 1rem;
+  }
+  .auth-form-card {
+    padding: 2rem 1.4rem;
+    border-radius: 18px;
+  }
+  .form-main-heading {
+    font-size: 1.6rem;
+  }
+  .form-sub-heading {
+    font-size: 0.88rem;
+  }
+
+  /* Landing Page */
   .landing-hero-title {
-    font-size: 2.4rem;
+    font-size: 2.3rem;
+  }
+  .landing-hero-subtitle {
+    font-size: 1rem;
+  }
+  .landing-cta-row {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.85rem;
+  }
+  .landing-cta-row button {
+    width: 100%;
+    justify-content: center;
+  }
+  .hero-trust-metrics {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .trust-divider {
+    display: none;
+  }
+  .floating-preview-badge {
+    display: none;
   }
   .features-cards-grid {
     grid-template-columns: 1fr;
@@ -6249,18 +6341,87 @@ body.light-theme .call-ctrl-btn {
   .footer-logo-title {
     justify-content: center;
   }
-  .hero-trust-metrics {
+}
+
+@media (max-width: 480px) {
+  /* Auth Page on small smartphones */
+  .auth-main-layout {
+    padding: 1rem 0.75rem;
+  }
+  .auth-form-card {
+    padding: 1.5rem 1.1rem;
+    border-radius: 16px;
+  }
+  .auth-verification-card {
+    padding: 1.5rem 1.1rem;
+    border-radius: 16px;
+  }
+  .otp-boxes-row {
+    gap: 6px;
+  }
+  .otp-digit-box {
+    width: 40px;
+    height: 50px;
+    font-size: 1.3rem;
+    border-radius: 8px;
+  }
+  .remember-forgot-row {
     flex-direction: column;
     align-items: flex-start;
+    gap: 0.65rem;
+  }
+  .chathub-input-group label {
+    font-size: 0.8rem;
+  }
+  .input-with-icon {
+    padding: 0.55rem 0.75rem;
+  }
+  .input-with-icon input {
+    font-size: 0.88rem;
+  }
+  .chathub-primary-btn {
+    padding: 0.75rem 1rem;
+    font-size: 0.92rem;
+  }
+
+  /* Landing Page */
+  .landing-container {
+    padding: 0 1rem;
+  }
+  .landing-hero-title {
+    font-size: 1.95rem;
+    line-height: 1.15;
+  }
+  .chathub-landing-hero {
+    padding: 2.5rem 0 3rem;
+  }
+  .stats-row {
+    grid-template-columns: 1fr 1fr;
     gap: 1rem;
-  .trust-divider {
-    display: none;
   }
-  .floating-preview-badge {
-    display: none;
+  .stat-number {
+    font-size: 1.85rem;
+  }
+  .cta-banner-card {
+    padding: 2.5rem 1.15rem;
+    border-radius: 20px;
+  }
+  .cta-banner-card h2 {
+    font-size: 1.65rem;
   }
 }
+
+@media (max-width: 360px) {
+  .otp-boxes-row {
+    gap: 4px;
+  }
+  .otp-digit-box {
+    width: 35px;
+    height: 44px;
+    font-size: 1.15rem;
+  }
 }
+
 
 /* ==========================================================================
    CHATHUB PREMIUM DARK NAVY & EMERALD DASHBOARD STYLES
