@@ -40,6 +40,7 @@ export default function ChatFooter() {
     const [text, setText] = useState('');
     const [selectedImageData, setSelectedImageData] = useState(null);
     const [selectedDocument, setSelectedDocument] = useState(null);
+    const [isUploadingDoc, setIsUploadingDoc] = useState(false);
     const [isViewOnceActive, setIsViewOnceActive] = useState(false);
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
@@ -117,10 +118,10 @@ export default function ChatFooter() {
     const handleDocumentFile = useCallback((file) => {
         if (!file) return;
 
-        // 15MB file size limit for WebSockets & client memory safety
-        const MAX_SIZE = 15 * 1024 * 1024;
+        // 25MB file size limit (uploaded safely to server disk, bypassing Turso limits)
+        const MAX_SIZE = 25 * 1024 * 1024;
         if (file.size > MAX_SIZE) {
-            alert('File size exceeds the 15MB limit. Please select a smaller document.');
+            alert('File size exceeds the 25MB limit. Please select a smaller document under 25MB.');
             if (docInputRef.current) docInputRef.current.value = '';
             return;
         }
@@ -245,16 +246,46 @@ export default function ChatFooter() {
         }
     };
 
-    const handleFormSubmit = (e) => {
+    const handleFormSubmit = async (e) => {
         e.preventDefault();
         if (!text.trim() && !selectedImageData && !selectedDocument) return;
+        if (isUploadingDoc) return;
+
+        let documentUrl = null;
+        if (selectedDocument) {
+            try {
+                setIsUploadingDoc(true);
+                const uploadRes = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileName: selectedDocument.fileName,
+                        fileData: selectedDocument.data,
+                        fileType: selectedDocument.fileType
+                    })
+                });
+
+                if (!uploadRes.ok) {
+                    throw new Error('Upload failed with status ' + uploadRes.status);
+                }
+                const uploadData = await uploadRes.json();
+                documentUrl = uploadData.url;
+            } catch (err) {
+                console.error('Document upload failed:', err);
+                alert('Document upload failed. Please try again.');
+                setIsUploadingDoc(false);
+                return;
+            } finally {
+                setIsUploadingDoc(false);
+            }
+        }
 
         sendMessage({
             text: text.trim(),
             image: selectedImageData,
             audio: null,
             audioDuration: null,
-            file: selectedDocument?.data || null,
+            file: documentUrl || null,
             fileName: selectedDocument?.fileName || null,
             fileSize: selectedDocument?.fileSize || null,
             fileType: selectedDocument?.fileType || null,
@@ -712,10 +743,11 @@ export default function ChatFooter() {
                     <button
                         type="submit"
                         className="send-button"
-                        title="Send message"
+                        title={isUploadingDoc ? "Uploading document..." : "Send message"}
                         aria-label="Send message"
+                        disabled={isUploadingDoc}
                     >
-                        <Send size={18} />
+                        {isUploadingDoc ? <Loader2 size={18} className="wa-spin" /> : <Send size={18} />}
                     </button>
                 </form>
             </footer>

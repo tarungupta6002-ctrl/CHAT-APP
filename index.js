@@ -11,8 +11,19 @@ const { sendOtpEmail } = require("./emailService");
 const aiService = require("./aiService");
 
 const app = express();
-app.use(express.json({ limit: "15mb" }));
-app.use(express.urlencoded({ limit: "15mb", extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// Ensure uploads directory exists and is publicly accessible
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+app.use("/uploads", express.static(uploadsDir, {
+    setHeaders: (res) => {
+        res.setHeader("Access-Control-Allow-Origin", "*");
+    }
+}));
 
 // Enable CORS for mobile apps (Capacitor), PWAs and cross-origin access
 app.use((req, res, next) => {
@@ -23,6 +34,40 @@ app.use((req, res, next) => {
         return res.sendStatus(200);
     }
     next();
+});
+
+// Native Document & File Upload Endpoint (bypasses Turso DB limits)
+app.post("/api/upload", async (req, res) => {
+    try {
+        const { fileName, fileData, fileType } = req.body || {};
+        if (!fileData || !fileName) {
+            return res.status(400).json({ error: "No file data provided." });
+        }
+
+        const base64Data = fileData.includes(";base64,")
+            ? fileData.split(";base64,").pop()
+            : fileData;
+
+        const buffer = Buffer.from(base64Data, "base64");
+
+        const safeExt = path.extname(fileName) || `.${fileType || 'bin'}`;
+        const sanitizedBase = path.basename(fileName, safeExt).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 35);
+        const uniqueFileName = `${Date.now()}-${sanitizedBase}${safeExt}`;
+        const filePath = path.join(uploadsDir, uniqueFileName);
+
+        await fs.promises.writeFile(filePath, buffer);
+
+        const fileUrl = `/uploads/${uniqueFileName}`;
+        return res.json({
+            success: true,
+            url: fileUrl,
+            fileName: fileName,
+            fileSize: buffer.length
+        });
+    } catch (err) {
+        console.error("File upload error:", err);
+        return res.status(500).json({ error: "Failed to upload file to server." });
+    }
 });
 
 // Lightweight health endpoint for Uptime / Cron pings (Render keep-alive)
@@ -2108,7 +2153,7 @@ const distPath = path.join(__dirname, "dist");
 if (fs.existsSync(path.join(distPath, "index.html"))) {
     app.use(express.static(distPath));
     app.use((req, res, next) => {
-        if (req.method === "GET" && !req.path.startsWith("/socket.io")) {
+        if (req.method === "GET" && !req.path.startsWith("/socket.io") && !req.path.startsWith("/uploads") && !req.path.startsWith("/api")) {
             return res.sendFile(path.join(distPath, "index.html"));
         }
         next();

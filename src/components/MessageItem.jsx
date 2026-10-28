@@ -237,17 +237,26 @@ function DocumentAttachmentCard({ fileSrc, fileName, fileSize, fileType }) {
     const ext = fileType || (fileName ? fileName.split('.').pop() : 'file');
     const category = getDocCategory(ext);
 
+    // Resolve full URL if fileSrc is a relative path (e.g. /uploads/...)
+    const BACKEND_URL = 'https://chat-app-pmab.onrender.com';
+    const resolvedSrc = (typeof fileSrc === 'string' && fileSrc.startsWith('/') && typeof window !== 'undefined' && !window.location.origin.includes('onrender.com'))
+        ? `${BACKEND_URL}${fileSrc}`
+        : fileSrc;
+
     const handleDownload = (e) => {
         e.stopPropagation();
         try {
             const link = document.createElement('a');
-            link.href = fileSrc;
+            link.href = resolvedSrc;
             link.download = fileName || 'document';
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
         } catch (err) {
             console.error('Download error:', err);
+            window.open(resolvedSrc, '_blank');
         }
     };
 
